@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 
 export default function DashboardPage() {
   return (
-    <main className="min-h-screen bg-[#0a0a0f] text-white">
+    <main className="min-h-screen bg-background text-foreground">
       <Navbar />
       <div className="pt-24 pb-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
         {/* Header */}
@@ -113,7 +113,7 @@ export default function DashboardPage() {
               href={card.href}
               className={`rounded-2xl border ${card.border} bg-gradient-to-br ${card.color} to-transparent p-5 hover:scale-[1.02] transition-all duration-200 group`}
             >
-              <div className="text-base font-semibold font-display text-white mb-1 group-hover:text-white">{card.title}</div>
+              <div className="text-base font-semibold font-display text-foreground mb-1">{card.title}</div>
               <p className="text-sm text-muted-foreground">{card.desc}</p>
             </a>
           ))}

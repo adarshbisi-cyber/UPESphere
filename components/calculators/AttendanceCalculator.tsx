@@ -204,10 +204,10 @@ export function AttendanceCalculator() {
             <div className="flex flex-col items-center mb-8">
               <div className="relative w-48 h-48">
                 <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
-                  <circle cx="60" cy="60" r="52" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="10" />
+                  <circle cx="60" cy="60" r="52" fill="none" stroke="var(--ring-track)" strokeWidth="10" />
                   <circle
                     cx="60" cy="60" r="52" fill="none"
-                    stroke="rgba(255,255,255,0.2)"
+                    stroke="var(--ring-track)"
                     strokeWidth="2"
                     strokeDasharray={`2 ${circumference - 2}`}
                     strokeDashoffset={circumference - (requiredNum / 100) * circumference}
@@ -249,8 +249,8 @@ export function AttendanceCalculator() {
 
             {/* Key metrics */}
             <div className="grid grid-cols-3 gap-4 mb-6">
-              <div className="text-center rounded-xl bg-white/[0.04] border border-white/8 p-4">
-                <div className="text-2xl font-bold font-display text-white">{attendedNum}</div>
+              <div className="text-center rounded-xl p-4" style={{ background: 'var(--muted-surface)', border: '1px solid var(--divider)' }}>
+                <div className="text-2xl font-bold font-display text-foreground">{attendedNum}</div>
                 <div className="text-xs text-muted-foreground mt-1">Attended</div>
               </div>
               <div className={`text-center rounded-xl border p-4 ${cfg.bg} ${cfg.border}`}>
@@ -261,8 +261,8 @@ export function AttendanceCalculator() {
                   {result.status === 'danger' ? 'Must Attend' : 'Still Can Skip'}
                 </div>
               </div>
-              <div className="text-center rounded-xl bg-white/[0.04] border border-white/8 p-4">
-                <div className="text-2xl font-bold font-display text-white">{requiredNum}%</div>
+              <div className="text-center rounded-xl p-4" style={{ background: 'var(--muted-surface)', border: '1px solid var(--divider)' }}>
+                <div className="text-2xl font-bold font-display text-foreground">{requiredNum}%</div>
                 <div className="text-xs text-muted-foreground mt-1">Required</div>
               </div>
             </div>
@@ -314,8 +314,8 @@ export function AttendanceCalculator() {
           />
         </div>
         <div className="grid grid-cols-3 gap-4">
-          <div className="text-center rounded-xl bg-white/[0.04] border border-white/8 p-4">
-            <div className="text-3xl font-bold font-display text-white">{plannedTotalNum}</div>
+          <div className="text-center rounded-xl p-4" style={{ background: 'var(--muted-surface)', border: '1px solid var(--divider)' }}>
+            <div className="text-3xl font-bold font-display text-foreground">{plannedTotalNum}</div>
             <div className="text-xs text-muted-foreground mt-1">Total Classes</div>
           </div>
           <div className="text-center rounded-xl bg-emerald-500/10 border border-emerald-500/20 p-4">
@@ -329,8 +329,8 @@ export function AttendanceCalculator() {
             </motion.div>
             <div className="text-xs text-muted-foreground mt-1">Can Bunk</div>
           </div>
-          <div className="text-center rounded-xl bg-white/[0.04] border border-white/8 p-4">
-            <div className="text-3xl font-bold font-display text-white">{mustAttend}</div>
+          <div className="text-center rounded-xl p-4" style={{ background: 'var(--muted-surface)', border: '1px solid var(--divider)' }}>
+            <div className="text-3xl font-bold font-display text-foreground">{mustAttend}</div>
             <div className="text-xs text-muted-foreground mt-1">Must Attend</div>
           </div>
         </div>

@@ -113,7 +113,7 @@ export function Features() {
               <div className={`inline-flex p-3 rounded-xl bg-white/5 border border-white/10 mb-4 ${feature.iconColor}`}>
                 <feature.icon className="w-5 h-5" />
               </div>
-              <h3 className="text-lg font-semibold font-display text-white mb-2">{feature.title}</h3>
+              <h3 className="text-lg font-semibold font-display text-foreground mb-2">{feature.title}</h3>
               <p className="text-sm text-muted-foreground leading-relaxed">{feature.description}</p>
             </motion.div>
           ))}

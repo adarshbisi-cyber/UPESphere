@@ -82,7 +82,7 @@ export function GPADemo() {
             viewport={{ once: true }}
             transition={{ duration: 0.6, delay: 0.1 }}
           >
-            <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.06] to-white/[0.02] backdrop-blur-sm p-6 shadow-2xl">
+            <div className="rounded-2xl backdrop-blur-sm p-6 shadow-2xl" style={{ background: `linear-gradient(135deg, var(--glass-from), var(--glass-to))`, border: '1px solid var(--glass-border)', boxShadow: 'var(--glass-shadow)' }}>
               {/* GPA Display */}
               <div className="text-center mb-6 py-4">
                 <motion.div
@@ -147,7 +147,7 @@ export function GPADemo() {
                 </AnimatePresence>
               </div>
 
-              <Button variant="ghost" size="sm" onClick={addSubject} className="w-full gap-2 border border-dashed border-white/10 hover:border-indigo-500/40">
+              <Button variant="ghost" size="sm" onClick={addSubject} className="w-full gap-2 border border-dashed border-[var(--divider)] hover:border-indigo-500/40">
                 <Plus className="w-4 h-4" />
                 Add Subject
               </Button>

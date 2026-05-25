@@ -39,7 +39,7 @@ export default function UniversityPage({ params }: PageProps) {
   if (!uni) notFound()
 
   return (
-    <main className="min-h-screen bg-[#0a0a0f] text-white">
+    <main className="min-h-screen bg-background text-foreground">
       <Navbar />
       <div className="pt-24 pb-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto mb-10">
@@ -60,7 +60,7 @@ export default function UniversityPage({ params }: PageProps) {
         </div>
 
         {/* Grading table */}
-        <div className="max-w-4xl mx-auto mb-8 rounded-2xl border border-white/10 bg-white/[0.03] p-6">
+        <div className="max-w-4xl mx-auto mb-8 rounded-2xl p-6" style={{ background: 'var(--muted-surface)', border: '1px solid var(--divider)' }}>
           <h2 className="text-base font-semibold font-display mb-4">{uni.shortName} Grading System</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -72,10 +72,10 @@ export default function UniversityPage({ params }: PageProps) {
                   <th className="text-left pb-3">Description</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/5">
+              <tbody className="divide-y divide-[var(--divider)]">
                 {uni.gradingSystem.grades.map(g => (
                   <tr key={g.grade}>
-                    <td className="py-2.5 pr-6 font-semibold text-white">{g.grade}</td>
+                    <td className="py-2.5 pr-6 font-semibold text-foreground">{g.grade}</td>
                     <td className="py-2.5 pr-6 font-mono text-indigo-300">{g.points}</td>
                     {g.range && <td className="py-2.5 pr-6 text-muted-foreground">{g.range}%</td>}
                     <td className="py-2.5 text-muted-foreground">{g.description}</td>

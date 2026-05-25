@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Menu, X, GraduationCap, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { cn } from '@/lib/utils'
 
 const navLinks = [
@@ -33,7 +34,7 @@ export function Navbar() {
       className={cn(
         'fixed top-0 left-0 right-0 z-50 transition-all duration-300',
         scrolled
-          ? 'bg-[#0a0a0f]/80 backdrop-blur-xl border-b border-white/8 shadow-2xl shadow-black/30'
+          ? 'bg-background/80 backdrop-blur-xl border-b border-border shadow-lg shadow-black/10 dark:shadow-black/30'
           : 'bg-transparent'
       )}
     >
@@ -45,7 +46,7 @@ export function Navbar() {
               <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 to-violet-500 rounded-lg shadow-lg shadow-indigo-500/30 group-hover:shadow-indigo-500/50 transition-shadow" />
               <GraduationCap className="absolute inset-0 m-auto w-5 h-5 text-white" />
             </div>
-            <span className="text-lg font-bold font-display bg-gradient-to-r from-white to-white/70 bg-clip-text text-transparent group-hover:from-indigo-300 group-hover:to-violet-300 transition-all duration-300">
+            <span className="text-lg font-bold font-display bg-gradient-to-r dark:from-white dark:to-white/70 from-slate-900 to-slate-700 bg-clip-text text-transparent group-hover:from-indigo-500 group-hover:to-violet-500 transition-all duration-300">
               UPESphere
             </span>
           </Link>
@@ -65,6 +66,7 @@ export function Navbar() {
 
           {/* CTA */}
           <div className="hidden md:flex items-center gap-3">
+            <ThemeToggle />
             <Link href="/login">
               <Button variant="ghost" size="sm" className="text-muted-foreground">
                 Sign In
@@ -96,7 +98,7 @@ export function Navbar() {
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.2 }}
-            className="md:hidden border-t border-white/8 bg-[#0a0a0f]/95 backdrop-blur-xl"
+            className="md:hidden border-t border-border bg-background/95 backdrop-blur-xl"
           >
             <div className="px-4 py-4 space-y-1">
               {navLinks.map(link => (
@@ -109,7 +111,11 @@ export function Navbar() {
                   {link.label}
                 </Link>
               ))}
-              <div className="pt-3 flex flex-col gap-2 border-t border-white/8 mt-2">
+              <div className="pt-3 flex flex-col gap-2 border-t border-border mt-2">
+                <div className="flex items-center justify-between px-1 py-1">
+                  <span className="text-sm text-muted-foreground">Appearance</span>
+                  <ThemeToggle />
+                </div>
                 <Link href="/login" onClick={() => setMobileOpen(false)}>
                   <Button variant="outline" className="w-full">Sign In</Button>
                 </Link>

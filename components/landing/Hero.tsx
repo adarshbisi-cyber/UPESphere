@@ -16,11 +16,11 @@ const features = ['GPA & CGPA Calculator', 'Attendance Tracker', 'AI Insights', 
 export function Hero() {
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-16">
-      {/* Animated background */}
-      <div className="absolute inset-0 bg-[#0a0a0f]">
+      {/* Background — adapts to theme */}
+      <div className="absolute inset-0 bg-background">
         {/* Grid */}
         <div
-          className="absolute inset-0 opacity-[0.03]"
+          className="absolute inset-0 opacity-[0.04] dark:opacity-[0.03]"
           style={{
             backgroundImage: `linear-gradient(rgba(99,102,241,1) 1px, transparent 1px), linear-gradient(90deg, rgba(99,102,241,1) 1px, transparent 1px)`,
             backgroundSize: '60px 60px',
@@ -39,7 +39,7 @@ export function Hero() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-sm font-medium mb-8"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-500 dark:text-indigo-300 text-sm font-medium mb-8"
           >
             <Sparkles className="w-4 h-4" />
             Smart Academic Companion for Indian Students
@@ -50,7 +50,7 @@ export function Hero() {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.1 }}
-            className="text-5xl sm:text-6xl lg:text-7xl font-bold font-display leading-[1.1] tracking-tight mb-6"
+            className="text-5xl sm:text-6xl lg:text-7xl font-bold font-display leading-[1.1] tracking-tight mb-6 text-foreground"
           >
             Track Your{' '}
             <span className="bg-gradient-to-r from-indigo-400 via-violet-400 to-cyan-400 bg-clip-text text-transparent animate-gradient-x bg-[length:200%_auto]">
@@ -77,10 +77,11 @@ export function Hero() {
             transition={{ duration: 0.5, delay: 0.3 }}
             className="flex flex-wrap justify-center gap-2 mb-10"
           >
-            {features.map((f, i) => (
+            {features.map((f) => (
               <span
                 key={f}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-sm text-muted-foreground"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-sm text-muted-foreground"
+                style={{ background: 'var(--muted-surface)', borderColor: 'var(--divider)' }}
               >
                 <CheckCircle className="w-3.5 h-3.5 text-indigo-400" />
                 {f}
@@ -116,9 +117,9 @@ export function Hero() {
             transition={{ duration: 0.6, delay: 0.5 }}
             className="flex items-center justify-center gap-12"
           >
-            {stats.map((stat, i) => (
+            {stats.map((stat) => (
               <div key={stat.label} className="text-center">
-                <div className="text-2xl sm:text-3xl font-bold font-display bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent">
+                <div className="text-2xl sm:text-3xl font-bold font-display bg-gradient-to-r dark:from-white dark:to-white/60 from-slate-900 to-slate-600 bg-clip-text text-transparent">
                   {stat.value}
                 </div>
                 <div className="text-sm text-muted-foreground mt-1">{stat.label}</div>
@@ -134,17 +135,24 @@ export function Hero() {
           transition={{ duration: 0.8, delay: 0.6, ease: [0.22, 1, 0.36, 1] }}
           className="mt-20 max-w-4xl mx-auto"
         >
-          <div className="relative rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.06] to-white/[0.02] backdrop-blur-sm p-6 shadow-2xl shadow-black/50 overflow-hidden">
+          <div
+            className="relative rounded-2xl backdrop-blur-sm p-6 overflow-hidden"
+            style={{
+              background: `linear-gradient(135deg, var(--glass-from), var(--glass-to))`,
+              border: '1px solid var(--glass-border)',
+              boxShadow: 'var(--glass-shadow)',
+            }}
+          >
             {/* Gradient border effect */}
             <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-indigo-500/10 via-transparent to-violet-500/10 pointer-events-none" />
 
             {/* Mock dashboard header */}
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h3 className="text-lg font-semibold text-white font-display">Academic Overview</h3>
+                <h3 className="text-lg font-semibold text-foreground font-display">Academic Overview</h3>
                 <p className="text-sm text-muted-foreground">Semester 5 — Computer Science</p>
               </div>
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-sm">
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-600 dark:text-emerald-300 text-sm">
                 <TrendingUp className="w-3.5 h-3.5" />
                 Improving
               </div>
@@ -153,14 +161,14 @@ export function Hero() {
             {/* Mock stats grid */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
               {[
-                { label: 'Current GPA', value: '8.7', color: 'text-indigo-400', sub: '10 point scale' },
-                { label: 'CGPA', value: '8.4', color: 'text-violet-400', sub: '5 semesters' },
-                { label: 'Attendance', value: '84%', color: 'text-emerald-400', sub: 'Safe zone' },
-                { label: 'Safe Bunks', value: '7', color: 'text-cyan-400', sub: 'Remaining' },
+                { label: 'Current GPA', value: '8.7', color: 'text-indigo-500 dark:text-indigo-400', sub: '10 point scale' },
+                { label: 'CGPA', value: '8.4', color: 'text-violet-500 dark:text-violet-400', sub: '5 semesters' },
+                { label: 'Attendance', value: '84%', color: 'text-emerald-600 dark:text-emerald-400', sub: 'Safe zone' },
+                { label: 'Safe Bunks', value: '7', color: 'text-cyan-600 dark:text-cyan-400', sub: 'Remaining' },
               ].map(item => (
-                <div key={item.label} className="rounded-xl bg-white/[0.04] border border-white/8 p-4">
+                <div key={item.label} className="rounded-xl p-4" style={{ background: 'var(--muted-surface)', border: '1px solid var(--divider)' }}>
                   <div className={`text-2xl font-bold font-display ${item.color}`}>{item.value}</div>
-                  <div className="text-sm font-medium text-white/80 mt-0.5">{item.label}</div>
+                  <div className="text-sm font-medium text-foreground/70 mt-0.5">{item.label}</div>
                   <div className="text-xs text-muted-foreground">{item.sub}</div>
                 </div>
               ))}
@@ -175,7 +183,7 @@ export function Hero() {
               ].map(item => (
                 <div key={item.subject} className="flex items-center gap-4">
                   <div className="w-36 text-sm text-muted-foreground truncate">{item.subject}</div>
-                  <div className="flex-1 h-2 rounded-full bg-white/5 overflow-hidden">
+                  <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: 'var(--divider)' }}>
                     <motion.div
                       initial={{ width: 0 }}
                       animate={{ width: `${item.pct}%` }}
@@ -183,7 +191,7 @@ export function Hero() {
                       className={`h-full rounded-full bg-gradient-to-r ${item.color}`}
                     />
                   </div>
-                  <div className="w-8 text-sm font-medium text-white/60">{item.grade}</div>
+                  <div className="w-8 text-sm font-medium text-muted-foreground">{item.grade}</div>
                 </div>
               ))}
             </div>

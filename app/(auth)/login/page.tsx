@@ -21,7 +21,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden">
       {/* Background */}
       <div className="absolute inset-0">
         <div className="absolute top-1/4 left-1/3 w-72 h-72 bg-indigo-500/8 rounded-full blur-[100px]" />
@@ -39,13 +39,13 @@ export default function LoginPage() {
           <div className="w-9 h-9 bg-gradient-to-br from-indigo-500 to-violet-500 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/30">
             <GraduationCap className="w-5 h-5 text-white" />
           </div>
-          <span className="text-xl font-bold font-display bg-gradient-to-r from-white to-white/70 bg-clip-text text-transparent">
+          <span className="text-xl font-bold font-display bg-gradient-to-r dark:from-white dark:to-white/70 from-slate-900 to-slate-700 bg-clip-text text-transparent">
             UPESphere
           </span>
         </div>
 
         {/* Card */}
-        <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.06] to-white/[0.02] backdrop-blur-md p-8 shadow-2xl">
+        <div className="rounded-2xl backdrop-blur-md p-8 shadow-2xl" style={{ background: `linear-gradient(135deg, var(--glass-from), var(--glass-to))`, border: '1px solid var(--glass-border)', boxShadow: 'var(--glass-shadow)' }}>
           <h1 className="text-2xl font-bold font-display text-center mb-1">
             {mode === 'signin' ? 'Welcome back' : 'Create account'}
           </h1>
@@ -65,9 +65,9 @@ export default function LoginPage() {
           </Button>
 
           <div className="flex items-center gap-3 mb-4">
-            <div className="flex-1 h-px bg-white/10" />
+            <div className="flex-1 h-px" style={{ background: 'var(--divider)' }} />
             <span className="text-xs text-muted-foreground">or</span>
-            <div className="flex-1 h-px bg-white/10" />
+            <div className="flex-1 h-px" style={{ background: 'var(--divider)' }} />
           </div>
 
           {/* Email form */}

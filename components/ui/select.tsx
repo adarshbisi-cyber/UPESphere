@@ -15,10 +15,10 @@ const SelectTrigger = React.forwardRef<
 >(({ className, children, ...props }, ref) => (
   <SelectPrimitive.Trigger
     ref={ref}
+    style={{ borderColor: 'var(--divider)', background: 'var(--muted-surface)' }}
     className={cn(
-      'flex h-10 w-full items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-foreground ring-offset-background placeholder:text-muted-foreground',
+      'flex h-10 w-full items-center justify-between rounded-xl border px-3 py-2 text-sm text-foreground ring-offset-background placeholder:text-muted-foreground',
       'focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50',
-      'hover:bg-white/8 hover:border-white/20',
       'disabled:cursor-not-allowed disabled:opacity-50',
       'transition-all duration-200',
       '[&>span]:line-clamp-1',
@@ -69,8 +69,9 @@ const SelectContent = React.forwardRef<
   <SelectPrimitive.Portal>
     <SelectPrimitive.Content
       ref={ref}
+      style={{ background: 'hsl(var(--card))', border: '1px solid var(--divider)' }}
       className={cn(
-        'relative z-50 max-h-96 min-w-[8rem] overflow-hidden rounded-xl border border-white/10 bg-[#0f0f1a] text-popover-foreground shadow-2xl',
+        'relative z-50 max-h-96 min-w-[8rem] overflow-hidden rounded-xl text-popover-foreground shadow-2xl backdrop-blur-md',
         'data-[state=open]:animate-in data-[state=closed]:animate-out',
         'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
         'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
@@ -140,7 +141,8 @@ const SelectSeparator = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <SelectPrimitive.Separator
     ref={ref}
-    className={cn('-mx-1 my-1 h-px bg-white/10', className)}
+    style={{ background: 'var(--divider)' }}
+    className={cn('-mx-1 my-1 h-px', className)}
     {...props}
   />
 ))

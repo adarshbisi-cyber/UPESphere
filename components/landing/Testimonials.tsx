@@ -90,7 +90,8 @@ export function Testimonials() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: i * 0.08 }}
-              className="rounded-2xl border border-white/8 bg-gradient-to-br from-white/[0.05] to-white/[0.02] p-6 hover:border-white/15 transition-colors duration-300"
+              className="rounded-2xl p-6 transition-colors duration-300"
+              style={{ background: `linear-gradient(135deg, var(--glass-from), var(--glass-to))`, border: '1px solid var(--glass-border)' }}
             >
               {/* Stars */}
               <div className="flex gap-1 mb-4">
@@ -108,7 +109,7 @@ export function Testimonials() {
                   {t.avatar}
                 </div>
                 <div>
-                  <div className="text-sm font-medium text-white">{t.name}</div>
+                  <div className="text-sm font-medium text-foreground">{t.name}</div>
                   <div className="text-xs text-muted-foreground">{t.role}</div>
                 </div>
               </div>

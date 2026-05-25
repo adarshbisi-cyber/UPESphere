@@ -87,7 +87,7 @@ function MiniGauge({ value }: { value: number }) {
     <div className="flex flex-col items-center">
       <svg viewBox="0 0 140 82" className="w-36">
         {/* Track */}
-        <path d="M 10 75 A 60 60 0 0 1 130 75" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth={11} strokeLinecap="round" />
+        <path d="M 10 75 A 60 60 0 0 1 130 75" fill="none" stroke="var(--ring-track)" strokeWidth={11} strokeLinecap="round" />
         {/* Fill */}
         <motion.path
           d="M 10 75 A 60 60 0 0 1 130 75"
@@ -101,7 +101,7 @@ function MiniGauge({ value }: { value: number }) {
           initial={{ strokeDashoffset: 100 }}
           transition={{ duration: 0.9, ease: 'easeOut' }}
         />
-        <text x="70" y="63" textAnchor="middle" fill="white" fontSize="20" fontWeight="bold" fontFamily="system-ui">
+        <text x="70" y="63" textAnchor="middle" fill="currentColor" fontSize="20" fontWeight="bold" fontFamily="system-ui">
           {value}%
         </text>
       </svg>
@@ -199,7 +199,7 @@ export function GPATargetCalculator() {
       <GlassCard className="overflow-hidden border-violet-500/15">
 
         {/* 3-column layout */}
-        <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-white/8">
+        <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-[var(--divider)]">
 
           {/* Left — animated orb */}
           <div className="flex items-center justify-center p-8 md:p-10">
@@ -249,7 +249,7 @@ export function GPATargetCalculator() {
                   exit={{ opacity: 0 }}
                   className="space-y-1"
                 >
-                  <p className="text-sm font-bold text-white">Stay consistent and aim high!</p>
+                  <p className="text-sm font-bold text-foreground">Stay consistent and aim high!</p>
                   <p className="text-sm text-muted-foreground leading-relaxed">
                     Achieving this GPA will help you reach
                   </p>
@@ -262,14 +262,14 @@ export function GPATargetCalculator() {
               {raw <= 0 && (
                 <motion.div key="done" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                   className="text-sm text-emerald-300 space-y-1">
-                  <p className="font-bold text-white">Target already achieved!</p>
+                  <p className="font-bold text-foreground">Target already achieved!</p>
                   <p>You've surpassed your CGPA goal. Consider setting a higher target.</p>
                 </motion.div>
               )}
               {raw > 10 && (
                 <motion.div key="impossible" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                   className="text-sm text-gray-300 space-y-1">
-                  <p className="font-bold text-white">Target out of reach.</p>
+                  <p className="font-bold text-foreground">Target out of reach.</p>
                   <p>Adjust your CGPA goal or enroll in more credits this semester.</p>
                 </motion.div>
               )}
@@ -280,10 +280,10 @@ export function GPATargetCalculator() {
         </div>
 
         {/* Tip bar */}
-        <div className="px-6 py-3.5 border-t border-white/8 bg-white/[0.025] flex items-start gap-2.5">
+        <div className="px-6 py-3.5 border-t border-[var(--divider)] bg-[var(--inner-surface)] flex items-start gap-2.5">
           <Lightbulb className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
           <p className="text-sm text-muted-foreground leading-relaxed">
-            <span className="text-white font-semibold">Tip: </span>{tip}
+            <span className="text-foreground font-semibold">Tip: </span>{tip}
           </p>
         </div>
 

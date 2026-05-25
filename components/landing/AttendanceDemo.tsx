@@ -37,12 +37,12 @@ export function AttendanceDemo() {
             transition={{ duration: 0.6 }}
             className="order-2 lg:order-1"
           >
-            <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.06] to-white/[0.02] backdrop-blur-sm p-8 shadow-2xl">
+            <div className="rounded-2xl backdrop-blur-sm p-8 shadow-2xl" style={{ background: `linear-gradient(135deg, var(--glass-from), var(--glass-to))`, border: '1px solid var(--glass-border)', boxShadow: 'var(--glass-shadow)' }}>
               {/* Circular gauge */}
               <div className="flex justify-center mb-8">
                 <div className="relative w-40 h-40">
                   <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
-                    <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="8" />
+                    <circle cx="50" cy="50" r="45" fill="none" stroke="var(--ring-track)" strokeWidth="8" />
                     <motion.circle
                       cx="50" cy="50" r="45" fill="none"
                       stroke="url(#attendanceGrad)"

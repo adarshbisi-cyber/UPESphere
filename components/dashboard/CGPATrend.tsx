@@ -14,13 +14,13 @@ const DEMO_DATA = [
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null
   return (
-    <div className="rounded-xl border border-white/10 bg-[#0f0f1a]/90 backdrop-blur-sm p-3 shadow-xl">
+    <div className="rounded-xl backdrop-blur-sm p-3 shadow-xl" style={{ background: 'hsl(var(--card))', border: '1px solid var(--divider)' }}>
       <p className="text-xs text-muted-foreground mb-2">{label}</p>
       {payload.map((entry: any) => (
         <div key={entry.name} className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
           <span className="text-xs text-muted-foreground capitalize">{entry.name}:</span>
-          <span className="text-xs font-semibold text-white">{entry.value}</span>
+          <span className="text-xs font-semibold text-foreground">{entry.value}</span>
         </div>
       ))}
     </div>
@@ -63,7 +63,7 @@ export function CGPATrend({ data = DEMO_DATA }: CGPATrendProps) {
                 <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--divider)" />
             <XAxis dataKey="semester" tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} />
             <YAxis domain={[6, 10]} tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} />
             <Tooltip content={<CustomTooltip />} />

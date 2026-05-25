@@ -3,29 +3,49 @@
 @tailwind utilities;
 
 @layer base {
+  /* ── Light mode (default) ───────────────────────────────────────── */
   :root {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
+    --background: 240 20% 98.5%;
+    --foreground: 240 10% 6%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 6%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 6%;
     --primary: 238 84% 67%;
     --primary-foreground: 0 0% 98%;
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 55%;
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
+    --secondary: 240 6% 94%;
+    --secondary-foreground: 240 10% 15%;
+    --muted: 240 6% 94%;
+    --muted-foreground: 240 4% 46%;
+    --accent: 240 6% 94%;
+    --accent-foreground: 240 10% 15%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
+    --border: 240 6% 90%;
+    --input: 240 6% 90%;
     --ring: 238 84% 67%;
     --radius: 0.75rem;
+
+    /* Glass surface tokens */
+    --glass-from: rgba(255, 255, 255, 0.88);
+    --glass-to: rgba(248, 248, 255, 0.72);
+    --glass-border: rgba(99, 102, 241, 0.14);
+    --glass-hover-border: rgba(99, 102, 241, 0.30);
+    --glass-shadow: 0 4px 24px rgba(99, 102, 241, 0.07), 0 1px 4px rgba(0, 0, 0, 0.05);
+    --divider: rgba(0, 0, 0, 0.07);
+    --inner-surface: rgba(0, 0, 0, 0.028);
+    --muted-surface: rgba(0, 0, 0, 0.04);
+    --ring-track: rgba(15, 23, 42, 0.15);
+
+    /* Scroll arrow button */
+    --arrow-btn-bg: radial-gradient(circle at 40% 35%, rgba(99,102,241,0.14) 0%, rgba(148,163,184,0.08) 60%, rgba(255,255,255,0.82) 100%);
+    --arrow-btn-border: rgba(99, 102, 241, 0.32);
+    --arrow-btn-shadow: 0 0 16px rgba(99,102,241,0.16), 0 4px 14px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.9);
+    --arrow-btn-glow: 0 0 18px rgba(99,102,241,0.22);
+    --arrow-icon-color: #4338ca;
   }
 
+  /* ── Dark mode ──────────────────────────────────────────────────── */
   .dark {
     --background: 240 10% 3.9%;
     --foreground: 0 0% 98%;
@@ -46,6 +66,24 @@
     --border: 240 3.7% 15.9%;
     --input: 240 3.7% 15.9%;
     --ring: 238 84% 67%;
+
+    /* Glass surface tokens */
+    --glass-from: rgba(255, 255, 255, 0.07);
+    --glass-to: rgba(255, 255, 255, 0.03);
+    --glass-border: rgba(255, 255, 255, 0.10);
+    --glass-hover-border: rgba(255, 255, 255, 0.20);
+    --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.04);
+    --divider: rgba(255, 255, 255, 0.08);
+    --inner-surface: rgba(255, 255, 255, 0.025);
+    --muted-surface: rgba(255, 255, 255, 0.05);
+    --ring-track: rgba(255, 255, 255, 0.12);
+
+    /* Scroll arrow button */
+    --arrow-btn-bg: radial-gradient(circle at 40% 35%, rgba(139,92,246,0.22) 0%, rgba(99,102,241,0.12) 60%, rgba(255,255,255,0.04) 100%);
+    --arrow-btn-border: rgba(139, 92, 246, 0.40);
+    --arrow-btn-shadow: 0 0 22px rgba(139,92,246,0.28), 0 4px 16px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.10);
+    --arrow-btn-glow: 0 0 26px rgba(139,92,246,0.40);
+    --arrow-icon-color: #c4b5fd;
   }
 }
 
@@ -56,12 +94,13 @@
   }
   body {
     @apply bg-background text-foreground antialiased;
-    background-color: #0a0a0f;
     font-feature-settings: "cv11", "salt";
     font-variant-ligatures: none;
+    transition: background-color 0.35s ease, color 0.2s ease;
   }
   html {
     scroll-behavior: smooth;
+    transition: background-color 0.35s ease;
   }
 }
 
@@ -71,11 +110,16 @@
   }
 
   .glass {
-    @apply bg-white/5 backdrop-blur-md border border-white/10;
+    @apply backdrop-blur-md border;
+    background: var(--glass-from);
+    border-color: var(--glass-border);
   }
 
   .glass-card {
-    @apply rounded-2xl bg-gradient-to-br from-white/[0.07] to-white/[0.03] backdrop-blur-md border border-white/10 shadow-2xl;
+    @apply rounded-2xl backdrop-blur-md shadow-2xl;
+    background: linear-gradient(135deg, var(--glass-from), var(--glass-to));
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
   }
 
   .gradient-text {
@@ -86,7 +130,61 @@
     background-size: 200% auto;
     animation: gradient-x 3s linear infinite;
   }
+
+  .theme-divider {
+    border-color: var(--divider);
+  }
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   LIGHT-MODE AUTO-FIX  — neutralise every hard-coded dark-glass
+   pattern without touching individual component files.
+   ══════════════════════════════════════════════════════════════════ */
+
+/* Borders */
+:root:not(.dark) .border-white\/5,
+:root:not(.dark) .border-white\/8,
+:root:not(.dark) .border-white\/10,
+:root:not(.dark) .border-white\/15,
+:root:not(.dark) .border-white\/20 { border-color: var(--divider) !important; }
+
+:root:not(.dark) .hover\:border-white\/15:hover,
+:root:not(.dark) .hover\:border-white\/20:hover { border-color: var(--glass-hover-border) !important; }
+
+/* Backgrounds */
+:root:not(.dark) .bg-white\/5,
+:root:not(.dark) .bg-white\/8,
+:root:not(.dark) .bg-white\/10,
+:root:not(.dark) .bg-white\/\[0\.02\],
+:root:not(.dark) .bg-white\/\[0\.025\],
+:root:not(.dark) .bg-white\/\[0\.03\],
+:root:not(.dark) .bg-white\/\[0\.04\],
+:root:not(.dark) .bg-white\/\[0\.05\],
+:root:not(.dark) .bg-white\/\[0\.06\],
+:root:not(.dark) .bg-white\/\[0\.07\],
+:root:not(.dark) .bg-white\/\[0\.08\] { background-color: var(--muted-surface) !important; }
+
+:root:not(.dark) .hover\:bg-white\/5:hover,
+:root:not(.dark) .hover\:bg-white\/8:hover,
+:root:not(.dark) .hover\:bg-white\/10:hover,
+:root:not(.dark) .hover\:bg-white\/\[0\.03\]:hover { background-color: var(--inner-surface) !important; }
+
+/* Dividers */
+:root:not(.dark) .divide-white\/8 > * + * { border-color: var(--divider) !important; }
+
+/* Hardcoded page/panel backgrounds */
+:root:not(.dark) .bg-\[#0a0a0f\] { background-color: hsl(var(--background)) !important; }
+:root:not(.dark) .bg-\[#0f0f1a\] { background-color: hsl(var(--card)) !important; }
+
+/* Gradient-glass card fills — remap tw gradient stops to CSS tokens */
+:root:not(.dark) .from-white\/\[0\.06\],
+:root:not(.dark) .from-white\/\[0\.07\] { --tw-gradient-from: var(--glass-from) !important; }
+:root:not(.dark) .to-white\/\[0\.02\],
+:root:not(.dark) .to-white\/\[0\.03\] { --tw-gradient-to: var(--glass-to) !important; }
+
+/* Soft shadow override — heavy black shadows look jarring on light bg */
+:root:not(.dark) .shadow-black\/50 { box-shadow: 0 8px 32px rgba(99,102,241,0.08), 0 1px 4px rgba(0,0,0,0.06) !important; }
+:root:not(.dark) .shadow-2xl { box-shadow: 0 4px 24px rgba(99,102,241,0.07), 0 1px 4px rgba(0,0,0,0.05) !important; }
 
 /* Custom scrollbar */
 ::-webkit-scrollbar {
@@ -97,17 +195,17 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--divider);
   border-radius: 100px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(99, 102, 241, 0.3);
 }
 
 /* Selection */
 ::selection {
-  background: rgba(99, 102, 241, 0.3);
-  color: white;
+  background: rgba(99, 102, 241, 0.25);
+  color: inherit;
 }
 
 /* Focus styles */

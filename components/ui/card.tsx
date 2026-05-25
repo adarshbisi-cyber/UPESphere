@@ -2,13 +2,11 @@ import * as React from 'react'
 import { cn } from '@/lib/utils'
 
 const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  ({ className, ...props }, ref) => (
+  ({ className, style, ...props }, ref) => (
     <div
       ref={ref}
-      className={cn(
-        'rounded-2xl border border-white/8 bg-white/[0.04] backdrop-blur-sm shadow-xl',
-        className
-      )}
+      className={cn('rounded-2xl backdrop-blur-sm shadow-xl', className)}
+      style={{ background: 'linear-gradient(135deg, var(--glass-from), var(--glass-to))', border: '1px solid var(--glass-border)', ...style }}
       {...props}
     />
   )
@@ -55,13 +53,19 @@ const CardFooter = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDiv
 CardFooter.displayName = 'CardFooter'
 
 const GlassCard = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  ({ className, ...props }, ref) => (
+  ({ className, style, ...props }, ref) => (
     <div
       ref={ref}
       className={cn(
-        'rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.07] to-white/[0.03] backdrop-blur-md shadow-2xl transition-all duration-300 hover:border-white/20 hover:shadow-indigo-500/10 hover:shadow-2xl',
+        'rounded-2xl backdrop-blur-md transition-all duration-300',
         className
       )}
+      style={{
+        background: `linear-gradient(135deg, var(--glass-from), var(--glass-to))`,
+        border: '1px solid var(--glass-border)',
+        boxShadow: 'var(--glass-shadow)',
+        ...style,
+      }}
       {...props}
     />
   )

@@ -23,7 +23,7 @@ const DEFAULT_SEMESTERS: Semester[] = [
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null
   return (
-    <div className="rounded-xl border border-white/10 bg-[#0f0f1a]/90 backdrop-blur-sm p-3 shadow-xl">
+    <div className="rounded-xl backdrop-blur-sm p-3 shadow-xl" style={{ background: 'hsl(var(--card))', border: '1px solid var(--divider)' }}>
       <p className="text-xs text-muted-foreground mb-1">{label}</p>
       <p className="text-sm font-semibold text-indigo-300">{payload[0].value} SGPA</p>
     </div>
@@ -132,7 +132,7 @@ export function CGPACalculator() {
               variant="ghost"
               size="sm"
               onClick={addSemester}
-              className="w-full mt-3 gap-2 border border-dashed border-white/10 hover:border-violet-500/40"
+              className="w-full mt-3 gap-2 border border-dashed border-[var(--divider)] hover:border-violet-500/40"
             >
               <Plus className="w-4 h-4" /> Add Semester
             </Button>
@@ -154,15 +154,15 @@ export function CGPACalculator() {
             </motion.div>
             <div className="mt-3 flex items-center justify-center gap-3 text-sm">
               <div className="text-center">
-                <div className="text-white/80 font-medium">{result.percentageEquivalent}%</div>
+                <div className="text-foreground/80 font-medium">{result.percentageEquivalent}%</div>
                 <div className="text-xs text-muted-foreground">Equivalent</div>
               </div>
-              <div className="w-px h-8 bg-white/10" />
+              <div className="w-px h-8" style={{ background: 'var(--divider)' }} />
               <div className="text-center">
-                <div className="text-white/80 font-medium">{result.semesterCount}</div>
+                <div className="text-foreground/80 font-medium">{result.semesterCount}</div>
                 <div className="text-xs text-muted-foreground">Semesters</div>
               </div>
-              <div className="w-px h-8 bg-white/10" />
+              <div className="w-px h-8" style={{ background: 'var(--divider)' }} />
               <div className="text-center">
                 <div className={`font-medium flex items-center gap-1 justify-center ${trendColor}`}>
                   <TrendIcon className="w-3.5 h-3.5" />
@@ -197,7 +197,7 @@ export function CGPACalculator() {
           <div className="h-52">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--divider)" />
                 <XAxis dataKey="name" tick={{ fill: '#6b7280', fontSize: 12 }} axisLine={false} tickLine={false} />
                 <YAxis domain={[0, 10]} tick={{ fill: '#6b7280', fontSize: 12 }} axisLine={false} tickLine={false} />
                 <Tooltip content={<CustomTooltip />} />

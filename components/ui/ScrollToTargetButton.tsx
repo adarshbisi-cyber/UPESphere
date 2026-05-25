@@ -41,27 +41,32 @@ export function ScrollToTargetButton({ targetId }: ScrollToTargetButtonProps) {
         >
           <motion.button
             onClick={handleClick}
-            aria-label="Scroll to Semester GPA Target Calculator"
+            aria-label="Scroll to calculator"
             animate={{ y: [0, -6, 0] }}
-            transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-            whileHover={{ scale: 1.12 }}
-            whileTap={{ scale: 0.9 }}
-            className="relative w-12 h-12 rounded-full flex items-center justify-center cursor-pointer select-none"
+            transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.88 }}
+            className="relative w-12 h-12 rounded-full flex items-center justify-center cursor-pointer select-none transition-shadow duration-300"
             style={{
-              background: 'radial-gradient(circle at 40% 35%, rgba(139,92,246,0.22) 0%, rgba(99,102,241,0.12) 60%, rgba(255,255,255,0.04) 100%)',
-              border: '1px solid rgba(139,92,246,0.38)',
-              boxShadow: '0 0 20px rgba(139,92,246,0.22), 0 4px 16px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08)',
-              backdropFilter: 'blur(14px)',
+              background: 'var(--arrow-btn-bg)',
+              border: '1px solid var(--arrow-btn-border)',
+              boxShadow: 'var(--arrow-btn-shadow)',
+              backdropFilter: 'blur(16px)',
+              WebkitBackdropFilter: 'blur(16px)',
             }}
           >
             {/* Pulsing glow ring */}
             <motion.span
-              className="absolute inset-0 rounded-full"
-              animate={{ opacity: [0.35, 0.7, 0.35] }}
-              transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
-              style={{ boxShadow: '0 0 24px rgba(139,92,246,0.35)' }}
+              className="absolute inset-0 rounded-full pointer-events-none"
+              animate={{ opacity: [0.3, 0.65, 0.3] }}
+              transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
+              style={{ boxShadow: 'var(--arrow-btn-glow)' }}
             />
-            <ChevronDown className="w-5 h-5 text-violet-300 relative z-10" strokeWidth={2.5} />
+            <ChevronDown
+              className="relative z-10"
+              style={{ color: 'var(--arrow-icon-color)', width: 20, height: 20 }}
+              strokeWidth={2.5}
+            />
           </motion.button>
         </motion.div>
       )}

@@ -66,13 +66,14 @@ export function FAQ() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: i * 0.05 }}
-              className="rounded-2xl border border-white/8 bg-white/[0.03] overflow-hidden"
+              className="rounded-2xl overflow-hidden"
+              style={{ background: `linear-gradient(135deg, var(--glass-from), var(--glass-to))`, border: '1px solid var(--glass-border)' }}
             >
               <button
                 onClick={() => setOpen(open === i ? null : i)}
                 className="w-full flex items-center justify-between p-5 text-left hover:bg-white/[0.03] transition-colors"
               >
-                <span className="font-medium text-white/90 pr-4">{faq.q}</span>
+                <span className="font-medium text-foreground pr-4">{faq.q}</span>
                 <motion.div
                   animate={{ rotate: open === i ? 180 : 0 }}
                   transition={{ duration: 0.2 }}
@@ -88,7 +89,7 @@ export function FAQ() {
                     exit={{ height: 0, opacity: 0 }}
                     transition={{ duration: 0.2 }}
                   >
-                    <div className="px-5 pb-5 text-sm text-muted-foreground leading-relaxed border-t border-white/5 pt-4">
+                    <div className="px-5 pb-5 text-sm text-muted-foreground leading-relaxed border-t border-[var(--divider)] pt-4">
                       {faq.a}
                     </div>
                   </motion.div>

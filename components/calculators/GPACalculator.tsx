@@ -155,17 +155,17 @@ export function GPACalculator() {
               variant="ghost"
               size="sm"
               onClick={addSubject}
-              className="w-full mt-3 gap-2 border border-dashed border-white/10 hover:border-indigo-500/40"
+              className="w-full mt-3 gap-2 border border-dashed border-[var(--divider)] hover:border-indigo-500/40"
             >
               <Plus className="w-4 h-4" /> Add Subject
             </Button>
 
             {/* Grade reference */}
-            <div className="mt-6 pt-5 border-t border-white/8">
+            <div className="mt-6 pt-5 border-t border-[var(--divider)]">
               <p className="text-xs text-muted-foreground mb-3 font-medium">Grade Reference</p>
               <div className="flex flex-wrap gap-2">
                 {Object.entries(GRADE_POINTS_10).map(([g, pts]) => (
-                  <div key={g} className={`flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white/5 text-xs ${GRADE_COLOR[g] || 'text-muted-foreground'}`}>
+                  <div key={g} className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs ${GRADE_COLOR[g] || 'text-muted-foreground'}`} style={{ background: 'var(--muted-surface)' }}>
                     <span className="font-semibold">{g}</span>
                     <span className="text-muted-foreground">= {pts}</span>
                   </div>
@@ -191,17 +191,17 @@ export function GPACalculator() {
             </motion.div>
             <div className="mt-3 flex items-center justify-center gap-3 text-sm">
               <div className="text-center">
-                <div className="text-white/80 font-medium">{result.percentageEquivalent}%</div>
+                <div className="text-foreground/80 font-medium">{result.percentageEquivalent}%</div>
                 <div className="text-xs text-muted-foreground">Equivalent</div>
               </div>
-              <div className="w-px h-8 bg-white/10" />
+              <div className="w-px h-8 bg-[var(--divider)]" />
               <div className="text-center">
-                <div className="text-white/80 font-medium">{result.totalCredits}</div>
+                <div className="text-foreground/80 font-medium">{result.totalCredits}</div>
                 <div className="text-xs text-muted-foreground">Credits</div>
               </div>
-              <div className="w-px h-8 bg-white/10" />
+              <div className="w-px h-8 bg-[var(--divider)]" />
               <div className="text-center">
-                <div className="text-white/80 font-medium">{result.gradePoints.toFixed(1)}</div>
+                <div className="text-foreground/80 font-medium">{result.gradePoints.toFixed(1)}</div>
                 <div className="text-xs text-muted-foreground">Grade Pts</div>
               </div>
             </div>
@@ -220,8 +220,8 @@ export function GPACalculator() {
                 const active = result.sgpa >= band.min
                 return (
                   <div key={band.label} className="flex items-center gap-3">
-                    <div className={`w-2 h-2 rounded-full ${active ? band.color : 'bg-white/10'}`} />
-                    <span className={`text-sm ${active ? 'text-white' : 'text-muted-foreground/40'}`}>{band.label}</span>
+                    <div className={`w-2 h-2 rounded-full ${active ? band.color : 'bg-foreground/10'}`} />
+                    <span className={`text-sm ${active ? 'text-foreground' : 'text-muted-foreground/40'}`}>{band.label}</span>
                     {active && <Badge variant="indigo" className="ml-auto text-xs py-0">✓</Badge>}
                   </div>
                 )

@@ -9,13 +9,14 @@ const Tabs = TabsPrimitive.Root
 const TabsList = React.forwardRef<
   React.ElementRef<typeof TabsPrimitive.List>,
   React.ComponentPropsWithoutRef<typeof TabsPrimitive.List>
->(({ className, ...props }, ref) => (
+>(({ className, style, ...props }, ref) => (
   <TabsPrimitive.List
     ref={ref}
     className={cn(
-      'inline-flex h-11 items-center justify-center rounded-xl bg-white/5 border border-white/8 p-1 text-muted-foreground',
+      'inline-flex h-11 items-center justify-center rounded-xl p-1 text-muted-foreground',
       className
     )}
+    style={{ background: 'var(--muted-surface)', border: '1px solid var(--divider)', ...style }}
     {...props}
   />
 ))
@@ -32,7 +33,7 @@ const TabsTrigger = React.forwardRef<
       'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
       'disabled:pointer-events-none disabled:opacity-50',
       'data-[state=active]:bg-gradient-to-r data-[state=active]:from-indigo-500 data-[state=active]:to-violet-500 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-indigo-500/25',
-      'hover:text-foreground hover:bg-white/5',
+      'hover:text-foreground hover:bg-accent',
       className
     )}
     {...props}

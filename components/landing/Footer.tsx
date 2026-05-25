@@ -18,7 +18,7 @@ const links = {
 
 export function Footer() {
   return (
-    <footer className="border-t border-white/8 bg-[#0a0a0f]">
+    <footer className="border-t border-border bg-background">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
           {/* Brand */}
@@ -27,7 +27,7 @@ export function Footer() {
               <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-violet-500 rounded-lg flex items-center justify-center">
                 <GraduationCap className="w-5 h-5 text-white" />
               </div>
-              <span className="text-lg font-bold font-display bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent">
+              <span className="text-lg font-bold font-display bg-gradient-to-r dark:from-white dark:to-white/60 from-slate-900 to-slate-600 bg-clip-text text-transparent">
                 UPESphere
               </span>
             </Link>
@@ -35,10 +35,10 @@ export function Footer() {
               The smartest academic companion for Indian students. Track GPA, CGPA, attendance, and unlock your academic potential.
             </p>
             <div className="flex items-center gap-3 mt-6">
-              <a href="#" className="p-2 rounded-lg border border-white/10 text-muted-foreground hover:text-foreground hover:border-white/20 transition-colors">
+              <a href="#" className="p-2 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors">
                 <Github className="w-4 h-4" />
               </a>
-              <a href="#" className="p-2 rounded-lg border border-white/10 text-muted-foreground hover:text-foreground hover:border-white/20 transition-colors">
+              <a href="#" className="p-2 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors">
                 <Twitter className="w-4 h-4" />
               </a>
             </div>
@@ -47,7 +47,7 @@ export function Footer() {
           {/* Link groups */}
           {Object.entries(links).map(([title, items]) => (
             <div key={title}>
-              <h3 className="text-sm font-semibold text-white/80 mb-4 tracking-wider uppercase">{title}</h3>
+              <h3 className="text-sm font-semibold text-foreground/70 mb-4 tracking-wider uppercase">{title}</h3>
               <ul className="space-y-3">
                 {items.map(item => (
                   <li key={item.label}>
@@ -61,7 +61,7 @@ export function Footer() {
           ))}
         </div>
 
-        <div className="mt-12 pt-8 border-t border-white/8 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="mt-12 pt-8 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-sm text-muted-foreground">
             © {new Date().getFullYear()} UPESphere. Built for students, by{' '}
             <a

@@ -28,7 +28,7 @@ const toastVariants = cva(
   {
     variants: {
       variant: {
-        default: 'border-white/10 bg-[#0f0f1a]/90 backdrop-blur-md text-foreground',
+        default: 'backdrop-blur-md text-foreground',
         destructive: 'border-red-500/30 bg-red-950/80 backdrop-blur-md text-red-200',
         success: 'border-emerald-500/30 bg-emerald-950/80 backdrop-blur-md text-emerald-200',
       },
@@ -41,10 +41,11 @@ const Toast = React.forwardRef<
   React.ElementRef<typeof ToastPrimitive.Root>,
   React.ComponentPropsWithoutRef<typeof ToastPrimitive.Root> &
     VariantProps<typeof toastVariants>
->(({ className, variant, ...props }, ref) => (
+>(({ className, variant, style, ...props }, ref) => (
   <ToastPrimitive.Root
     ref={ref}
     className={cn(toastVariants({ variant }), className)}
+    style={!variant || variant === 'default' ? { background: 'hsl(var(--card))', border: '1px solid var(--divider)', ...style } : style}
     {...props}
   />
 ))
@@ -57,7 +58,7 @@ const ToastAction = React.forwardRef<
   <ToastPrimitive.Action
     ref={ref}
     className={cn(
-      'inline-flex h-8 shrink-0 items-center justify-center rounded-md border border-white/20 bg-transparent px-3 text-sm font-medium ring-offset-background transition-colors hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none disabled:opacity-50',
+      'inline-flex h-8 shrink-0 items-center justify-center rounded-md border border-border bg-transparent px-3 text-sm font-medium ring-offset-background transition-colors hover:bg-accent focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none disabled:opacity-50',
       className
     )}
     {...props}
