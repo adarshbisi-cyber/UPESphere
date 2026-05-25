@@ -2,7 +2,8 @@ import type { Metadata } from 'next'
 import { Navbar } from '@/components/shared/Navbar'
 import { GPACalculator } from '@/components/calculators/GPACalculator'
 import { GPATargetCalculator } from '@/components/calculators/GPATargetCalculator'
-import { Target } from 'lucide-react'
+import { Target, Calculator } from 'lucide-react'
+import { ScrollToTargetButton } from '@/components/ui/ScrollToTargetButton'
 
 export const metadata: Metadata = {
   title: 'GPA Calculator',
@@ -20,15 +21,37 @@ export default function GPAPage() {
     <main className="min-h-screen bg-[#0a0a0f] text-white">
       <Navbar />
       <div className="pt-24 pb-16 px-4 sm:px-6 lg:px-8">
+        {/* ── GPA Calculator heading ───────────────────────────────────── */}
+        <div className="relative max-w-3xl mx-auto text-center pt-4 pb-10">
+          <div className="flex justify-center mb-5">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-600/30 to-violet-600/20 border border-indigo-500/25 flex items-center justify-center shadow-lg shadow-indigo-500/10">
+              <Calculator className="w-7 h-7 text-indigo-300" />
+            </div>
+          </div>
+          <h1 className="text-5xl sm:text-6xl font-bold font-display tracking-tight mb-5 leading-[1.1]">
+            Semester{' '}
+            <span
+              className="bg-clip-text text-transparent"
+              style={{ backgroundImage: 'linear-gradient(135deg, #818cf8 0%, #a78bfa 50%, #22d3ee 100%)' }}
+            >
+              GPA
+            </span>
+            {' '}Calculator
+          </h1>
+          <p className="text-lg text-muted-foreground max-w-xl mx-auto leading-relaxed">
+            Add subjects, select grades, and get your SGPA instantly. Supports all major Indian university grading systems.
+          </p>
+        </div>
+
         <div className="max-w-5xl mx-auto">
           <GPACalculator />
         </div>
 
-        {/* ── Section bridge ───────────────────────────────────────────── */}
-        <div className="relative mt-8">
+        {/* ── Scroll arrow ─────────────────────────────────────────────── */}
+        <ScrollToTargetButton targetId="gpa-target-section" />
 
-          {/* Hairline gradient rule */}
-          <div className="h-px bg-gradient-to-r from-transparent via-violet-500/30 to-transparent" />
+        {/* ── Target Calculator section ─────────────────────────────────── */}
+        <div id="gpa-target-section" className="relative scroll-mt-20">
 
           {/* Ambient glow */}
           <div
@@ -37,7 +60,7 @@ export default function GPAPage() {
           />
 
           {/* Section heading */}
-          <div className="relative max-w-3xl mx-auto text-center pt-14 pb-10">
+          <div className="relative max-w-3xl mx-auto text-center pt-10 pb-10">
 
             {/* Centered icon */}
             <div className="flex justify-center mb-5">
