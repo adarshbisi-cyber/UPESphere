@@ -4,6 +4,7 @@ import { useState, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Upload, X, Sparkles, AlertTriangle, RotateCcw, Check, Zap,
+  ImagePlus, CheckCircle2, Loader2, Circle,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { generateId } from '@/lib/utils'
@@ -11,7 +12,15 @@ import type { Subject } from '@/types'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type ScannerState = 'idle' | 'scanning' | 'preview' | 'error'
+type ScannerState = 'idle' | 'queued' | 'scanning' | 'preview' | 'error'
+type FileStatus = 'pending' | 'scanning' | 'done' | 'error'
+
+interface UploadedFile {
+  id: string
+  file: File
+  preview: string
+  status: FileStatus
+}
 
 interface ParsedSubject {
   id: string
@@ -23,20 +32,42 @@ interface ParsedSubject {
 
 // ─── OCR Text Parser ──────────────────────────────────────────────────────────
 
-// Matches ERP-style course codes: DIGM7004_3, HRES7029_2, CS301, BCA-101
-// Deliberately no `i` flag — codes are ALL-CAPS; avoids eating "IoT" or "AI" in real names
 const CODE_RE = /[A-Z]{2,8}-?\d+[_-]?\d*/
 
+const TRAILING_TYPE_RE = new RegExp(
+  '\\s+(' +
+  [
+    'Non[\\s-]Time[\\s-]Table',
+    'Open\\s+Elective',
+    'Professional\\s+Elective',
+    'Project\\s+Work',
+    'Community\\s+Service',
+    'Audit\\s+Course',
+    'Value\\s+Added',
+    'Dissertation',
+    'Internship',
+    'Elective',
+    'Tutorial',
+    'Seminar',
+    'Core',
+    'Lab',
+  ].join('|') +
+  ')\\s*$',
+  'i'
+)
+
 function cleanCourseName(raw: string): string {
-  return raw
-    .replace(new RegExp(`^${CODE_RE.source}\\s+`), '')          // leading code
-    .replace(new RegExp(`\\s*\\(${CODE_RE.source}\\)\\s*`, 'g'), ' ') // (bracketed) codes
-    .replace(new RegExp(`\\s+${CODE_RE.source}$`), '')           // trailing code
-    .replace(/^\d{1,3}[\s.)]+/, '')                              // leading row numbers
-    .replace(/\|/g, '')                                          // pipe artifacts
-    .replace(/_+/g, ' ')                                         // leftover underscores
-    .replace(/\s{2,}/g, ' ')                                     // collapse spaces
+  const step1 = raw
+    .replace(new RegExp(`^${CODE_RE.source}\\s+`), '')
+    .replace(new RegExp(`\\s*\\(${CODE_RE.source}\\)\\s*`, 'g'), ' ')
+    .replace(new RegExp(`\\s+${CODE_RE.source}$`), '')
+    .replace(/^\d{1,3}[\s.)]+/, '')
+    .replace(/\|/g, '')
+    .replace(/_+/g, ' ')
+    .replace(/\s{2,}/g, ' ')
     .trim()
+  const step2 = step1.replace(TRAILING_TYPE_RE, '').trim()
+  return step2.length >= 3 ? step2 : step1
 }
 
 const SKIP_PATTERNS = [
@@ -46,24 +77,21 @@ const SKIP_PATTERNS = [
   /^(page\s*\d|www\.|http)/i,
 ]
 
-function parseSubjectsFromOCR(rawText: string): ParsedSubject[] {
+function parseSubjectsFromOCR(rawText: string, seen: Set<string>): ParsedSubject[] {
   const lines = rawText
     .split('\n')
     .map(l => l.trim().replace(/\s+/g, ' '))
     .filter(l => l.length >= 4)
 
-  const seen = new Set<string>()
   const results: ParsedSubject[] = []
 
   const addResult = (name: string, credits: number, confidence: 'high' | 'low') => {
     const cleaned = cleanCourseName(name)
-
     const key = cleaned.toLowerCase().replace(/\s+/g, '')
     if (
       cleaned.length >= 3 &&
       /[a-zA-Z]{2,}/.test(cleaned) &&
-      credits >= 1 &&
-      credits <= 9 &&
+      credits >= 1 && credits <= 9 &&
       !seen.has(key)
     ) {
       seen.add(key)
@@ -71,31 +99,33 @@ function parseSubjectsFromOCR(rawText: string): ParsedSubject[] {
     }
   }
 
-  // Pass 1 — credit at end of line (most common in Indian ERP/curriculum tables)
   for (const line of lines) {
     if (SKIP_PATTERNS.some(p => p.test(line))) continue
-
-    // "Machine Learning   4" or "Machine Learning 3.0"
     const m = line.match(/^(.+?)\s+(\d(?:\.0)?)\s*$/)
-    if (m) {
-      const credit = parseFloat(m[2])
-      addResult(m[1], Math.round(credit), 'high')
-    }
+    if (m) addResult(m[1], Math.round(parseFloat(m[2])), 'high')
   }
 
-  // Pass 2 — looser match if pass 1 yielded < 2 subjects
   if (results.length < 2) {
     for (const line of lines) {
       if (SKIP_PATTERNS.some(p => p.test(line))) continue
-      // find first standalone digit 1-9 anywhere in the line
       const m = line.match(/([A-Za-z][A-Za-z\s&,:()\-–]{3,60}?)\s+(\d)\b/)
-      if (m) {
-        addResult(m[1], parseInt(m[2]), 'low')
-      }
+      if (m) addResult(m[1], parseInt(m[2]), 'low')
     }
   }
 
   return results.slice(0, 20)
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+const MAX_FILES = 10
+
+function readAsDataURL(file: File): Promise<string> {
+  return new Promise(resolve => {
+    const reader = new FileReader()
+    reader.onload = e => resolve(e.target?.result as string)
+    reader.readAsDataURL(file)
+  })
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -107,17 +137,156 @@ export interface CurriculumScannerProps {
 
 export function CurriculumScanner({ onImport, onClose }: CurriculumScannerProps) {
   const [state, setState] = useState<ScannerState>('idle')
-  const [progress, setProgress] = useState(0)
-  const [progressMsg, setProgressMsg] = useState('Initializing…')
-  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [files, setFiles] = useState<UploadedFile[]>([])
+  const [currentIdx, setCurrentIdx] = useState(0)
+  const [overallPct, setOverallPct] = useState(0)
+  const [progressMsg, setProgressMsg] = useState('')
+  const [currentPreview, setCurrentPreview] = useState<string | null>(null)
   const [parsed, setParsed] = useState<ParsedSubject[]>([])
   const [errorMsg, setErrorMsg] = useState('')
   const [isDragging, setIsDragging] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
+  const addMoreRef = useRef<HTMLInputElement>(null)
 
   const selectedCount = parsed.filter(s => s.selected).length
-  const hasLowConf = parsed.some(s => s.confidence === 'low')
   const totalCredits = parsed.filter(s => s.selected).reduce((a, s) => a + s.credits, 0)
+  const hasLowConf = parsed.some(s => s.confidence === 'low')
+
+  // ── File management ────────────────────────────────────────────────────────
+
+  const addFiles = useCallback(async (incoming: FileList | File[]) => {
+    const arr = Array.from(incoming).filter(f => f.type.startsWith('image/'))
+    if (arr.length === 0) return
+
+    const next: UploadedFile[] = await Promise.all(
+      arr.slice(0, MAX_FILES).map(async f => ({
+        id: generateId(),
+        file: f,
+        preview: await readAsDataURL(f),
+        status: 'pending' as FileStatus,
+      }))
+    )
+
+    setFiles(prev => {
+      const combined = [...prev, ...next]
+      return combined.slice(0, MAX_FILES)
+    })
+    setState('queued')
+  }, [])
+
+  const removeFile = (id: string) => {
+    setFiles(prev => {
+      const next = prev.filter(f => f.id !== id)
+      if (next.length === 0) setState('idle')
+      return next
+    })
+  }
+
+  // ── OCR processing ─────────────────────────────────────────────────────────
+
+  const startScan = useCallback(async () => {
+    setState('scanning')
+    setOverallPct(0)
+    setCurrentIdx(0)
+
+    const snap = [...files]
+    const seen = new Set<string>()
+    const allParsed: ParsedSubject[] = []
+
+    try {
+      const { createWorker } = await import('tesseract.js')
+
+      // Create one worker, reuse for all files (language data cached after first load)
+      let workerReady = false
+
+      const worker = await createWorker('eng', 1, {
+        logger: (m: { status: string; progress: number }) => {
+          const s = m.status
+          if (!workerReady) {
+            if (s === 'loading tesseract core')            setProgressMsg('Loading AI engine…')
+            else if (s === 'loading language traineddata') setProgressMsg('Loading language model…')
+            else if (s === 'initializing api')             setProgressMsg('Preparing scanner…')
+          }
+        },
+      })
+      workerReady = true
+
+      for (let i = 0; i < snap.length; i++) {
+        const uf = snap[i]
+        setCurrentIdx(i)
+        setCurrentPreview(uf.preview)
+        setProgressMsg(`Scanning screenshot ${i + 1} of ${snap.length}…`)
+        setFiles(prev => prev.map(f => f.id === uf.id ? { ...f, status: 'scanning' } : f))
+
+        const filePct = (i / snap.length) * 100
+        const sliceSize = 100 / snap.length
+
+        // Inline progress reporter for this file's recognition
+        let lastPct = filePct
+        const recognizeWithProgress = async () => {
+          // Patch logger temporarily
+          const origLogger = (m: { status: string; progress: number }) => {
+            if (m.status === 'recognizing text') {
+              const pct = Math.round(filePct + m.progress * sliceSize)
+              lastPct = pct
+              setOverallPct(pct)
+            }
+          }
+          // Tesseract v7 doesn't support per-recognize logger easily,
+          // so we animate the progress bar manually during recognition
+          const progressInterval = setInterval(() => {
+            lastPct = Math.min(lastPct + 1, filePct + sliceSize * 0.9)
+            setOverallPct(Math.round(lastPct))
+          }, 120)
+
+          const result = await worker.recognize(uf.file)
+          clearInterval(progressInterval)
+          return result
+        }
+
+        try {
+          const { data } = await recognizeWithProgress()
+          const subjects = parseSubjectsFromOCR(data.text, seen)
+          allParsed.push(...subjects)
+          setFiles(prev => prev.map(f => f.id === uf.id ? { ...f, status: 'done' } : f))
+        } catch {
+          setFiles(prev => prev.map(f => f.id === uf.id ? { ...f, status: 'error' } : f))
+        }
+
+        setOverallPct(Math.round(((i + 1) / snap.length) * 100))
+      }
+
+      await worker.terminate()
+
+    } catch {
+      setErrorMsg('OCR engine failed to load. Please check your connection and try again.')
+      setState('error')
+      return
+    }
+
+    if (allParsed.length === 0) {
+      setErrorMsg(
+        snap.length > 1
+          ? 'No subjects detected in any screenshot. Make sure your images show a clear curriculum table with a credit column.'
+          : 'No subjects detected. Try a higher-resolution screenshot with a visible credit column.'
+      )
+      setState('error')
+      return
+    }
+
+    setParsed(allParsed)
+    setState('preview')
+  }, [files])
+
+  // ── Drag & drop ────────────────────────────────────────────────────────────
+
+  const onDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(false)
+    addFiles(e.dataTransfer.files)
+  }, [addFiles])
+
+  // ── Actions ────────────────────────────────────────────────────────────────
 
   const toggle = (id: string) =>
     setParsed(p => p.map(s => s.id === id ? { ...s, selected: !s.selected } : s))
@@ -136,87 +305,33 @@ export function CurriculumScanner({ onImport, onClose }: CurriculumScannerProps)
 
   const reset = () => {
     setState('idle')
-    setProgress(0)
-    setImagePreview(null)
+    setFiles([])
+    setOverallPct(0)
+    setCurrentPreview(null)
     setParsed([])
     setErrorMsg('')
   }
 
-  const processFile = useCallback(async (file: File) => {
-    if (!file.type.startsWith('image/')) {
-      if (file.type === 'application/pdf') {
-        setErrorMsg('PDF upload is coming soon. Please upload a screenshot of your curriculum instead.')
-      } else {
-        setErrorMsg('Please upload a PNG, JPG, or JPEG image.')
-      }
-      setState('error')
-      return
-    }
+  // ── Status icon for file list ──────────────────────────────────────────────
 
-    const reader = new FileReader()
-    reader.onload = e => setImagePreview(e.target?.result as string)
-    reader.readAsDataURL(file)
+  function FileStatusIcon({ status }: { status: FileStatus }) {
+    if (status === 'done')    return <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+    if (status === 'error')   return <AlertTriangle className="w-3.5 h-3.5 text-red-400" />
+    if (status === 'scanning')return (
+      <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}>
+        <Loader2 className="w-3.5 h-3.5 text-indigo-400" />
+      </motion.div>
+    )
+    return <Circle className="w-3.5 h-3.5 text-muted-foreground/30" />
+  }
 
-    setState('scanning')
-    setProgress(5)
-
-    try {
-      const { createWorker } = await import('tesseract.js')
-
-      const worker = await createWorker('eng', 1, {
-        logger: (m: { status: string; progress: number }) => {
-          const s = m.status
-          if (s === 'loading tesseract core')         { setProgressMsg('Loading AI engine…');       setProgress(10) }
-          else if (s === 'initializing tesseract')    { setProgressMsg('Initializing OCR…');        setProgress(22) }
-          else if (s === 'loading language traineddata') { setProgressMsg('Loading language model…'); setProgress(38) }
-          else if (s === 'loaded language traineddata')  { setProgress(50) }
-          else if (s === 'initializing api')          { setProgressMsg('Preparing scanner…');       setProgress(55) }
-          else if (s === 'recognizing text')          {
-            setProgressMsg('Scanning curriculum…')
-            setProgress(55 + Math.round(m.progress * 40))
-          }
-        },
-      })
-
-      const { data } = await worker.recognize(file)
-      await worker.terminate()
-
-      setProgress(100)
-      setProgressMsg('Parsing subjects…')
-
-      const subjects = parseSubjectsFromOCR(data.text)
-
-      if (subjects.length === 0) {
-        setErrorMsg(
-          "No subjects detected. Make sure your image has a clear table with a credit column, or try a higher-resolution screenshot."
-        )
-        setState('error')
-        return
-      }
-
-      setParsed(subjects)
-      setState('preview')
-    } catch {
-      setErrorMsg('OCR failed. Please try again with a clearer, higher-contrast image.')
-      setState('error')
-    }
-  }, [])
-
-  const onDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(false)
-    const file = e.dataTransfer.files[0]
-    if (file) processFile(file)
-  }, [processFile])
+  // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop */}
       <motion.div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         onClick={onClose}
       />
 
@@ -225,7 +340,7 @@ export function CurriculumScanner({ onImport, onClose }: CurriculumScannerProps)
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.96, y: 18 }}
         transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-        className="relative w-full max-w-[440px]"
+        className="relative w-full max-w-[480px]"
         onClick={e => e.stopPropagation()}
       >
         <div
@@ -237,7 +352,7 @@ export function CurriculumScanner({ onImport, onClose }: CurriculumScannerProps)
             backdropFilter: 'blur(24px)',
           }}
         >
-          {/* ── Header ───────────────────────────────────────────── */}
+          {/* ── Header ─────────────────────────────────────────── */}
           <div className="flex items-center justify-between px-6 pt-5 pb-4">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500/25 to-indigo-500/20 border border-violet-500/30 flex items-center justify-center shrink-0">
@@ -245,7 +360,13 @@ export function CurriculumScanner({ onImport, onClose }: CurriculumScannerProps)
               </div>
               <div>
                 <h3 className="text-sm font-bold font-display leading-tight">AI Curriculum Scanner</h3>
-                <p className="text-[11px] text-muted-foreground">Upload once, fill automatically</p>
+                <p className="text-[11px] text-muted-foreground">
+                  {state === 'idle'    && 'Upload screenshots, fill automatically'}
+                  {state === 'queued'  && `${files.length} screenshot${files.length !== 1 ? 's' : ''} ready to scan`}
+                  {state === 'scanning'&& `Scanning ${currentIdx + 1} of ${files.length}…`}
+                  {state === 'preview' && `${parsed.length} subjects extracted`}
+                  {state === 'error'   && 'Scan failed'}
+                </p>
               </div>
             </div>
             <button
@@ -268,7 +389,7 @@ export function CurriculumScanner({ onImport, onClose }: CurriculumScannerProps)
                     onDragLeave={() => setIsDragging(false)}
                     onDrop={onDrop}
                     onClick={() => fileRef.current?.click()}
-                    className="relative rounded-xl border-2 border-dashed p-9 text-center cursor-pointer transition-all duration-200 select-none"
+                    className="relative rounded-xl border-2 border-dashed p-9 text-center cursor-pointer select-none transition-all duration-200"
                     style={{
                       borderColor: isDragging ? 'rgba(99,102,241,0.6)' : 'var(--divider)',
                       background: isDragging ? 'rgba(99,102,241,0.06)' : 'transparent',
@@ -283,12 +404,10 @@ export function CurriculumScanner({ onImport, onClose }: CurriculumScannerProps)
                     >
                       <Upload className="w-6 h-6 text-indigo-400" />
                     </motion.div>
-
                     <p className="text-sm font-semibold text-foreground mb-1">
-                      {isDragging ? 'Drop it here!' : 'Drop your curriculum'}
+                      {isDragging ? 'Drop them here!' : 'Drop your screenshots here'}
                     </p>
-                    <p className="text-xs text-muted-foreground mb-5">or click to browse</p>
-
+                    <p className="text-xs text-muted-foreground mb-5">or click to browse — multiple files supported</p>
                     <div
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs text-muted-foreground"
                       style={{ background: 'var(--muted-surface)', border: '1px solid var(--divider)' }}
@@ -296,76 +415,145 @@ export function CurriculumScanner({ onImport, onClose }: CurriculumScannerProps)
                       <Zap className="w-3 h-3 text-amber-400 shrink-0" />
                       ERP screenshots · curriculum tables · course lists
                     </div>
-
-                    <p className="text-[10px] text-muted-foreground/50 mt-3">PNG · JPG · JPEG</p>
-                    <input
-                      ref={fileRef}
-                      type="file"
-                      accept="image/png,image/jpg,image/jpeg,image/webp,.pdf"
-                      className="hidden"
-                      onChange={e => { const f = e.target.files?.[0]; if (f) processFile(f) }}
-                    />
+                    <p className="text-[10px] text-muted-foreground/50 mt-3">PNG · JPG · JPEG · up to {MAX_FILES} files</p>
+                    <input ref={fileRef} type="file" accept="image/*" multiple className="hidden"
+                      onChange={e => { if (e.target.files) addFiles(e.target.files) }} />
                   </div>
+                </motion.div>
+              )}
+
+              {/* ── QUEUED ───────────────────────────────────────── */}
+              {state === 'queued' && (
+                <motion.div key="queued" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                  {/* Thumbnail grid */}
+                  <div className="grid grid-cols-3 gap-2 mb-3">
+                    {files.map((f, i) => (
+                      <motion.div
+                        key={f.id}
+                        initial={{ opacity: 0, scale: 0.85 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: i * 0.05 }}
+                        className="relative aspect-video rounded-lg overflow-hidden group"
+                        style={{ border: '1px solid var(--divider)' }}
+                      >
+                        <img src={f.preview} alt="" className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        {/* Remove button */}
+                        <button
+                          onClick={() => removeFile(f.id)}
+                          className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/70 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500/80"
+                        >
+                          <X className="w-2.5 h-2.5 text-white" />
+                        </button>
+                        {/* Index badge */}
+                        <div className="absolute bottom-1 left-1.5 text-[9px] font-bold text-white/70 tabular-nums">
+                          {i + 1}
+                        </div>
+                      </motion.div>
+                    ))}
+
+                    {/* Add more slot */}
+                    {files.length < MAX_FILES && (
+                      <button
+                        onClick={() => addMoreRef.current?.click()}
+                        className="aspect-video rounded-lg border-2 border-dashed flex flex-col items-center justify-center gap-1 transition-all hover:border-indigo-500/50 hover:bg-indigo-500/4"
+                        style={{ borderColor: 'var(--divider)' }}
+                      >
+                        <ImagePlus className="w-4 h-4 text-muted-foreground/50" />
+                        <span className="text-[9px] text-muted-foreground/50">Add more</span>
+                        <input ref={addMoreRef} type="file" accept="image/*" multiple className="hidden"
+                          onChange={e => { if (e.target.files) addFiles(e.target.files) }} />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Summary row */}
+                  <div
+                    className="flex items-center justify-between px-3 py-2 rounded-lg mb-4 text-xs"
+                    style={{ background: 'var(--muted-surface)', border: '1px solid var(--divider)' }}
+                  >
+                    <span className="text-muted-foreground">
+                      <span className="font-semibold text-foreground">{files.length}</span> screenshot{files.length !== 1 ? 's' : ''} selected
+                    </span>
+                    <button
+                      onClick={() => { setFiles([]); setState('idle') }}
+                      className="text-[10px] text-muted-foreground/60 hover:text-red-400 transition-colors"
+                    >
+                      Clear all
+                    </button>
+                  </div>
+
+                  {/* CTA */}
+                  <Button variant="gradient" className="w-full gap-2" onClick={startScan}>
+                    <Sparkles className="w-4 h-4" />
+                    Scan {files.length} Screenshot{files.length !== 1 ? 's' : ''}
+                  </Button>
                 </motion.div>
               )}
 
               {/* ── SCANNING ─────────────────────────────────────── */}
               {state === 'scanning' && (
                 <motion.div key="scanning" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-4">
-                  {/* Image with moving scan line */}
-                  <div className="relative rounded-xl overflow-hidden h-36" style={{ border: '1px solid var(--divider)' }}>
-                    {imagePreview && (
-                      <img src={imagePreview} alt="" className="w-full h-full object-cover opacity-50 dark:opacity-35" />
-                    )}
-                    {/* Ambient glow sweep */}
+                  {/* Current image with scan animation */}
+                  <div className="relative rounded-xl overflow-hidden h-32" style={{ border: '1px solid var(--divider)' }}>
+                    <AnimatePresence mode="wait">
+                      {currentPreview && (
+                        <motion.img
+                          key={currentPreview}
+                          src={currentPreview} alt=""
+                          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                          className="w-full h-full object-cover opacity-50 dark:opacity-35 absolute inset-0"
+                        />
+                      )}
+                    </AnimatePresence>
                     <motion.div
-                      className="absolute left-0 right-0 h-12 pointer-events-none"
+                      className="absolute left-0 right-0 h-10 pointer-events-none"
                       style={{ background: 'linear-gradient(to bottom, transparent, rgba(99,102,241,0.18), transparent)' }}
-                      initial={{ top: '-15%' }}
-                      animate={{ top: '110%' }}
-                      transition={{ duration: 1.7, repeat: Infinity, ease: 'linear' }}
+                      initial={{ top: '-15%' }} animate={{ top: '110%' }}
+                      transition={{ duration: 1.6, repeat: Infinity, ease: 'linear' }}
                     />
-                    {/* Sharp scan line */}
                     <motion.div
                       className="absolute left-0 right-0 h-px pointer-events-none"
-                      style={{ background: 'linear-gradient(to right, transparent, rgba(99,102,241,0.8), rgba(139,92,246,0.8), transparent)' }}
-                      initial={{ top: '0%' }}
-                      animate={{ top: '100%' }}
-                      transition={{ duration: 1.7, repeat: Infinity, ease: 'linear' }}
+                      style={{ background: 'linear-gradient(to right, transparent, rgba(99,102,241,0.85), rgba(139,92,246,0.85), transparent)' }}
+                      initial={{ top: '0%' }} animate={{ top: '100%' }}
+                      transition={{ duration: 1.6, repeat: Infinity, ease: 'linear' }}
                     />
-                    {/* Corner brackets */}
                     {(['top-2 left-2 border-t-2 border-l-2', 'top-2 right-2 border-t-2 border-r-2', 'bottom-2 left-2 border-b-2 border-l-2', 'bottom-2 right-2 border-b-2 border-r-2'] as const).map(cls => (
                       <div key={cls} className={`absolute w-3.5 h-3.5 ${cls} border-indigo-400/70 rounded-sm`} />
                     ))}
-                    {/* Dark overlay gradient */}
                     <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-black/10 dark:from-black/40 dark:to-black/20 pointer-events-none" />
                   </div>
 
-                  {/* Progress bar + status */}
+                  {/* Overall progress */}
                   <div>
-                    <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center justify-between mb-1.5">
                       <span className="text-xs font-medium text-foreground">{progressMsg}</span>
-                      <span className="text-xs font-mono tabular-nums" style={{ color: 'rgba(99,102,241,0.9)' }}>{progress}%</span>
+                      <span className="text-xs font-mono tabular-nums" style={{ color: 'rgba(99,102,241,0.9)' }}>{overallPct}%</span>
                     </div>
                     <div className="h-1 rounded-full overflow-hidden" style={{ background: 'var(--divider)' }}>
                       <motion.div
                         className="h-full rounded-full"
                         style={{ background: 'linear-gradient(to right, #6366f1, #8b5cf6)' }}
-                        animate={{ width: `${progress}%` }}
-                        transition={{ duration: 0.5, ease: 'easeOut' }}
+                        animate={{ width: `${overallPct}%` }}
+                        transition={{ duration: 0.4, ease: 'easeOut' }}
                       />
                     </div>
-                    <div className="flex items-center gap-1.5 mt-3">
-                      {[0, 1, 2].map(i => (
-                        <motion.div
-                          key={i}
-                          className="w-1.5 h-1.5 rounded-full bg-indigo-400"
-                          animate={{ opacity: [0.25, 1, 0.25] }}
-                          transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.22 }}
-                        />
-                      ))}
-                      <span className="text-[11px] text-muted-foreground ml-1">AI is reading your curriculum…</span>
-                    </div>
+                  </div>
+
+                  {/* Per-file status list */}
+                  <div className="space-y-1.5">
+                    {files.map((f, i) => (
+                      <div key={f.id} className="flex items-center gap-2.5">
+                        {/* Thumbnail */}
+                        <div className="w-8 h-6 rounded overflow-hidden shrink-0" style={{ border: '1px solid var(--divider)' }}>
+                          <img src={f.preview} alt="" className="w-full h-full object-cover opacity-70" />
+                        </div>
+                        <span className="text-[11px] text-muted-foreground flex-1 truncate">
+                          {f.file.name.length > 24 ? f.file.name.slice(0, 22) + '…' : f.file.name}
+                        </span>
+                        <FileStatusIcon status={f.status} />
+                      </div>
+                    ))}
                   </div>
                 </motion.div>
               )}
@@ -373,7 +561,7 @@ export function CurriculumScanner({ onImport, onClose }: CurriculumScannerProps)
               {/* ── PREVIEW ──────────────────────────────────────── */}
               {state === 'preview' && (
                 <motion.div key="preview" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                  {/* Summary */}
+                  {/* Summary bar */}
                   <div
                     className="flex items-center justify-between mb-3 px-3 py-2.5 rounded-xl"
                     style={{ background: 'var(--muted-surface)', border: '1px solid var(--divider)' }}
@@ -382,12 +570,14 @@ export function CurriculumScanner({ onImport, onClose }: CurriculumScannerProps)
                       <div className="w-5 h-5 rounded-md bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center">
                         <Check className="w-3 h-3 text-emerald-400" />
                       </div>
-                      <span className="text-xs font-semibold">{parsed.length} subjects detected</span>
+                      <span className="text-xs font-semibold">{parsed.length} subjects found</span>
+                      {files.length > 1 && (
+                        <span className="text-[10px] text-muted-foreground">across {files.length} screenshots</span>
+                      )}
                     </div>
-                    <span className="text-[11px] text-muted-foreground">{totalCredits} credits selected</span>
+                    <span className="text-[11px] text-muted-foreground">{totalCredits} cr selected</span>
                   </div>
 
-                  {/* Low confidence warning */}
                   {hasLowConf && (
                     <div
                       className="flex items-start gap-2 mb-3 p-3 rounded-xl"
@@ -407,15 +597,14 @@ export function CurriculumScanner({ onImport, onClose }: CurriculumScannerProps)
                         key={s.id}
                         initial={{ opacity: 0, x: -6 }}
                         animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: i * 0.025 }}
+                        transition={{ delay: i * 0.02 }}
                         onClick={() => toggle(s.id)}
-                        className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg cursor-pointer transition-all duration-150 group"
+                        className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg cursor-pointer transition-all duration-150"
                         style={{
                           background: s.selected ? 'rgba(99,102,241,0.08)' : 'transparent',
                           border: `1px solid ${s.selected ? 'rgba(99,102,241,0.22)' : 'transparent'}`,
                         }}
                       >
-                        {/* Checkbox */}
                         <div
                           className="w-4 h-4 rounded shrink-0 flex items-center justify-center transition-colors"
                           style={{
@@ -425,15 +614,9 @@ export function CurriculumScanner({ onImport, onClose }: CurriculumScannerProps)
                         >
                           {s.selected && <Check className="w-2.5 h-2.5 text-white" />}
                         </div>
-
-                        {/* Name */}
-                        <span
-                          className={`flex-1 text-xs leading-snug ${s.selected ? 'text-foreground' : 'text-muted-foreground'} ${s.confidence === 'low' ? 'italic opacity-80' : ''}`}
-                        >
+                        <span className={`flex-1 text-xs leading-snug ${s.selected ? 'text-foreground' : 'text-muted-foreground'} ${s.confidence === 'low' ? 'italic opacity-75' : ''}`}>
                           {s.name}
                         </span>
-
-                        {/* Credits badge */}
                         <span
                           className="text-[10px] font-semibold font-mono px-1.5 py-0.5 rounded-md shrink-0"
                           style={{ background: 'var(--muted-surface)', color: s.selected ? 'rgba(99,102,241,0.9)' : undefined }}
@@ -444,7 +627,6 @@ export function CurriculumScanner({ onImport, onClose }: CurriculumScannerProps)
                     ))}
                   </div>
 
-                  {/* Select all */}
                   <button
                     onClick={toggleAll}
                     className="text-[11px] font-medium mb-4 transition-colors"
@@ -453,15 +635,13 @@ export function CurriculumScanner({ onImport, onClose }: CurriculumScannerProps)
                     {parsed.every(s => s.selected) ? 'Deselect all' : 'Select all'}
                   </button>
 
-                  {/* Action row */}
                   <div className="flex gap-2">
                     <Button variant="ghost" size="sm" onClick={reset} className="gap-1.5 shrink-0">
                       <RotateCcw className="w-3.5 h-3.5" />
                       Re-scan
                     </Button>
                     <Button
-                      variant="gradient"
-                      size="sm"
+                      variant="gradient" size="sm"
                       className="flex-1 gap-1.5"
                       disabled={selectedCount === 0}
                       onClick={handleImport}
