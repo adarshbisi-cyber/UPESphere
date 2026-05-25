@@ -3,7 +3,7 @@ import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
 
 const badgeVariants = cva(
-  'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
+  'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
   {
     variants: {
       variant: {
@@ -16,17 +16,17 @@ const badgeVariants = cva(
         outline:
           'border border-current text-foreground',
         indigo:
-          'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30',
+          'bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30',
         violet:
-          'bg-violet-500/20 text-violet-300 border border-violet-500/30',
+          'bg-violet-500/15 text-violet-700 dark:text-violet-300 border border-violet-500/30',
         emerald:
-          'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30',
+          'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30',
         amber:
-          'bg-amber-500/20 text-amber-300 border border-amber-500/30',
+          'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30',
         red:
-          'bg-red-500/20 text-red-300 border border-red-500/30',
+          'bg-red-500/15 text-red-700 dark:text-red-300 border border-red-500/30',
         cyan:
-          'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30',
+          'bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border border-cyan-500/30',
       },
     },
     defaultVariants: {

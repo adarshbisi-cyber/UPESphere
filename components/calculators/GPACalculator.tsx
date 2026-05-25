@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Trash2, RotateCcw, Share2, TrendingUp, Calculator } from 'lucide-react'
+import { Plus, Trash2, RotateCcw, Share2, TrendingUp, Calculator, ScanLine } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -11,6 +11,7 @@ import { GlassCard } from '@/components/ui/card'
 import { calculateGPA, GRADE_POINTS_10 } from '@/lib/calculations/gpa'
 import { generateId, getGPAColor } from '@/lib/utils'
 import { useToast } from '@/components/ui/use-toast'
+import { CurriculumScanner } from './CurriculumScanner'
 import type { Subject } from '@/types'
 
 const GRADES = Object.keys(GRADE_POINTS_10)
@@ -29,6 +30,7 @@ const GRADE_COLOR: Record<string, string> = {
 
 export function GPACalculator() {
   const [subjects, setSubjects] = useState<Subject[]>(DEFAULT_SUBJECTS)
+  const [showScanner, setShowScanner] = useState(false)
   const { toast } = useToast()
 
   const result = calculateGPA(subjects, '10')
@@ -57,15 +59,30 @@ export function GPACalculator() {
     toast({ title: 'Copied!', description: 'Result copied to clipboard.', variant: 'success' } as any)
   }
 
+  const handleScanImport = (imported: Subject[]) => {
+    setSubjects(imported)
+    setShowScanner(false)
+    toast({ title: `${imported.length} subjects imported`, description: `Total credits: ${imported.reduce((a, s) => a + s.credits, 0)}. Now select your grades.` })
+  }
+
   const gpaColorClass = getGPAColor(result.sgpa, 10)
 
   return (
     <div className="max-w-4xl mx-auto">
+      <AnimatePresence>
+        {showScanner && (
+          <CurriculumScanner
+            onImport={handleScanImport}
+            onClose={() => setShowScanner(false)}
+          />
+        )}
+      </AnimatePresence>
+
       <div className="grid lg:grid-cols-5 gap-6">
         {/* Left: Subject table */}
         <div className="lg:col-span-3">
           <GlassCard className="p-6">
-            <div className="flex items-start justify-between mb-6">
+            <div className="flex items-start justify-between mb-5">
               <div className="flex items-center gap-3">
                 <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-violet-600/25 to-indigo-600/20 border border-violet-500/20 flex items-center justify-center shrink-0">
                   <Calculator className="w-5 h-5 text-violet-400" />
@@ -77,6 +94,27 @@ export function GPACalculator() {
               </div>
               <Badge variant="indigo">10-Point Scale</Badge>
             </div>
+
+            {/* AI Scanner trigger */}
+            <button
+              onClick={() => setShowScanner(true)}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl mb-5 text-left group transition-all duration-200 hover:scale-[1.01]"
+              style={{
+                background: 'linear-gradient(135deg, rgba(99,102,241,0.08), rgba(139,92,246,0.06))',
+                border: '1px solid rgba(99,102,241,0.22)',
+              }}
+            >
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500/25 to-violet-500/20 border border-indigo-500/25 flex items-center justify-center shrink-0">
+                <ScanLine className="w-4 h-4 text-indigo-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold text-foreground leading-none mb-0.5">AI Curriculum Scanner</p>
+                <p className="text-[11px] text-muted-foreground truncate">Upload ERP screenshot — auto-fill subjects & credits</p>
+              </div>
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0" style={{ background: 'rgba(99,102,241,0.15)', color: 'rgba(99,102,241,0.9)' }}>
+                NEW
+              </span>
+            </button>
 
             {/* Header row */}
             <div className="grid grid-cols-12 gap-2 mb-3 px-1">
