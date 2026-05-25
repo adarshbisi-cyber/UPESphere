@@ -1,4 +1,4 @@
-export type GradeScale = '10' | 'percentage'
+export type GradeScale = '10' | '4' | 'percentage'
 
 export type AttendanceStatus = 'safe' | 'warning' | 'danger'
 
