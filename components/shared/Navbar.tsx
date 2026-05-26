@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Menu, X, GraduationCap, Sparkles } from 'lucide-react'
+import { Menu, X, GraduationCap, Sparkles, LogOut, LayoutDashboard, ChevronDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
+import { useAuth } from '@/components/auth/AuthProvider'
 import { cn } from '@/lib/utils'
 
 const navLinks = [
@@ -16,7 +17,83 @@ const navLinks = [
   { label: 'Dashboard', href: '/dashboard' },
 ]
 
+function UserMenu() {
+  const { user, signOut } = useAuth()
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  if (!user) return null
+
+  const initials = (
+    user.user_metadata?.full_name
+      ? user.user_metadata.full_name
+          .split(' ')
+          .slice(0, 2)
+          .map((n: string) => n[0])
+          .join('')
+      : user.email?.[0] ?? 'U'
+  ).toUpperCase()
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="flex items-center gap-2 px-2 py-1.5 rounded-xl hover:bg-white/5 transition-colors"
+      >
+        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center text-white text-xs font-bold">
+          {initials}
+        </div>
+        <ChevronDown className={cn('w-3.5 h-3.5 text-muted-foreground transition-transform', open && 'rotate-180')} />
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: 6, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 6, scale: 0.97 }}
+            transition={{ duration: 0.15 }}
+            className="absolute right-0 top-full mt-2 w-52 rounded-2xl overflow-hidden z-50"
+            style={{ background: 'var(--glass-from)', border: '1px solid var(--glass-border)', boxShadow: 'var(--glass-shadow)' }}
+          >
+            <div className="px-4 py-3 border-b" style={{ borderColor: 'var(--divider)' }}>
+              <p className="text-xs font-medium text-foreground truncate">{user.user_metadata?.full_name ?? 'Student'}</p>
+              <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+            </div>
+            <div className="py-1.5">
+              <Link
+                href="/dashboard"
+                onClick={() => setOpen(false)}
+                className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-foreground hover:bg-white/5 transition-colors"
+              >
+                <LayoutDashboard className="w-4 h-4 text-muted-foreground" />
+                Dashboard
+              </Link>
+              <button
+                onClick={() => { setOpen(false); signOut() }}
+                className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/10 transition-colors"
+              >
+                <LogOut className="w-4 h-4" />
+                Sign out
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
+
 export function Navbar() {
+  const { user, loading } = useAuth()
   const [scrolled, setScrolled] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
 
@@ -67,17 +144,25 @@ export function Navbar() {
           {/* CTA */}
           <div className="hidden md:flex items-center gap-3">
             <ThemeToggle />
-            <Link href="/login">
-              <Button variant="ghost" size="sm" className="text-muted-foreground">
-                Sign In
-              </Button>
-            </Link>
-            <Link href="/gpa">
-              <Button variant="gradient" size="sm" className="gap-2">
-                <Sparkles className="w-4 h-4" />
-                Get Started
-              </Button>
-            </Link>
+            {!loading && (
+              user ? (
+                <UserMenu />
+              ) : (
+                <>
+                  <Link href="/login">
+                    <Button variant="ghost" size="sm" className="text-muted-foreground">
+                      Sign In
+                    </Button>
+                  </Link>
+                  <Link href="/gpa">
+                    <Button variant="gradient" size="sm" className="gap-2">
+                      <Sparkles className="w-4 h-4" />
+                      Get Started
+                    </Button>
+                  </Link>
+                </>
+              )
+            )}
           </div>
 
           {/* Mobile menu toggle */}
@@ -116,14 +201,32 @@ export function Navbar() {
                   <span className="text-sm text-muted-foreground">Appearance</span>
                   <ThemeToggle />
                 </div>
-                <Link href="/login" onClick={() => setMobileOpen(false)}>
-                  <Button variant="outline" className="w-full">Sign In</Button>
-                </Link>
-                <Link href="/gpa" onClick={() => setMobileOpen(false)}>
-                  <Button variant="gradient" className="w-full gap-2">
-                    <Sparkles className="w-4 h-4" /> Get Started Free
-                  </Button>
-                </Link>
+                {!loading && user ? (
+                  <>
+                    <div className="px-4 py-2">
+                      <p className="text-xs font-medium text-foreground">{user.user_metadata?.full_name ?? 'Student'}</p>
+                      <p className="text-xs text-muted-foreground">{user.email}</p>
+                    </div>
+                    <button
+                      onClick={() => { setMobileOpen(false); }}
+                      className="w-full flex items-center gap-2 px-4 py-3 text-sm text-red-400 hover:bg-red-500/10 rounded-xl transition-colors"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      Sign out
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <Link href="/login" onClick={() => setMobileOpen(false)}>
+                      <Button variant="outline" className="w-full">Sign In</Button>
+                    </Link>
+                    <Link href="/gpa" onClick={() => setMobileOpen(false)}>
+                      <Button variant="gradient" className="w-full gap-2">
+                        <Sparkles className="w-4 h-4" /> Get Started Free
+                      </Button>
+                    </Link>
+                  </>
+                )}
               </div>
             </div>
           </motion.div>

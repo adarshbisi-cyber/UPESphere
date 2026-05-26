@@ -16,6 +16,16 @@
       "static/chunks/main-app.js",
       "static/chunks/app/[university]/page.js"
     ],
+    "/(auth)/login/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(auth)/login/page.js"
+    ],
+    "/dashboard/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/dashboard/page.js"
+    ],
     "/gpa/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
@@ -30,6 +40,11 @@
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/attendance/page.js"
+    ],
+    "/pass/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/pass/page.js"
     ]
   }
 }

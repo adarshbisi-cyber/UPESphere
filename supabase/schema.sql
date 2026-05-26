@@ -1,9 +1,6 @@
 -- GradeFlow Database Schema
 -- Run this in your Supabase SQL editor
 
--- Enable Row Level Security
-alter database postgres set "app.jwt_secret" to 'your-jwt-secret';
-
 -- ===== PROFILES =====
 create table if not exists public.profiles (
   id uuid references auth.users(id) on delete cascade primary key,
@@ -139,6 +136,48 @@ create trigger semesters_updated_at before update on public.semesters
 
 create trigger attendance_updated_at before update on public.attendance_records
   for each row execute procedure public.handle_updated_at();
+
+
+-- ===== SUBJECTS (per GPA record) =====
+create table if not exists public.subjects (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references public.profiles(id) on delete cascade not null,
+  gpa_record_id uuid references public.gpa_records(id) on delete cascade,
+  name text not null,
+  credits int not null check (credits > 0),
+  grade text not null,
+  grade_points numeric(4,2) not null,
+  semester_id uuid references public.semesters(id) on delete set null,
+  created_at timestamptz default now()
+);
+
+alter table public.subjects enable row level security;
+
+create policy "Users can manage own subjects"
+  on public.subjects for all
+  using (auth.uid() = user_id);
+
+create index subjects_user_id_idx on public.subjects(user_id);
+
+
+-- ===== OCR UPLOADS =====
+create table if not exists public.ocr_uploads (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references public.profiles(id) on delete cascade not null,
+  storage_path text not null,
+  original_name text,
+  subjects_extracted jsonb default '[]',
+  status text not null default 'pending' check (status in ('pending', 'processing', 'done', 'failed')),
+  created_at timestamptz default now()
+);
+
+alter table public.ocr_uploads enable row level security;
+
+create policy "Users can manage own OCR uploads"
+  on public.ocr_uploads for all
+  using (auth.uid() = user_id);
+
+create index ocr_uploads_user_id_idx on public.ocr_uploads(user_id);
 
 
 -- ===== SAMPLE SEED DATA (optional) =====
