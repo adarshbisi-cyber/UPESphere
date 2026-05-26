@@ -1,5 +1,6 @@
 'use client'
 
+import { useRef } from 'react'
 import { motion } from 'framer-motion'
 import { Calculator, BarChart3, Calendar, Brain, Target, Share2 } from 'lucide-react'
 
@@ -11,7 +12,7 @@ const features = [
     color: 'from-indigo-500/20 to-indigo-600/10',
     iconColor: 'text-indigo-400',
     border: 'border-indigo-500/20',
-    glow: 'group-hover:shadow-indigo-500/20',
+    glowColor: 'rgba(99,102,241,0.18)',
   },
   {
     icon: BarChart3,
@@ -20,7 +21,7 @@ const features = [
     color: 'from-violet-500/20 to-violet-600/10',
     iconColor: 'text-violet-400',
     border: 'border-violet-500/20',
-    glow: 'group-hover:shadow-violet-500/20',
+    glowColor: 'rgba(139,92,246,0.18)',
   },
   {
     icon: Calendar,
@@ -29,7 +30,7 @@ const features = [
     color: 'from-cyan-500/20 to-cyan-600/10',
     iconColor: 'text-cyan-400',
     border: 'border-cyan-500/20',
-    glow: 'group-hover:shadow-cyan-500/20',
+    glowColor: 'rgba(6,182,212,0.18)',
   },
   {
     icon: Brain,
@@ -38,7 +39,7 @@ const features = [
     color: 'from-emerald-500/20 to-emerald-600/10',
     iconColor: 'text-emerald-400',
     border: 'border-emerald-500/20',
-    glow: 'group-hover:shadow-emerald-500/20',
+    glowColor: 'rgba(16,185,129,0.18)',
   },
   {
     icon: Target,
@@ -47,7 +48,7 @@ const features = [
     color: 'from-amber-500/20 to-amber-600/10',
     iconColor: 'text-amber-400',
     border: 'border-amber-500/20',
-    glow: 'group-hover:shadow-amber-500/20',
+    glowColor: 'rgba(245,158,11,0.18)',
   },
   {
     icon: Share2,
@@ -56,7 +57,7 @@ const features = [
     color: 'from-rose-500/20 to-rose-600/10',
     iconColor: 'text-rose-400',
     border: 'border-rose-500/20',
-    glow: 'group-hover:shadow-rose-500/20',
+    glowColor: 'rgba(244,63,94,0.18)',
   },
 ]
 
@@ -68,6 +69,42 @@ const container = {
 const item = {
   hidden: { opacity: 0, y: 30 },
   show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] } },
+}
+
+function FeatureCard({ feature }: { feature: (typeof features)[0] }) {
+  const cardRef = useRef<HTMLDivElement>(null)
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const card = cardRef.current
+    if (!card) return
+    const rect = card.getBoundingClientRect()
+    card.style.setProperty('--gx', `${e.clientX - rect.left}px`)
+    card.style.setProperty('--gy', `${e.clientY - rect.top}px`)
+  }
+
+  return (
+    <motion.div
+      ref={cardRef}
+      variants={item}
+      onMouseMove={handleMouseMove}
+      onMouseEnter={() => cardRef.current?.style.setProperty('--go', '1')}
+      onMouseLeave={() => cardRef.current?.style.setProperty('--go', '0')}
+      whileHover={{ y: -6, scale: 1.018 }}
+      transition={{ type: 'spring', stiffness: 360, damping: 26 }}
+      className={`group relative rounded-2xl border ${feature.border} bg-gradient-to-br ${feature.color} p-6 cursor-default overflow-hidden`}
+    >
+      {/* Cursor-reactive radial glow — zero React re-renders via CSS vars */}
+      <div
+        className="glow-card-overlay"
+        style={{ background: `radial-gradient(380px at var(--gx, 50%) var(--gy, 50%), ${feature.glowColor}, transparent 80%)` }}
+      />
+      <div className={`relative inline-flex p-3 rounded-xl bg-white/5 border border-white/10 mb-4 ${feature.iconColor}`}>
+        <feature.icon className="w-5 h-5" />
+      </div>
+      <h3 className="relative text-lg font-semibold font-display text-foreground mb-2">{feature.title}</h3>
+      <p className="relative text-sm text-muted-foreground leading-relaxed">{feature.description}</p>
+    </motion.div>
+  )
 }
 
 export function Features() {
@@ -105,17 +142,7 @@ export function Features() {
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
         >
           {features.map(feature => (
-            <motion.div
-              key={feature.title}
-              variants={item}
-              className={`group relative rounded-2xl border ${feature.border} bg-gradient-to-br ${feature.color} p-6 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl ${feature.glow} cursor-default`}
-            >
-              <div className={`inline-flex p-3 rounded-xl bg-white/5 border border-white/10 mb-4 ${feature.iconColor}`}>
-                <feature.icon className="w-5 h-5" />
-              </div>
-              <h3 className="text-lg font-semibold font-display text-foreground mb-2">{feature.title}</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">{feature.description}</p>
-            </motion.div>
+            <FeatureCard key={feature.title} feature={feature} />
           ))}
         </motion.div>
       </div>

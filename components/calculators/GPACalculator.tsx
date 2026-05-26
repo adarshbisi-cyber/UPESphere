@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useCallback } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { useState, useCallback, useEffect, useRef } from 'react'
+import { motion, AnimatePresence, animate } from 'framer-motion'
 import { Plus, Trash2, RotateCcw, Share2, TrendingUp, Calculator, ScanLine } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -66,6 +66,23 @@ export function GPACalculator() {
   }
 
   const gpaColorClass = getGPAColor(result.sgpa, 10)
+
+  // Animated counter for SGPA display
+  const prevGpaRef = useRef(result.sgpa)
+  const [displayGpa, setDisplayGpa] = useState(result.sgpa)
+
+  useEffect(() => {
+    const from = prevGpaRef.current
+    const to = result.sgpa
+    if (Math.abs(from - to) < 0.005) { prevGpaRef.current = to; setDisplayGpa(to); return }
+    const controls = animate(from, to, {
+      duration: Math.min(0.7, Math.abs(from - to) * 1.8),
+      ease: [0.22, 1, 0.36, 1],
+      onUpdate: (v) => { prevGpaRef.current = v; setDisplayGpa(v) },
+      onComplete: () => { prevGpaRef.current = to },
+    })
+    return () => controls.stop()
+  }, [result.sgpa])
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -218,15 +235,9 @@ export function GPACalculator() {
           {/* Main GPA card */}
           <GlassCard className="p-6 text-center">
             <div className="text-xs text-muted-foreground uppercase tracking-widest mb-2">Your SGPA</div>
-            <motion.div
-              key={result.sgpa}
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-              className={`text-7xl font-bold font-display ${gpaColorClass}`}
-            >
-              {result.sgpa.toFixed(2)}
-            </motion.div>
+            <div className={`text-7xl font-bold font-display tabular-nums ${gpaColorClass}`}>
+              {displayGpa.toFixed(2)}
+            </div>
             <div className="mt-3 flex items-center justify-center gap-3 text-sm">
               <div className="text-center">
                 <div className="text-foreground/80 font-medium">{result.percentageEquivalent}%</div>

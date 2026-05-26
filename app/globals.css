@@ -213,3 +213,13 @@
   outline: 2px solid rgba(99, 102, 241, 0.5);
   outline-offset: 2px;
 }
+
+/* ── Mouse glow card overlay (opacity controlled via --go CSS var, no re-renders) */
+.glow-card-overlay {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: var(--go, 0);
+  transition: opacity 0.4s ease;
+}

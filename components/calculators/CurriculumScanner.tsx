@@ -432,29 +432,85 @@ export function CurriculumScanner({ onImport, onClose }: CurriculumScannerProps)
               {/* ── IDLE ─────────────────────────────────────────── */}
               {state === 'idle' && (
                 <motion.div key="idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                  <div
+                  <motion.div
                     onDragOver={e => { e.preventDefault(); setIsDragging(true) }}
                     onDragLeave={() => setIsDragging(false)}
                     onDrop={onDrop}
                     onClick={() => fileRef.current?.click()}
-                    className="relative rounded-xl border-2 border-dashed p-9 text-center cursor-pointer select-none transition-all duration-200"
-                    style={{
-                      borderColor: isDragging ? 'rgba(99,102,241,0.6)' : 'var(--divider)',
-                      background: isDragging ? 'rgba(99,102,241,0.06)' : 'transparent',
-                      transform: isDragging ? 'scale(1.01)' : 'scale(1)',
+                    className="relative rounded-xl border-2 border-dashed p-9 text-center cursor-pointer select-none overflow-hidden"
+                    animate={isDragging ? 'drag' : 'rest'}
+                    whileHover={!isDragging ? 'hover' : undefined}
+                    variants={{
+                      rest: {
+                        borderColor: 'rgba(99,102,241,0.25)',
+                        boxShadow: '0 0 0px rgba(99,102,241,0)',
+                        backgroundColor: 'transparent',
+                        scale: 1,
+                      },
+                      hover: {
+                        borderColor: 'rgba(99,102,241,0.52)',
+                        boxShadow: '0 0 22px rgba(99,102,241,0.13), inset 0 0 28px rgba(99,102,241,0.04)',
+                        backgroundColor: 'rgba(99,102,241,0.025)',
+                        scale: 1.006,
+                      },
+                      drag: {
+                        borderColor: 'rgba(99,102,241,0.88)',
+                        boxShadow: '0 0 40px rgba(99,102,241,0.38), 0 0 80px rgba(139,92,246,0.16), inset 0 0 40px rgba(99,102,241,0.1)',
+                        backgroundColor: 'rgba(99,102,241,0.07)',
+                        scale: 1.018,
+                      },
                     }}
+                    transition={{ type: 'spring', stiffness: 420, damping: 32 }}
                   >
-                    <motion.div
-                      animate={isDragging ? { scale: 1.12, rotate: -4 } : { scale: 1, rotate: 0 }}
-                      transition={{ type: 'spring', stiffness: 300 }}
-                      className="w-14 h-14 mx-auto mb-4 rounded-2xl flex items-center justify-center"
-                      style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.2), rgba(139,92,246,0.15))', border: '1px solid rgba(99,102,241,0.25)' }}
+                    {/* Drag radial fill */}
+                    <AnimatePresence>
+                      {isDragging && (
+                        <motion.div
+                          key="drag-fill"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          className="absolute inset-0 rounded-xl pointer-events-none"
+                          style={{ background: 'radial-gradient(ellipse at 50% 50%, rgba(99,102,241,0.18) 0%, transparent 70%)' }}
+                        />
+                      )}
+                    </AnimatePresence>
+
+                    {/* Upload icon: ambient pulse ring + float */}
+                    <div className="relative mx-auto w-14 h-14 mb-4">
+                      <motion.div
+                        className="absolute pointer-events-none"
+                        style={{ inset: '-8px', background: 'rgba(99,102,241,0.2)', filter: 'blur(8px)', borderRadius: '1.25rem' }}
+                        animate={{ scale: [1, 1.22, 1], opacity: [0.55, 0, 0.55] }}
+                        transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut' }}
+                      />
+                      <motion.div
+                        animate={isDragging
+                          ? { scale: 1.16, rotate: -6, y: 0 }
+                          : { scale: 1, rotate: 0, y: [0, -5, 0] }
+                        }
+                        transition={isDragging
+                          ? { type: 'spring', stiffness: 320, damping: 18 }
+                          : { duration: 3.5, repeat: Infinity, ease: 'easeInOut' }
+                        }
+                        className="relative w-14 h-14 rounded-2xl flex items-center justify-center"
+                        style={{
+                          background: 'linear-gradient(135deg, rgba(99,102,241,0.22), rgba(139,92,246,0.16))',
+                          border: '1px solid rgba(99,102,241,0.3)',
+                          boxShadow: isDragging ? '0 8px 24px rgba(99,102,241,0.38)' : '0 4px 12px rgba(99,102,241,0.14)',
+                        }}
+                      >
+                        <Upload className="w-6 h-6 text-indigo-400" />
+                      </motion.div>
+                    </div>
+
+                    <motion.p
+                      animate={isDragging ? { scale: 1.04 } : { scale: 1 }}
+                      transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                      className="text-sm font-semibold text-foreground mb-1"
                     >
-                      <Upload className="w-6 h-6 text-indigo-400" />
-                    </motion.div>
-                    <p className="text-sm font-semibold text-foreground mb-1">
                       {isDragging ? 'Drop them here!' : 'Drop your screenshots here'}
-                    </p>
+                    </motion.p>
                     <p className="text-xs text-muted-foreground mb-4">
                       or click to browse · or press{' '}
                       <kbd className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold" style={{ background: 'var(--muted-surface)', border: '1px solid var(--divider)' }}>
@@ -472,7 +528,7 @@ export function CurriculumScanner({ onImport, onClose }: CurriculumScannerProps)
                     <p className="text-[10px] text-muted-foreground/50 mt-3">PNG · JPG · JPEG · up to {MAX_FILES} files</p>
                     <input ref={fileRef} type="file" accept="image/*" multiple className="hidden"
                       onChange={e => { if (e.target.files) addFiles(e.target.files) }} />
-                  </div>
+                  </motion.div>
                 </motion.div>
               )}
 
@@ -486,7 +542,8 @@ export function CurriculumScanner({ onImport, onClose }: CurriculumScannerProps)
                         key={f.id}
                         initial={{ opacity: 0, scale: 0.85 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: i * 0.05 }}
+                        whileHover={{ scale: 1.05, boxShadow: '0 4px 18px rgba(99,102,241,0.32)', borderColor: 'rgba(99,102,241,0.5)' }}
+                        transition={{ delay: i * 0.05, type: 'spring', stiffness: 400, damping: 28 }}
                         className="relative aspect-video rounded-lg overflow-hidden group"
                         style={{ border: '1px solid var(--divider)' }}
                       >
@@ -549,9 +606,16 @@ export function CurriculumScanner({ onImport, onClose }: CurriculumScannerProps)
                   )}
 
                   {/* CTA */}
-                  <Button variant="gradient" className="w-full gap-2" onClick={startScan}>
-                    <Sparkles className="w-4 h-4" />
-                    Scan {files.length} Screenshot{files.length !== 1 ? 's' : ''}
+                  <Button variant="gradient" className="w-full gap-2 relative overflow-hidden" onClick={startScan}>
+                    <motion.span
+                      aria-hidden="true"
+                      className="absolute inset-0 pointer-events-none"
+                      style={{ background: 'linear-gradient(105deg, transparent 30%, rgba(255,255,255,0.16) 50%, transparent 70%)' }}
+                      animate={{ x: ['-100%', '200%'] }}
+                      transition={{ duration: 2.2, repeat: Infinity, repeatDelay: 1.5, ease: 'linear' }}
+                    />
+                    <Sparkles className="w-4 h-4 relative z-10" />
+                    <span className="relative z-10">Scan {files.length} Screenshot{files.length !== 1 ? 's' : ''}</span>
                   </Button>
                 </motion.div>
               )}
@@ -560,7 +624,7 @@ export function CurriculumScanner({ onImport, onClose }: CurriculumScannerProps)
               {state === 'scanning' && (
                 <motion.div key="scanning" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-4">
                   {/* Current image with scan animation */}
-                  <div className="relative rounded-xl overflow-hidden h-32" style={{ border: '1px solid var(--divider)' }}>
+                  <div className="relative rounded-xl overflow-hidden h-32" style={{ border: '1px solid rgba(99,102,241,0.3)', boxShadow: '0 0 18px rgba(99,102,241,0.12)' }}>
                     <AnimatePresence mode="wait">
                       {currentPreview && (
                         <motion.img
@@ -571,21 +635,54 @@ export function CurriculumScanner({ onImport, onClose }: CurriculumScannerProps)
                         />
                       )}
                     </AnimatePresence>
+
+                    {/* Subtle grid overlay */}
+                    <div
+                      className="absolute inset-0 pointer-events-none"
+                      style={{
+                        backgroundImage: 'linear-gradient(rgba(99,102,241,0.07) 1px, transparent 1px), linear-gradient(90deg, rgba(99,102,241,0.07) 1px, transparent 1px)',
+                        backgroundSize: '20px 20px',
+                      }}
+                    />
+
+                    {/* Primary scan beam */}
                     <motion.div
                       className="absolute left-0 right-0 h-10 pointer-events-none"
-                      style={{ background: 'linear-gradient(to bottom, transparent, rgba(99,102,241,0.18), transparent)' }}
+                      style={{ background: 'linear-gradient(to bottom, transparent, rgba(99,102,241,0.22), transparent)' }}
                       initial={{ top: '-15%' }} animate={{ top: '110%' }}
                       transition={{ duration: 1.6, repeat: Infinity, ease: 'linear' }}
                     />
+                    {/* Primary scan line */}
                     <motion.div
                       className="absolute left-0 right-0 h-px pointer-events-none"
-                      style={{ background: 'linear-gradient(to right, transparent, rgba(99,102,241,0.85), rgba(139,92,246,0.85), transparent)' }}
+                      style={{ background: 'linear-gradient(to right, transparent, rgba(99,102,241,0.9), rgba(139,92,246,0.9), transparent)' }}
                       initial={{ top: '0%' }} animate={{ top: '100%' }}
                       transition={{ duration: 1.6, repeat: Infinity, ease: 'linear' }}
                     />
-                    {(['top-2 left-2 border-t-2 border-l-2', 'top-2 right-2 border-t-2 border-r-2', 'bottom-2 left-2 border-b-2 border-l-2', 'bottom-2 right-2 border-b-2 border-r-2'] as const).map(cls => (
-                      <div key={cls} className={`absolute w-3.5 h-3.5 ${cls} border-indigo-400/70 rounded-sm`} />
+                    {/* Ghost scan line (offset, dimmer) */}
+                    <motion.div
+                      className="absolute left-0 right-0 h-px pointer-events-none"
+                      style={{ background: 'linear-gradient(to right, transparent, rgba(139,92,246,0.42), rgba(99,102,241,0.42), transparent)' }}
+                      initial={{ top: '0%' }} animate={{ top: '100%' }}
+                      transition={{ duration: 1.6, repeat: Infinity, ease: 'linear', delay: 0.28 }}
+                    />
+
+                    {/* Corner brackets — spring in on mount */}
+                    {([
+                      'top-2 left-2 border-t-2 border-l-2',
+                      'top-2 right-2 border-t-2 border-r-2',
+                      'bottom-2 left-2 border-b-2 border-l-2',
+                      'bottom-2 right-2 border-b-2 border-r-2',
+                    ] as const).map((cls, idx) => (
+                      <motion.div
+                        key={cls}
+                        className={`absolute w-4 h-4 ${cls} border-indigo-400/80 rounded-sm`}
+                        initial={{ opacity: 0, scale: 0.3 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ type: 'spring', stiffness: 380, damping: 18, delay: idx * 0.07 }}
+                      />
                     ))}
+
                     <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-black/10 dark:from-black/40 dark:to-black/20 pointer-events-none" />
                   </div>
 
@@ -597,11 +694,19 @@ export function CurriculumScanner({ onImport, onClose }: CurriculumScannerProps)
                     </div>
                     <div className="h-1 rounded-full overflow-hidden" style={{ background: 'var(--divider)' }}>
                       <motion.div
-                        className="h-full rounded-full"
-                        style={{ background: 'linear-gradient(to right, #6366f1, #8b5cf6)' }}
+                        className="h-full rounded-full relative overflow-hidden"
+                        style={{ background: 'linear-gradient(to right, #6366f1, #8b5cf6)', boxShadow: '0 0 8px rgba(99,102,241,0.5)' }}
                         animate={{ width: `${overallPct}%` }}
                         transition={{ duration: 0.4, ease: 'easeOut' }}
-                      />
+                      >
+                        <motion.span
+                          aria-hidden="true"
+                          className="absolute inset-0 pointer-events-none"
+                          style={{ background: 'linear-gradient(90deg, transparent 20%, rgba(255,255,255,0.28) 50%, transparent 80%)' }}
+                          animate={{ x: ['-100%', '200%'] }}
+                          transition={{ duration: 1.4, repeat: Infinity, ease: 'linear', repeatDelay: 0.3 }}
+                        />
+                      </motion.div>
                     </div>
                   </div>
 

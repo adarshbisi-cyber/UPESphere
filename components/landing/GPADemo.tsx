@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { useState, useEffect, useRef } from 'react'
+import { motion, AnimatePresence, animate } from 'framer-motion'
 import { Plus, Trash2, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -22,6 +22,30 @@ export function GPADemo() {
   const [subjects, setSubjects] = useState<Subject[]>(DEFAULT_SUBJECTS)
 
   const result = calculateGPA(subjects, '10')
+
+  // Animated count-up for SGPA
+  const prevGpaRef = useRef(result.sgpa)
+  const [displayGpa, setDisplayGpa] = useState(result.sgpa)
+
+  useEffect(() => {
+    const from = prevGpaRef.current
+    const to = result.sgpa
+    if (Math.abs(from - to) < 0.005) {
+      prevGpaRef.current = to
+      setDisplayGpa(to)
+      return
+    }
+    const controls = animate(from, to, {
+      duration: Math.min(0.7, Math.abs(from - to) * 1.8),
+      ease: [0.22, 1, 0.36, 1],
+      onUpdate: (v) => {
+        prevGpaRef.current = v
+        setDisplayGpa(v)
+      },
+      onComplete: () => { prevGpaRef.current = to },
+    })
+    return () => controls.stop()
+  }, [result.sgpa])
 
   const addSubject = () => {
     setSubjects(s => [...s, { id: generateId(), name: '', credits: 3, grade: 'A' }])
@@ -83,16 +107,11 @@ export function GPADemo() {
             transition={{ duration: 0.6, delay: 0.1 }}
           >
             <div className="rounded-2xl backdrop-blur-sm p-6 shadow-2xl" style={{ background: `linear-gradient(135deg, var(--glass-from), var(--glass-to))`, border: '1px solid var(--glass-border)', boxShadow: 'var(--glass-shadow)' }}>
-              {/* GPA Display */}
+              {/* GPA Display — animated counter */}
               <div className="text-center mb-6 py-4">
-                <motion.div
-                  key={result.sgpa}
-                  initial={{ scale: 0.8, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  className="text-6xl font-bold font-display bg-gradient-to-r from-indigo-400 to-violet-400 bg-clip-text text-transparent"
-                >
-                  {result.sgpa.toFixed(2)}
-                </motion.div>
+                <div className="text-6xl font-bold font-display bg-gradient-to-r from-indigo-400 to-violet-400 bg-clip-text text-transparent tabular-nums">
+                  {displayGpa.toFixed(2)}
+                </div>
                 <div className="text-muted-foreground text-sm mt-1">
                   SGPA · {result.percentageEquivalent}% · {result.totalCredits} Credits
                 </div>
