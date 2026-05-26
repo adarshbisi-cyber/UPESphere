@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Upload, X, Sparkles, AlertTriangle, RotateCcw, Check, Zap,
-  ImagePlus, CheckCircle2, Loader2, Circle,
+  ImagePlus, CheckCircle2, Loader2, Circle, ClipboardPaste,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { generateId } from '@/lib/utils'
@@ -145,8 +145,12 @@ export function CurriculumScanner({ onImport, onClose }: CurriculumScannerProps)
   const [parsed, setParsed] = useState<ParsedSubject[]>([])
   const [errorMsg, setErrorMsg] = useState('')
   const [isDragging, setIsDragging] = useState(false)
+  const [pasteFlash, setPasteFlash] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
   const addMoreRef = useRef<HTMLInputElement>(null)
+  // Ref mirrors state so the paste listener doesn't re-register on every state change
+  const stateRef = useRef(state)
+  useEffect(() => { stateRef.current = state }, [state])
 
   const selectedCount = parsed.filter(s => s.selected).length
   const totalCredits = parsed.filter(s => s.selected).reduce((a, s) => a + s.credits, 0)
@@ -181,6 +185,32 @@ export function CurriculumScanner({ onImport, onClose }: CurriculumScannerProps)
       return next
     })
   }
+
+  // ── Clipboard paste ────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    const handlePaste = async (e: ClipboardEvent) => {
+      // Don't intercept while scanning or in preview/error — user may be editing text
+      const s = stateRef.current
+      if (s === 'scanning' || s === 'preview') return
+
+      const items = Array.from(e.clipboardData?.items ?? [])
+      const imageItems = items.filter(it => it.type.startsWith('image/'))
+      if (imageItems.length === 0) return
+
+      e.preventDefault()
+      const imageFiles = imageItems.map(it => it.getAsFile()).filter(Boolean) as File[]
+
+      // Flash feedback before async addFiles resolves
+      setPasteFlash(true)
+      setTimeout(() => setPasteFlash(false), 1800)
+
+      await addFiles(imageFiles)
+    }
+
+    document.addEventListener('paste', handlePaste)
+    return () => document.removeEventListener('paste', handlePaste)
+  }, [addFiles])
 
   // ── OCR processing ─────────────────────────────────────────────────────────
 
@@ -352,6 +382,24 @@ export function CurriculumScanner({ onImport, onClose }: CurriculumScannerProps)
             backdropFilter: 'blur(24px)',
           }}
         >
+          {/* ── Paste flash notification ───────────────────────── */}
+          <AnimatePresence>
+            {pasteFlash && (
+              <motion.div
+                key="paste-flash"
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.2 }}
+                className="absolute top-0 left-0 right-0 z-10 flex items-center justify-center gap-2 py-2 text-xs font-semibold rounded-t-2xl"
+                style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.9), rgba(139,92,246,0.9))', color: '#fff' }}
+              >
+                <ClipboardPaste className="w-3.5 h-3.5" />
+                Screenshot detected — adding to queue…
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           {/* ── Header ─────────────────────────────────────────── */}
           <div className="flex items-center justify-between px-6 pt-5 pb-4">
             <div className="flex items-center gap-3">
@@ -407,7 +455,13 @@ export function CurriculumScanner({ onImport, onClose }: CurriculumScannerProps)
                     <p className="text-sm font-semibold text-foreground mb-1">
                       {isDragging ? 'Drop them here!' : 'Drop your screenshots here'}
                     </p>
-                    <p className="text-xs text-muted-foreground mb-5">or click to browse — multiple files supported</p>
+                    <p className="text-xs text-muted-foreground mb-4">
+                      or click to browse · or press{' '}
+                      <kbd className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold" style={{ background: 'var(--muted-surface)', border: '1px solid var(--divider)' }}>
+                        Ctrl + V
+                      </kbd>{' '}
+                      to paste
+                    </p>
                     <div
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs text-muted-foreground"
                       style={{ background: 'var(--muted-surface)', border: '1px solid var(--divider)' }}
@@ -469,7 +523,7 @@ export function CurriculumScanner({ onImport, onClose }: CurriculumScannerProps)
 
                   {/* Summary row */}
                   <div
-                    className="flex items-center justify-between px-3 py-2 rounded-lg mb-4 text-xs"
+                    className="flex items-center justify-between px-3 py-2 rounded-lg mb-3 text-xs"
                     style={{ background: 'var(--muted-surface)', border: '1px solid var(--divider)' }}
                   >
                     <span className="text-muted-foreground">
@@ -482,6 +536,17 @@ export function CurriculumScanner({ onImport, onClose }: CurriculumScannerProps)
                       Clear all
                     </button>
                   </div>
+
+                  {/* Paste hint */}
+                  {files.length < MAX_FILES && (
+                    <p className="text-[11px] text-muted-foreground/60 text-center mb-3">
+                      Press{' '}
+                      <kbd className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold" style={{ background: 'var(--inner-surface)', border: '1px solid var(--divider)' }}>
+                        Ctrl + V
+                      </kbd>{' '}
+                      to paste more screenshots
+                    </p>
+                  )}
 
                   {/* CTA */}
                   <Button variant="gradient" className="w-full gap-2" onClick={startScan}>
