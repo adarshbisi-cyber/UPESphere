@@ -1,8 +1,0 @@
-{
-  "/cgpa/page": "app/cgpa/page.js",
-  "/attendance/page": "app/attendance/page.js",
-  "/page": "app/page.js",
-  "/pass/page": "app/pass/page.js",
-  "/(auth)/login/page": "app/(auth)/login/page.js",
-  "/faq/page": "app/faq/page.js"
-}
