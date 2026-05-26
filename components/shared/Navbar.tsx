@@ -119,9 +119,9 @@ function CalculatorsDropdown() {
             role="menu"
             className="absolute left-0 top-[calc(100%+10px)] w-[440px] rounded-2xl z-50 overflow-hidden backdrop-blur-2xl"
             style={{
-              background: `linear-gradient(145deg, var(--glass-from) 0%, var(--glass-to) 100%)`,
-              border: '1px solid var(--glass-border)',
-              boxShadow: 'var(--glass-shadow), 0 32px 72px -16px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.06)',
+              background: 'var(--dropdown-bg)',
+              border: '1px solid var(--dropdown-border)',
+              boxShadow: 'var(--dropdown-shadow)',
             }}
           >
             {/* Header */}
@@ -142,20 +142,42 @@ function CalculatorsDropdown() {
               {calculators.map((item, i) => {
                 const active = pathname.startsWith(item.href)
                 return (
-                  <motion.div key={item.href} custom={i} initial="hidden" animate="visible" variants={itemVariants}>
+                  <motion.div
+                    key={item.href}
+                    custom={i}
+                    initial="hidden"
+                    animate="visible"
+                    variants={itemVariants}
+                    whileHover={
+                      active
+                        ? undefined
+                        : {
+                            y: -2,
+                            scale: 1.018,
+                            boxShadow: '0 6px 22px rgba(99,102,241,0.18), 0 2px 8px rgba(99,102,241,0.10)',
+                            transition: { type: 'spring', stiffness: 420, damping: 26 },
+                          }
+                    }
+                    className={cn(
+                      'group relative rounded-xl border transition-colors duration-200 cursor-pointer',
+                      active
+                        ? item.activeBg
+                        : 'border-transparent hover:bg-indigo-500/[0.09] hover:border-indigo-500/30'
+                    )}
+                  >
                     <Link
                       href={item.href}
                       role="menuitem"
                       onClick={() => setOpen(false)}
-                      className={cn(
-                        'group relative flex items-start gap-3 p-3.5 rounded-xl border transition-all duration-200',
-                        active
-                          ? item.activeBg
-                          : 'border-transparent hover:bg-white/[0.06] hover:border-white/[0.08]'
-                      )}
+                      className="flex items-start gap-3 p-3.5 focus-visible:outline-none"
                     >
-                      {/* Icon container */}
-                      <div className={cn('w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0', item.iconBg)}>
+                      {/* Icon */}
+                      <div
+                        className={cn(
+                          'w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform duration-200 group-hover:scale-105',
+                          item.iconBg
+                        )}
+                      >
                         <item.icon
                           className={cn(
                             'w-[18px] h-[18px] transition-all duration-200 group-hover:scale-110 group-hover:-rotate-6',
@@ -176,12 +198,12 @@ function CalculatorsDropdown() {
                           {item.description}
                         </div>
                       </div>
-
-                      {/* Active indicator */}
-                      {active && (
-                        <div className="absolute top-3 right-3 w-1.5 h-1.5 rounded-full bg-indigo-400" />
-                      )}
                     </Link>
+
+                    {/* Active dot */}
+                    {active && (
+                      <div className="absolute top-3 right-3 w-1.5 h-1.5 rounded-full bg-indigo-400 pointer-events-none" />
+                    )}
                   </motion.div>
                 )
               })}

@@ -37,6 +37,11 @@
     --muted-surface: rgba(0, 0, 0, 0.04);
     --ring-track: rgba(15, 23, 42, 0.15);
 
+    /* Floating dropdown — needs opaque fill so page content doesn't bleed through */
+    --dropdown-bg: rgba(253, 253, 255, 0.97);
+    --dropdown-border: rgba(99, 102, 241, 0.18);
+    --dropdown-shadow: 0 8px 40px rgba(99, 102, 241, 0.10), 0 2px 10px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(99, 102, 241, 0.10);
+
     /* Scroll arrow button */
     --arrow-btn-bg: radial-gradient(circle at 40% 35%, rgba(99,102,241,0.14) 0%, rgba(148,163,184,0.08) 60%, rgba(255,255,255,0.82) 100%);
     --arrow-btn-border: rgba(99, 102, 241, 0.32);
@@ -77,6 +82,11 @@
     --inner-surface: rgba(255, 255, 255, 0.025);
     --muted-surface: rgba(255, 255, 255, 0.05);
     --ring-track: rgba(255, 255, 255, 0.12);
+
+    /* Floating dropdown — opaque enough to fully cover underlying content */
+    --dropdown-bg: rgba(11, 11, 20, 0.94);
+    --dropdown-border: rgba(255, 255, 255, 0.12);
+    --dropdown-shadow: 0 8px 40px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.07), inset 0 1px 0 rgba(255, 255, 255, 0.06);
 
     /* Scroll arrow button */
     --arrow-btn-bg: radial-gradient(circle at 40% 35%, rgba(139,92,246,0.22) 0%, rgba(99,102,241,0.12) 60%, rgba(255,255,255,0.04) 100%);
