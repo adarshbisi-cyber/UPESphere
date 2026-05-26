@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { CheckCircle, AlertTriangle, XCircle, Plus, Minus } from 'lucide-react'
 import { Input } from '@/components/ui/input'
@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label'
 import { GlassCard } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { calculateAttendance } from '@/lib/calculations/attendance'
+import { GA } from '@/lib/analytics'
 
 type NumOrEmpty = number | ''
 
@@ -55,6 +56,35 @@ export function AttendanceCalculator() {
   const result = calculateAttendance(attendedNum, totalNum, requiredNum)
   const cfg = STATUS_CONFIG[result.status]
   const StatusIcon = cfg.icon
+
+  // Fire attendance_calculated once per stable result (debounced, only when inputs are valid)
+  const trackTimer = useRef<ReturnType<typeof setTimeout>>()
+  const lastTracked = useRef<string>('')
+  useEffect(() => {
+    if (typeof attended !== 'number' || typeof total !== 'number' || total === 0) return
+    const key = `${attended}/${total}/${requiredNum}`
+    if (key === lastTracked.current) return
+    clearTimeout(trackTimer.current)
+    trackTimer.current = setTimeout(() => {
+      lastTracked.current = key
+      GA.attendanceCalculated(result.currentPercentage, result.status)
+    }, 800)
+    return () => clearTimeout(trackTimer.current)
+  }, [attended, total, requiredNum, result.currentPercentage, result.status])
+
+  // Track bunk planner when plannedTotal is set
+  const bunkTimer = useRef<ReturnType<typeof setTimeout>>()
+  const lastBunk = useRef<number>(-1)
+  useEffect(() => {
+    if (typeof plannedTotal !== 'number' || plannedTotal === 0) return
+    if (plannedTotal === lastBunk.current) return
+    clearTimeout(bunkTimer.current)
+    bunkTimer.current = setTimeout(() => {
+      lastBunk.current = plannedTotal
+      GA.attendanceBunkPlannerUsed(plannedTotal)
+    }, 1000)
+    return () => clearTimeout(bunkTimer.current)
+  }, [plannedTotal])
 
   const circumference = 2 * Math.PI * 52
   const pct = Math.min(100, result.currentPercentage)

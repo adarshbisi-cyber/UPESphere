@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, Trash2, Target, TrendingUp, TrendingDown, Minus } from 'lucide-react'
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine } from 'recharts'
@@ -11,6 +11,7 @@ import { GlassCard } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { calculateCGPA, predictTargetSGPA } from '@/lib/calculations/cgpa'
 import { generateId, getGPAColor } from '@/lib/utils'
+import { GA } from '@/lib/analytics'
 import type { Semester } from '@/types'
 
 const DEFAULT_SEMESTERS: Semester[] = [
@@ -45,17 +46,52 @@ export function CGPACalculator() {
 
   const addSemester = () => {
     const n = semesters.length + 1
-    setSemesters(s => [...s, { id: generateId(), name: `Semester ${n}`, sgpa: 0, credits: 22 }])
+    setSemesters(s => {
+      const next = [...s, { id: generateId(), name: `Semester ${n}`, sgpa: 0, credits: 22 }]
+      GA.cgpaSemesterAdded(next.length)
+      return next
+    })
   }
 
   const removeSemester = (id: string) => {
     if (semesters.length <= 1) return
-    setSemesters(s => s.filter(sem => sem.id !== id))
+    setSemesters(s => {
+      const next = s.filter(sem => sem.id !== id)
+      GA.cgpaSemesterRemoved(next.length)
+      return next
+    })
   }
 
   const update = (id: string, field: keyof Semester, value: string | number) => {
     setSemesters(s => s.map(sem => sem.id === id ? { ...sem, [field]: value } : sem))
   }
+
+  // Debounced tracking for CGPA calculation and target check
+  const cgpaTimer = useRef<ReturnType<typeof setTimeout>>()
+  const lastCgpa = useRef<string>('')
+  useEffect(() => {
+    const key = `${result.cgpa}/${semesters.length}`
+    if (key === lastCgpa.current) return
+    clearTimeout(cgpaTimer.current)
+    cgpaTimer.current = setTimeout(() => {
+      lastCgpa.current = key
+      GA.cgpaCalculated(result.cgpa, semesters.length)
+    }, 1000)
+    return () => clearTimeout(cgpaTimer.current)
+  }, [result.cgpa, semesters.length])
+
+  const targetTimer = useRef<ReturnType<typeof setTimeout>>()
+  const lastTarget = useRef<string>('')
+  useEffect(() => {
+    const key = `${targetCGPA}/${remainingSems}`
+    if (key === lastTarget.current) return
+    clearTimeout(targetTimer.current)
+    targetTimer.current = setTimeout(() => {
+      lastTarget.current = key
+      GA.cgpaTargetChecked(targetCGPA, remainingSems)
+    }, 1200)
+    return () => clearTimeout(targetTimer.current)
+  }, [targetCGPA, remainingSems])
 
   const TrendIcon = result.trend === 'improving' ? TrendingUp : result.trend === 'declining' ? TrendingDown : Minus
   const trendColor = result.trend === 'improving' ? 'text-emerald-400' : result.trend === 'declining' ? 'text-red-400' : 'text-yellow-400'

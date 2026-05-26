@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronDown } from 'lucide-react'
+import { GA } from '@/lib/analytics'
 
 const faqs = [
   {
@@ -70,7 +71,11 @@ export function FAQ() {
               style={{ background: `linear-gradient(135deg, var(--glass-from), var(--glass-to))`, border: '1px solid var(--glass-border)' }}
             >
               <button
-                onClick={() => setOpen(open === i ? null : i)}
+                onClick={() => {
+                  const isOpening = open !== i
+                  setOpen(isOpening ? i : null)
+                  if (isOpening) GA.faqExpanded(faq.q)
+                }}
                 className="w-full flex items-center justify-between p-5 text-left hover:bg-white/[0.03] transition-colors"
               >
                 <span className="font-medium text-foreground pr-4">{faq.q}</span>

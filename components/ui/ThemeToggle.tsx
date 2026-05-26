@@ -4,6 +4,7 @@ import { useTheme } from 'next-themes'
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Moon, Sun } from 'lucide-react'
+import { GA } from '@/lib/analytics'
 
 export function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme()
@@ -20,7 +21,11 @@ export function ThemeToggle() {
 
   return (
     <button
-      onClick={() => setTheme(isDark ? 'light' : 'dark')}
+      onClick={() => {
+        const next = isDark ? 'light' : 'dark'
+        setTheme(next)
+        GA.themeChanged(next)
+      }}
       aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
       className="relative flex items-center w-[58px] h-[30px] rounded-full p-1 shrink-0 cursor-pointer select-none"
       style={{

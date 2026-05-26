@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { generateId } from '@/lib/utils'
+import { GA } from '@/lib/analytics'
 import type { Subject } from '@/types'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -202,6 +203,7 @@ export function CurriculumScanner({ onImport, onClose }: CurriculumScannerProps)
       const imageFiles = imageItems.map(it => it.getAsFile()).filter(Boolean) as File[]
 
       // Flash feedback before async addFiles resolves
+      GA.scanPasteUsed()
       setPasteFlash(true)
       setTimeout(() => setPasteFlash(false), 1800)
 
@@ -220,6 +222,7 @@ export function CurriculumScanner({ onImport, onClose }: CurriculumScannerProps)
     setCurrentIdx(0)
 
     const snap = [...files]
+    GA.scanStarted(snap.length)
     const seen = new Set<string>()
     const allParsed: ParsedSubject[] = []
 
@@ -289,12 +292,14 @@ export function CurriculumScanner({ onImport, onClose }: CurriculumScannerProps)
       await worker.terminate()
 
     } catch {
+      GA.scanFailed('engine_error')
       setErrorMsg('OCR engine failed to load. Please check your connection and try again.')
       setState('error')
       return
     }
 
     if (allParsed.length === 0) {
+      GA.scanFailed('no_subjects_found')
       setErrorMsg(
         snap.length > 1
           ? 'No subjects detected in any screenshot. Make sure your images show a clear curriculum table with a credit column.'
@@ -304,6 +309,7 @@ export function CurriculumScanner({ onImport, onClose }: CurriculumScannerProps)
       return
     }
 
+    GA.scanCompleted(allParsed.length, snap.length)
     setParsed(allParsed)
     setState('preview')
   }, [files])
@@ -313,6 +319,8 @@ export function CurriculumScanner({ onImport, onClose }: CurriculumScannerProps)
   const onDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()
     setIsDragging(false)
+    const fileCount = e.dataTransfer.files.length
+    if (fileCount > 0) GA.scanDragDropUsed(fileCount)
     addFiles(e.dataTransfer.files)
   }, [addFiles])
 

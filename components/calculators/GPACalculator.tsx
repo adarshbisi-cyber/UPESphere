@@ -12,6 +12,7 @@ import { calculateGPA, GRADE_POINTS_10 } from '@/lib/calculations/gpa'
 import { generateId, getGPAColor } from '@/lib/utils'
 import { useToast } from '@/components/ui/use-toast'
 import { CurriculumScanner } from './CurriculumScanner'
+import { GA } from '@/lib/analytics'
 import type { Subject } from '@/types'
 
 const GRADES = Object.keys(GRADE_POINTS_10)
@@ -36,12 +37,20 @@ export function GPACalculator() {
   const result = calculateGPA(subjects, '10')
 
   const addSubject = () => {
-    setSubjects(s => [...s, { id: generateId(), name: '', credits: 3, grade: 'A' }])
+    setSubjects(s => {
+      const next = [...s, { id: generateId(), name: '', credits: 3, grade: 'A' }]
+      GA.gpaSubjectAdded(next.length)
+      return next
+    })
   }
 
   const removeSubject = (id: string) => {
     if (subjects.length <= 1) return
-    setSubjects(s => s.filter(sub => sub.id !== id))
+    setSubjects(s => {
+      const next = s.filter(sub => sub.id !== id)
+      GA.gpaSubjectRemoved(next.length)
+      return next
+    })
   }
 
   const update = useCallback((id: string, field: keyof Subject, value: string | number) => {
@@ -56,13 +65,16 @@ export function GPACalculator() {
   const handleShare = () => {
     const text = `My SGPA: ${result.sgpa} (${result.percentageEquivalent}%) — Calculated with UPESphere`
     navigator.clipboard.writeText(text)
+    GA.gpaShared(result.sgpa, result.totalCredits)
     toast({ title: 'Copied!', description: 'Result copied to clipboard.', variant: 'success' } as any)
   }
 
   const handleScanImport = (imported: Subject[]) => {
+    const totalCredits = imported.reduce((a, s) => a + s.credits, 0)
     setSubjects(imported)
     setShowScanner(false)
-    toast({ title: `${imported.length} subjects imported`, description: `Total credits: ${imported.reduce((a, s) => a + s.credits, 0)}. Now select your grades.` })
+    GA.gpaSubjectsImported(imported.length, totalCredits)
+    toast({ title: `${imported.length} subjects imported`, description: `Total credits: ${totalCredits}. Now select your grades.` })
   }
 
   const gpaColorClass = getGPAColor(result.sgpa, 10)
@@ -114,7 +126,7 @@ export function GPACalculator() {
 
             {/* AI Scanner trigger */}
             <button
-              onClick={() => setShowScanner(true)}
+              onClick={() => { setShowScanner(true); GA.gpaScannerOpened() }}
               className="w-full flex items-center gap-3 px-4 py-3 rounded-xl mb-5 text-left group transition-all duration-200 hover:scale-[1.01]"
               style={{
                 background: 'linear-gradient(135deg, rgba(99,102,241,0.08), rgba(139,92,246,0.06))',

@@ -5,6 +5,7 @@ import { motion, useMotionValue, useTransform, animate } from 'framer-motion'
 import Link from 'next/link'
 import { ArrowRight, Sparkles, TrendingUp, BookOpen, CheckCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { GA } from '@/lib/analytics'
 
 const stats = [
   { value: '50K+', label: 'Students' },
@@ -156,7 +157,7 @@ export function Hero() {
             className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16"
           >
             <MagneticButton>
-              <Link href="/gpa">
+              <Link href="/gpa" onClick={() => GA.ctaClicked('hero_calculate_gpa')}>
                 <Button variant="gradient" size="xl" className="gap-2 min-w-[200px]">
                   Calculate GPA
                   <ArrowRight className="w-5 h-5" />
@@ -164,7 +165,7 @@ export function Hero() {
               </Link>
             </MagneticButton>
             <MagneticButton>
-              <Link href="/attendance">
+              <Link href="/attendance" onClick={() => GA.ctaClicked('hero_track_attendance')}>
                 <Button variant="outline" size="xl" className="gap-2 min-w-[200px]">
                   <BookOpen className="w-5 h-5" />
                   Track Attendance

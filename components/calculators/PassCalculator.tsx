@@ -1,10 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Shield, AlertTriangle, XCircle, BookOpen, FileText, GraduationCap, Target, CheckCircle, HelpCircle } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { GlassCard } from '@/components/ui/card'
+import { GA } from '@/lib/analytics'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -247,6 +248,21 @@ export function PassCalculator() {
 
   // Neutral status for the empty/no-data state
   const displayStatus = !r.hasKnownData ? 'neutral' : r.impossible ? 'danger' : r.status
+
+  // Track when user has filled in enough to get a meaningful result
+  const passTimer = useRef<ReturnType<typeof setTimeout>>()
+  const lastPassKey = useRef<string>('')
+  useEffect(() => {
+    if (typeof inp.endSemMax !== 'number' || inp.endSemMax === 0) return
+    const key = `${inp.endSemMax}/${inp.endSemMarks}/${inp.passingPercent}`
+    if (key === lastPassKey.current) return
+    clearTimeout(passTimer.current)
+    passTimer.current = setTimeout(() => {
+      lastPassKey.current = key
+      GA.passChecked(inp.endSemMax as number, inp.passingPercent)
+    }, 800)
+    return () => clearTimeout(passTimer.current)
+  }, [inp.endSemMax, inp.endSemMarks, inp.passingPercent])
 
   const STATUS_MAP = {
     safe:       { color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/25', barColor: 'bg-emerald-500', Icon: Shield,        label: 'Safe Zone'     },

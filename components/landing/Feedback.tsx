@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion'
 import { MessageSquareHeart, Lightbulb, ArrowRight, Sparkles } from 'lucide-react'
+import { GA } from '@/lib/analytics'
 
 const FORM_URL = 'https://forms.gle/WxJ8hFrrTLfV4ZmDA'
 
@@ -88,6 +89,7 @@ export function Feedback() {
                   href={FORM_URL}
                   target="_blank"
                   rel="noopener noreferrer"
+                  onClick={() => GA.feedbackClicked('give_feedback')}
                   whileHover={{ scale: 1.03, y: -2 }}
                   whileTap={{ scale: 0.97 }}
                   transition={{ type: 'spring', stiffness: 400, damping: 20 }}
@@ -109,6 +111,7 @@ export function Feedback() {
                   href={FORM_URL}
                   target="_blank"
                   rel="noopener noreferrer"
+                  onClick={() => GA.feedbackClicked('suggest_feature')}
                   whileHover={{ scale: 1.03, y: -2 }}
                   whileTap={{ scale: 0.97 }}
                   transition={{ type: 'spring', stiffness: 400, damping: 20 }}
