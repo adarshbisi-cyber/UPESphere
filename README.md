@@ -24,15 +24,6 @@
 - **CGPA Calculator** — Semester-wise entry, cumulative CGPA with trend chart, and a target CGPA predictor.
 - **Attendance Calculator** — Current percentage, safe-bunk count, recovery classes needed, circular health gauge.
 
-### University Presets
-Pre-configured grading systems for:
-- VTU (85% attendance, O/A+/A/B+/B/C/P/F — 10 pt)
-- SRM (75% attendance, 10 pt scale)
-- KIIT (75% attendance, O/E/A/B/C/D/F — 10 pt)
-- Anna University (75% attendance, Regulation 2021)
-- UPES (75% attendance, 10 pt scale)
-- Generic 10-point and 4-point scale
-
 ### Dashboard
 - Stats cards: Current GPA, CGPA, Attendance %, Safe Bunks, Academic Health Score
 - SGPA/CGPA trend area chart
