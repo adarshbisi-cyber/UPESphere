@@ -1,8 +1,8 @@
 {
-  "/(auth)/login/page": "app/(auth)/login/page.js",
+  "/cgpa/page": "app/cgpa/page.js",
   "/attendance/page": "app/attendance/page.js",
-  "/dashboard/page": "app/dashboard/page.js",
-  "/gpa/page": "app/gpa/page.js",
+  "/page": "app/page.js",
   "/pass/page": "app/pass/page.js",
-  "/auth/callback/route": "app/auth/callback/route.js"
+  "/(auth)/login/page": "app/(auth)/login/page.js",
+  "/faq/page": "app/faq/page.js"
 }

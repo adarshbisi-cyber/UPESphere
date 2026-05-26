@@ -3,7 +3,6 @@ import { Hero } from '@/components/landing/Hero'
 import { Features } from '@/components/landing/Features'
 import { GPADemo } from '@/components/landing/GPADemo'
 import { AttendanceDemo } from '@/components/landing/AttendanceDemo'
-import { FAQ } from '@/components/landing/FAQ'
 import { Feedback } from '@/components/landing/Feedback'
 import { Footer } from '@/components/landing/Footer'
 
@@ -15,7 +14,6 @@ export default function HomePage() {
       <Features />
       <GPADemo />
       <AttendanceDemo />
-      <FAQ />
       <Feedback />
       <Footer />
     </main>
