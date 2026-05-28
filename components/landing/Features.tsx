@@ -2,62 +2,62 @@
 
 import { useRef } from 'react'
 import { motion } from 'framer-motion'
-import { Calculator, BarChart3, Calendar, Brain, Target, Share2 } from 'lucide-react'
+import { ScanLine, Calculator, Activity, CalendarCheck, Crosshair, LayoutDashboard } from 'lucide-react'
 
 const features = [
   {
-    icon: Calculator,
-    title: 'GPA Calculator',
-    description: 'Support for 10-point, 4-point, and percentage scales. Dynamic subject rows with real-time calculation.',
-    color: 'from-indigo-500/20 to-indigo-600/10',
-    iconColor: 'text-indigo-400',
-    border: 'border-indigo-500/20',
-    glowColor: 'rgba(99,102,241,0.18)',
-  },
-  {
-    icon: BarChart3,
-    title: 'CGPA Tracker',
-    description: 'Semester-wise SGPA entry, cumulative CGPA trends, and target prediction for your dream score.',
+    icon: ScanLine,
+    title: 'AI Curriculum Scanner',
+    description: 'Upload curriculum screenshots to instantly auto-fill subjects and credits using OCR — no manual entry needed.',
     color: 'from-violet-500/20 to-violet-600/10',
     iconColor: 'text-violet-400',
     border: 'border-violet-500/20',
     glowColor: 'rgba(139,92,246,0.18)',
   },
   {
-    icon: Calendar,
-    title: 'Attendance Manager',
-    description: 'Know exactly how many classes you can bunk safely. Health meter and instant recovery guidance.',
-    color: 'from-cyan-500/20 to-cyan-600/10',
-    iconColor: 'text-cyan-400',
-    border: 'border-cyan-500/20',
-    glowColor: 'rgba(6,182,212,0.18)',
+    icon: Calculator,
+    title: 'Smart GPA Suite',
+    description: 'Calculate semester GPA, track cumulative CGPA trends, and simulate future performance across any grading scale.',
+    color: 'from-indigo-500/20 to-indigo-600/10',
+    iconColor: 'text-indigo-400',
+    border: 'border-indigo-500/20',
+    glowColor: 'rgba(99,102,241,0.18)',
   },
   {
-    icon: Brain,
-    title: 'AI-Style Insights',
-    description: 'Intelligent suggestions like "Improving Math from B to A increases your GPA by 0.3." Rule-based smart analysis.',
+    icon: Activity,
+    title: 'Expected Score Predictor',
+    description: 'Forecast your final subject score, analyze passing probability, and estimate end semester outcomes instantly.',
     color: 'from-emerald-500/20 to-emerald-600/10',
     iconColor: 'text-emerald-400',
     border: 'border-emerald-500/20',
     glowColor: 'rgba(16,185,129,0.18)',
   },
   {
-    icon: Target,
-    title: 'Target Predictor',
-    description: 'Set your target CGPA and we calculate the exact SGPA you need each semester to reach it.',
-    color: 'from-amber-500/20 to-amber-600/10',
-    iconColor: 'text-amber-400',
-    border: 'border-amber-500/20',
-    glowColor: 'rgba(245,158,11,0.18)',
+    icon: CalendarCheck,
+    title: 'Attendance Planner',
+    description: 'Track attendance percentage, calculate safe bunks, and get a clear recovery plan before it is too late.',
+    color: 'from-cyan-500/20 to-cyan-600/10',
+    iconColor: 'text-cyan-400',
+    border: 'border-cyan-500/20',
+    glowColor: 'rgba(6,182,212,0.18)',
   },
   {
-    icon: Share2,
-    title: 'Save & Share',
-    description: 'Save your calculations, export as PDF, and share beautiful result cards with friends.',
+    icon: Crosshair,
+    title: 'Target GPA Planner',
+    description: 'Set your desired CGPA goal and instantly discover the exact GPA you need to score this semester to reach it.',
     color: 'from-rose-500/20 to-rose-600/10',
     iconColor: 'text-rose-400',
     border: 'border-rose-500/20',
     glowColor: 'rgba(244,63,94,0.18)',
+  },
+  {
+    icon: LayoutDashboard,
+    title: 'Personal Academic Dashboard',
+    description: 'Save semester records, monitor CGPA trends over time, and access your full academic history anywhere.',
+    color: 'from-amber-500/20 to-amber-600/10',
+    iconColor: 'text-amber-400',
+    border: 'border-amber-500/20',
+    glowColor: 'rgba(245,158,11,0.18)',
   },
 ]
 
@@ -120,16 +120,16 @@ export function Features() {
           className="text-center mb-16"
         >
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-300 text-sm font-medium mb-4">
-            Everything You Need
+            AI-Powered Platform
           </div>
           <h2 className="text-4xl sm:text-5xl font-bold font-display tracking-tight mb-4">
-            Built for modern{' '}
+            Your Complete{' '}
             <span className="bg-gradient-to-r from-violet-400 to-indigo-400 bg-clip-text text-transparent">
-              students
+              Academic Toolkit
             </span>
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Not just calculators — a complete academic analytics platform that understands how Indian universities work.
+            From GPA tracking to AI-powered curriculum scanning, UPESphere helps students predict scores, manage attendance, and stay academically ahead.
           </p>
         </motion.div>
 

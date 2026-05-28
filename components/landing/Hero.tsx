@@ -7,12 +7,6 @@ import { ArrowRight, Sparkles, TrendingUp, BookOpen, CheckCircle } from 'lucide-
 import { Button } from '@/components/ui/button'
 import { GA } from '@/lib/analytics'
 
-const stats = [
-  { value: '50K+', label: 'Students' },
-  { value: '1M+', label: 'Calculations' },
-  { value: '100+', label: 'Universities' },
-]
-
 const features = ['GPA & CGPA Calculator', 'Attendance Tracker', 'AI Insights', 'Target Predictor']
 
 // ── Magnetic button wrapper ──────────────────────────────────────────────────
@@ -154,7 +148,7 @@ export function Hero() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.4 }}
-            className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16"
+            className="flex flex-col sm:flex-row items-center justify-center gap-4"
           >
             <MagneticButton>
               <Link href="/gpa" onClick={() => GA.ctaClicked('hero_calculate_gpa')}>
@@ -172,23 +166,6 @@ export function Hero() {
                 </Button>
               </Link>
             </MagneticButton>
-          </motion.div>
-
-          {/* Stats */}
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.5 }}
-            className="flex items-center justify-center gap-12"
-          >
-            {stats.map((stat) => (
-              <div key={stat.label} className="text-center">
-                <div className="text-2xl sm:text-3xl font-bold font-display bg-gradient-to-r dark:from-white dark:to-white/60 from-slate-900 to-slate-600 bg-clip-text text-transparent">
-                  {stat.value}
-                </div>
-                <div className="text-sm text-muted-foreground mt-1">{stat.label}</div>
-              </div>
-            ))}
           </motion.div>
         </div>
 
