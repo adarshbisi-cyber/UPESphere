@@ -18,7 +18,7 @@ interface Inputs {
   midSemMax:     NumOrEmpty
   endSemMarks:   NumOrEmpty
   endSemMax:     NumOrEmpty
-  passingPercent: number
+  passingPercent: number | ''
 }
 
 const DEFAULTS: Inputs = {
@@ -53,7 +53,7 @@ function calcResults(i: Inputs) {
 
   const knownScore    = internalScore + midSemScore   // out of 70 (before end sem)
   const expectedTotal = knownScore + endSemScore      // out of 100
-  const passingMark   = i.passingPercent
+  const passingMark   = i.passingPercent !== '' ? Math.max(1, Math.min(100, i.passingPercent)) : 40
   const endSemMax     = toNum(i.endSemMax)
   const endSemMarks   = toNum(i.endSemMarks)
 
@@ -295,7 +295,7 @@ export function PassCalculator() {
 
   const setMark = (key: keyof Omit<Inputs, 'passingPercent'>, value: NumOrEmpty) =>
     setInp(prev => ({ ...prev, [key]: value }))
-  const setPassing = (value: number) =>
+  const setPassing = (value: number | '') =>
     setInp(prev => ({ ...prev, passingPercent: value }))
 
   const r = calcResults(inp)
@@ -313,7 +313,7 @@ export function PassCalculator() {
     clearTimeout(passTimer.current)
     passTimer.current = setTimeout(() => {
       lastPassKey.current = key
-      GA.passChecked(inp.endSemMax as number, inp.passingPercent)
+      GA.passChecked(inp.endSemMax as number, inp.passingPercent !== '' ? inp.passingPercent : 40)
     }, 800)
     return () => clearTimeout(passTimer.current)
   }, [inp.endSemMax, inp.endSemMarks, inp.passingPercent])
@@ -388,11 +388,14 @@ export function PassCalculator() {
               <p className="text-xs text-muted-foreground font-medium mb-1.5">Passing Criteria</p>
               <div className="flex items-center gap-2 max-w-[140px]">
                 <Input
-                  type="number" min={1} max={100}
+                  type="number"
                   value={inp.passingPercent}
+                  placeholder="40"
                   onChange={e => {
-                    const parsed = parseInt(e.target.value, 10)
-                    if (!isNaN(parsed)) setPassing(Math.max(1, Math.min(100, parsed)))
+                    const raw = e.target.value
+                    if (raw === '') { setPassing(''); return }
+                    const parsed = parseInt(raw, 10)
+                    if (!isNaN(parsed)) setPassing(parsed)
                   }}
                   className="h-9 text-center font-semibold"
                 />
@@ -405,53 +408,131 @@ export function PassCalculator() {
         {/* ── Score Summary ────────────────────────────────────────────────── */}
         <div className="lg:col-span-2 space-y-3">
 
-          {/* CARD 1 — Secured So Far */}
-          <GlassCard className="p-5">
-            <div className="flex items-start justify-between mb-2">
-              <div>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold mb-0.5">
-                  Secured So Far
+          {/* CARD 1 — Academic Performance Overview */}
+          <GlassCard className="overflow-hidden">
+            <div className="p-5">
+
+              {/* Header */}
+              <div className="flex items-start justify-between mb-5">
+                <p className="text-base font-semibold font-display text-foreground leading-tight">
+                  Academic Performance Overview
                 </p>
-                <p className="text-xs text-muted-foreground">Internal + Mid Sem combined</p>
+                <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full border shrink-0 ${sc.bg} ${sc.border} ${sc.color}`}>
+                  <sc.Icon className="w-3 h-3" />
+                  {sc.label}
+                </span>
               </div>
-              <span
-                className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full border shrink-0 ${sc.bg} ${sc.border} ${sc.color}`}
-              >
-                <sc.Icon className="w-3 h-3" />
-                {sc.label}
-              </span>
-            </div>
 
-            <div className="flex items-baseline gap-1.5 mb-3">
-              <motion.span
-                key={r.knownScore}
-                initial={{ scale: 0.85, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                className="text-4xl font-bold font-display text-foreground"
-              >
-                {r.knownScore.toFixed(1)}
-              </motion.span>
-              <span className="text-base text-muted-foreground font-medium">/ 70 pts</span>
-            </div>
+              {/* Side-by-side metrics */}
+              <div className="grid grid-cols-1 sm:grid-cols-2">
 
-            <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--divider)' }}>
-              <motion.div
-                className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-violet-500"
-                animate={{ width: `${Math.min(100, knownPct)}%` }}
-                transition={{ duration: 0.7, ease: 'easeOut' }}
-              />
-            </div>
-            <div className="flex justify-between text-[10px] text-muted-foreground/50 mt-1">
-              <span>0</span>
-              <span>{knownPct}% of pre-exam marks</span>
-              <span>70</span>
+                {/* Metric 1 — Secured So Far */}
+                <motion.div
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.05, duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                  className="sm:pr-4 sm:border-r pb-4 sm:pb-0"
+                  style={{ borderColor: 'var(--divider)' }}
+                >
+                  <p className="text-[10px] text-muted-foreground/55 uppercase tracking-widest font-bold mb-2">
+                    Internal + Mid Sem
+                  </p>
+                  <div className="flex items-baseline gap-1 mb-2.5">
+                    <motion.span
+                      key={r.knownScore}
+                      initial={{ scale: 0.85, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      className="text-3xl font-bold font-display text-foreground"
+                    >
+                      {r.knownScore.toFixed(1)}
+                    </motion.span>
+                    <span className="text-sm text-muted-foreground font-medium">&nbsp;/ 70 pts</span>
+                  </div>
+                  <div className="h-1.5 rounded-full overflow-hidden mb-1.5" style={{ background: 'var(--divider)' }}>
+                    <motion.div
+                      className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-violet-500"
+                      animate={{ width: `${Math.min(100, knownPct)}%` }}
+                      transition={{ duration: 0.7, ease: 'easeOut' }}
+                    />
+                  </div>
+                  <p className="text-[10px] text-muted-foreground/45">{knownPct}% pre-exam</p>
+                </motion.div>
+
+                {/* Metric 2 — Expected Total */}
+                <motion.div
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.08, duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                  className="sm:pl-4 pt-4 sm:pt-0 border-t sm:border-t-0"
+                  style={{ borderColor: 'var(--divider)' }}
+                >
+                  <p className="text-[10px] text-muted-foreground/55 uppercase tracking-widest font-bold mb-2">
+                    Expected Total
+                  </p>
+                  <div className="flex items-baseline gap-1 mb-2.5">
+                    <motion.span
+                      key={r.expectedTotal}
+                      initial={{ scale: 0.8, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                      className="text-3xl font-bold font-display text-foreground"
+                    >
+                      {r.hasKnownData ? r.expectedTotal.toFixed(0) : '—'}
+                    </motion.span>
+                    {r.hasKnownData && (
+                      <span className="text-sm text-muted-foreground font-medium">&nbsp;/ 100</span>
+                    )}
+                  </div>
+                  <div className="h-1.5 rounded-full overflow-hidden mb-1.5" style={{ background: 'var(--divider)' }}>
+                    <motion.div
+                      className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-violet-500"
+                      animate={{ width: r.hasKnownData ? `${Math.min(100, r.expectedTotal)}%` : '0%' }}
+                      transition={{ duration: 0.7, ease: 'easeOut' }}
+                    />
+                  </div>
+                  <p className="text-[10px] text-muted-foreground/45">
+                    {r.hasKnownData ? `Pass at: ${r.passingMark}` : 'Expected score'}
+                  </p>
+                </motion.div>
+
+              </div>
+
+              {/* Contextual insight — only when data is available */}
+              {r.hasKnownData && (
+                <motion.div
+                  key={displayStatus}
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.15, duration: 0.3 }}
+                  className="mt-4"
+                >
+                  <div className="my-4" style={{ borderTop: '1px solid var(--divider)' }} />
+                  <div
+                    className="rounded-xl p-3 flex items-start gap-2.5"
+                    style={{ background: 'var(--muted-surface)', border: '1px solid var(--divider)' }}
+                  >
+                    <Lightbulb className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      {r.impossible
+                        ? <><span className="font-semibold text-red-400">Passing not possible.</span>{' '}Adjust your target or speak to your faculty.</>
+                        : r.alreadyPassing
+                        ? <><span className="font-semibold text-emerald-400">Already passing!</span>{' '}Any End Sem score only improves your total.</>
+                        : safeZoneScore !== null
+                        ? <><span className="font-semibold text-foreground">Aim for {safeZoneScore}+</span>{' '}in End Sem to move into the safe zone.</>
+                        : <>Enter all marks to see your recommended End Sem target.</>
+                      }
+                    </p>
+                  </div>
+                </motion.div>
+              )}
+
             </div>
           </GlassCard>
 
           {/* CARD 2 — End Sem Score Recommendations */}
           <GlassCard className="overflow-hidden">
             <div className="px-5 pt-5 pb-5">
-              <p className="text-[10px] uppercase tracking-widest font-semibold text-muted-foreground/70 mb-4">
+              <p className="text-base font-semibold font-display text-foreground leading-tight mb-4">
                 End Sem Score Recommendations
               </p>
 
@@ -570,22 +651,6 @@ export function PassCalculator() {
                       </motion.div>
                     ))}
 
-                    {/* Recommendation tip */}
-                    <motion.div
-                      initial={{ opacity: 0, y: 6 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.28, duration: 0.35 }}
-                      className="rounded-xl p-3.5 flex items-start gap-2.5"
-                      style={{ background: 'rgba(52,211,153,0.07)', border: '1px solid rgba(52,211,153,0.2)' }}
-                    >
-                      <Lightbulb className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
-                      <p className="text-xs text-muted-foreground leading-relaxed">
-                        <span className="font-semibold text-emerald-300">
-                          Try scoring {safeZoneScore}+ in End Sem
-                        </span>{' '}
-                        to stay in the safe zone.
-                      </p>
-                    </motion.div>
                   </motion.div>
                 )}
 
@@ -593,56 +658,6 @@ export function PassCalculator() {
             </div>
           </GlassCard>
 
-          {/* CARD 4 — Expected Total */}
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-            whileHover={{ scale: 1.015, transition: { type: 'spring', stiffness: 380, damping: 26 } }}
-            className="rounded-2xl p-5 cursor-default"
-            style={{
-              background: 'var(--muted-surface)',
-              border: '1px solid var(--divider)',
-            }}
-          >
-            <p className="text-xs font-bold uppercase tracking-widest text-foreground/55 mb-3.5">
-              Expected Total
-            </p>
-
-            <div className="flex items-baseline gap-2 mb-1.5">
-              <motion.span
-                key={r.expectedTotal}
-                initial={{ scale: 0.8, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-                className="text-5xl font-bold font-display text-foreground"
-              >
-                {r.hasKnownData ? r.expectedTotal.toFixed(0) : '—'}
-              </motion.span>
-              {r.hasKnownData && (
-                <span className="text-lg font-medium text-muted-foreground">/ 100</span>
-              )}
-            </div>
-
-            <p className="text-xs text-muted-foreground mb-4">
-              Based on your expected End Sem score
-            </p>
-
-            <div className="h-2 rounded-full overflow-hidden" style={{ background: 'var(--divider)' }}>
-              <motion.div
-                className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-violet-500"
-                animate={{ width: r.hasKnownData ? `${Math.min(100, r.expectedTotal)}%` : '0%' }}
-                transition={{ duration: 0.7, ease: 'easeOut' }}
-              />
-            </div>
-            <div className="flex justify-between text-[10px] text-muted-foreground/40 mt-1.5">
-              <span>0</span>
-              {r.hasKnownData && (
-                <span className="font-semibold text-muted-foreground/60">Pass: {r.passingMark}</span>
-              )}
-              <span>100</span>
-            </div>
-          </motion.div>
 
         </div>
       </div>
