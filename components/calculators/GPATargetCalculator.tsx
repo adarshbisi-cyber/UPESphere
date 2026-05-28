@@ -59,7 +59,7 @@ function getTip(gpa: number, raw: number): string {
 
 function TargetOrb() {
   return (
-    <div className="relative flex items-center justify-center w-44 h-44">
+    <div className="relative flex items-center justify-center w-32 h-32 sm:w-44 sm:h-44">
       {[0, 1, 2].map(i => (
         <motion.div
           key={i}
@@ -172,7 +172,7 @@ export function GPATargetCalculator() {
     <div className="space-y-4">
 
       {/* ── 4 Input cards ──────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <InputCard
           icon={GraduationCap} label="Credits Completed" sublabel="(Till Last Sem)"
           value={inp.completedCredits} suffix="credits" min={0}
@@ -202,12 +202,12 @@ export function GPATargetCalculator() {
         <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-[var(--divider)]">
 
           {/* Left — animated orb */}
-          <div className="flex items-center justify-center p-8 md:p-10">
+          <div className="flex items-center justify-center p-5 sm:p-8 md:p-10">
             <TargetOrb />
           </div>
 
           {/* Center — GPA result */}
-          <div className="flex flex-col items-center justify-center gap-3 p-8 text-center">
+          <div className="flex flex-col items-center justify-center gap-3 p-5 sm:p-8 text-center">
             <p className="text-sm text-muted-foreground">You need</p>
 
             <motion.div
@@ -215,7 +215,7 @@ export function GPATargetCalculator() {
               initial={{ scale: 0.82, opacity: 0, y: 10 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               transition={{ type: 'spring', stiffness: 260, damping: 22 }}
-              className={`text-[80px] leading-none font-bold font-display ${diff.text}`}
+              className={`text-[56px] sm:text-[80px] leading-none font-bold font-display ${diff.text}`}
               style={{ textShadow: `0 0 48px ${diff.hex}55` }}
             >
               {displayGPA}
@@ -238,7 +238,7 @@ export function GPATargetCalculator() {
           </div>
 
           {/* Right — message + gauge */}
-          <div className="flex flex-col justify-center gap-4 p-8">
+          <div className="flex flex-col justify-center gap-4 p-5 sm:p-8">
 
             <AnimatePresence mode="wait">
               {isValid && (
