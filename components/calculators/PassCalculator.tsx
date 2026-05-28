@@ -61,7 +61,7 @@ function calcResults(i: Inputs) {
   const minEndSemWeightedNeeded = Math.max(passingMark - knownScore, 0)
 
   // Distinguish "no data entered yet" from "entered 0"
-  const hasKnownData  = i.internalMarks !== '' || i.midSemMarks !== ''
+  const hasKnownData  = i.internalMarks !== '' && i.internalMax !== '' && i.midSemMarks !== '' && i.midSemMax !== ''
   const alreadyPassing = knownScore >= passingMark
   // Impossible: after data is entered, even full End Sem marks can't bridge the gap
   const impossible    = hasKnownData && !alreadyPassing && minEndSemWeightedNeeded > W_ENDSEM
@@ -263,6 +263,14 @@ export function PassCalculator() {
     }, 800)
     return () => clearTimeout(passTimer.current)
   }, [inp.endSemMax, inp.endSemMarks, inp.passingPercent])
+
+  // Auto-default End Sem "Out Of" to 100 the moment the user starts entering marks,
+  // but only when the field is still empty — never overwrite a value the user typed.
+  useEffect(() => {
+    const hasStarted = inp.internalMarks !== '' || inp.midSemMarks !== ''
+    if (!hasStarted) return
+    setInp(prev => prev.endSemMax !== '' ? prev : { ...prev, endSemMax: 100 })
+  }, [inp.internalMarks, inp.midSemMarks])
 
   const STATUS_MAP = {
     safe:       { color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/25', barColor: 'bg-emerald-500', Icon: Shield,        label: 'Safe Zone'     },
