@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { GraduationCap, Github, Twitter } from 'lucide-react'
+import { GraduationCap, Github } from 'lucide-react'
 
 const links = {
   Tools: [
@@ -34,12 +34,14 @@ export function Footer() {
             <p className="text-sm text-muted-foreground leading-relaxed max-w-xs">
               The smartest academic companion for Indian students. Track GPA, CGPA, attendance, and unlock your academic potential.
             </p>
-            <div className="flex items-center gap-3 mt-6">
-              <a href="#" className="p-2 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors">
+            <div className="mt-6">
+              <a
+                href="https://github.com/adarshbisi-cyber/UPESphere"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 p-2 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:border-indigo-500/40 hover:bg-indigo-500/[0.06] hover:shadow-[0_0_12px_rgba(99,102,241,0.15)] transition-all duration-200"
+              >
                 <Github className="w-4 h-4" />
-              </a>
-              <a href="#" className="p-2 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors">
-                <Twitter className="w-4 h-4" />
               </a>
             </div>
           </div>

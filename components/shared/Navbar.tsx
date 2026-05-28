@@ -53,9 +53,9 @@ const calculators = [
     activeBg: 'bg-cyan-500/10 border-cyan-500/25',
   },
   {
-    label: 'Can I Pass?',
-    description: 'Predict passing probability & required marks',
-    href: '/pass',
+    label: 'Expected Total',
+    description: 'Predict your final subject score and exam outcome',
+    href: '/calculators/expected-total',
     icon: Target,
     iconClass: 'text-emerald-400',
     iconBg: 'bg-emerald-500/15',

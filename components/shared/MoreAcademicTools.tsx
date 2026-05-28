@@ -51,9 +51,9 @@ const ALL_TOOLS = [
     shadowHover: '0 8px 28px rgba(34,211,238,0.16), 0 2px 8px rgba(34,211,238,0.08)',
   },
   {
-    label: 'Can I Pass?',
-    description: 'Predict passing probability and required marks',
-    href: '/pass',
+    label: 'Expected Total',
+    description: 'Predict your final subject score and exam outcome',
+    href: '/calculators/expected-total',
     icon: Target,
     iconBg: 'bg-emerald-500/15',
     iconClass: 'text-emerald-400',
