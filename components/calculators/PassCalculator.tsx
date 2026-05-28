@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Shield, AlertTriangle, XCircle, BookOpen, FileText, GraduationCap, Target, CheckCircle, HelpCircle } from 'lucide-react'
+import { Shield, AlertTriangle, XCircle, BookOpen, FileText, GraduationCap, Target, CheckCircle, HelpCircle, Lightbulb } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { GlassCard } from '@/components/ui/card'
 import { GA } from '@/lib/analytics'
@@ -128,6 +128,60 @@ function calcResults(i: Inputs) {
     passProbability,
     status, headline, subtext, endSemMax,
   }
+}
+
+// ─── Recommendation Tiers ────────────────────────────────────────────────────
+
+interface Tier {
+  label: string
+  score: number
+  outOf: number
+  confidence: number
+  description: string
+  textColor: string
+  bgClass: string
+  borderClass: string
+  isHighlight: boolean
+}
+
+function calcTiers(minMarks: number, endSemMax: number): Tier[] {
+  const outOf = endSemMax || 100
+  const step  = Math.max(1, Math.round(outOf * 0.1))
+  return [
+    {
+      label: 'Minimum Passing',
+      score: minMarks,
+      outOf,
+      confidence: 50,
+      description: 'Bare minimum required to pass the subject.',
+      textColor: 'text-red-400',
+      bgClass: 'bg-red-500/[0.08]',
+      borderClass: 'border-red-500/25',
+      isHighlight: false,
+    },
+    {
+      label: 'Safer Score',
+      score: Math.min(minMarks + step, outOf),
+      outOf,
+      confidence: 75,
+      description: 'Recommended score to reduce passing risk.',
+      textColor: 'text-amber-400',
+      bgClass: 'bg-amber-500/[0.08]',
+      borderClass: 'border-amber-500/25',
+      isHighlight: false,
+    },
+    {
+      label: 'Strong Safe Zone',
+      score: Math.min(minMarks + step * 2, outOf),
+      outOf,
+      confidence: 100,
+      description: 'Ideal target for confident passing.',
+      textColor: 'text-emerald-400',
+      bgClass: 'bg-emerald-500/[0.08]',
+      borderClass: 'border-emerald-500/25',
+      isHighlight: true,
+    },
+  ]
 }
 
 // ─── Mark Input ───────────────────────────────────────────────────────────────
@@ -280,10 +334,11 @@ export function PassCalculator() {
   } as const
   const sc = STATUS_MAP[displayStatus]
 
-  const knownPct     = Math.round((r.knownScore / 70) * 100)
-  const endSemReqPct = r.endSemMax > 0 && r.minEndSemMarks !== null
-    ? Math.min(100, Math.round((r.minEndSemMarks / r.endSemMax) * 100))
-    : 0
+  const knownPct      = Math.round((r.knownScore / 70) * 100)
+  const tiers         = r.hasKnownData && !r.impossible && !r.alreadyPassing && r.minEndSemMarks !== null
+    ? calcTiers(r.minEndSemMarks, toNum(inp.endSemMax))
+    : null
+  const safeZoneScore = tiers ? tiers[2].score : null
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
@@ -393,37 +448,11 @@ export function PassCalculator() {
             </div>
           </GlassCard>
 
-          {/* CARD 2+3 — Unified: End Sem Requirement + Pass Chance */}
-          <motion.div
-            key={displayStatus}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-            className={`rounded-2xl border relative overflow-hidden ${sc.border}`}
-            style={{
-              background:
-                displayStatus === 'safe'       ? 'linear-gradient(145deg, rgba(52,211,153,0.11) 0%, rgba(16,185,129,0.04) 100%)' :
-                displayStatus === 'borderline' ? 'linear-gradient(145deg, rgba(245,158,11,0.11) 0%, rgba(217,119,6,0.04) 100%)' :
-                displayStatus === 'danger'     ? 'linear-gradient(145deg, rgba(239,68,68,0.11) 0%, rgba(220,38,38,0.04) 100%)' :
-                                                 'linear-gradient(145deg, rgba(99,102,241,0.07) 0%, rgba(139,92,246,0.03) 100%)',
-            }}
-          >
-            {/* Corner glow */}
-            <div
-              className="absolute -top-10 -right-10 w-32 h-32 rounded-full pointer-events-none"
-              style={{
-                background:
-                  displayStatus === 'safe'       ? 'radial-gradient(circle, rgba(52,211,153,0.18) 0%, transparent 70%)' :
-                  displayStatus === 'borderline' ? 'radial-gradient(circle, rgba(245,158,11,0.18) 0%, transparent 70%)' :
-                  displayStatus === 'danger'     ? 'radial-gradient(circle, rgba(239,68,68,0.18) 0%, transparent 70%)' :
-                                                   'radial-gradient(circle, rgba(99,102,241,0.14) 0%, transparent 70%)',
-              }}
-            />
-
-            {/* ── Requirement section ─────────────────────────────────────── */}
-            <div className="px-5 pt-5 pb-4">
-              <p className="text-[10px] uppercase tracking-widest font-semibold text-muted-foreground mb-4">
-                Minimum End Sem Marks to Pass
+          {/* CARD 2 — End Sem Score Recommendations */}
+          <GlassCard className="overflow-hidden">
+            <div className="px-5 pt-5 pb-5">
+              <p className="text-[10px] uppercase tracking-widest font-semibold text-muted-foreground/70 mb-4">
+                End Sem Score Recommendations
               </p>
 
               <AnimatePresence mode="wait">
@@ -435,13 +464,13 @@ export function PassCalculator() {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="flex items-center gap-3"
+                    className="flex items-center gap-3 py-1"
                   >
                     <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ background: 'var(--muted-surface)', border: '1px solid var(--divider)' }}>
-                      <HelpCircle className="w-4.5 h-4.5 text-muted-foreground/40" />
+                      <HelpCircle className="w-4 h-4 text-muted-foreground/40" />
                     </div>
                     <p className="text-sm text-muted-foreground leading-relaxed">
-                      Enter Internal &amp; Mid Sem marks to see your requirement.
+                      Enter Internal &amp; Mid Sem marks to see your recommendations.
                     </p>
                   </motion.div>
                 )}
@@ -453,7 +482,7 @@ export function PassCalculator() {
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0 }}
-                    className="flex items-center gap-3"
+                    className="flex items-center gap-3 py-1"
                   >
                     <div className="w-11 h-11 rounded-full bg-red-500/20 border border-red-500/30 flex items-center justify-center shrink-0">
                       <XCircle className="w-5 h-5 text-red-400" />
@@ -476,7 +505,7 @@ export function PassCalculator() {
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0 }}
-                    className="flex items-center gap-3"
+                    className="flex items-center gap-3 py-1"
                   >
                     <div className="w-11 h-11 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center shrink-0">
                       <CheckCircle className="w-5 h-5 text-emerald-400" />
@@ -488,70 +517,81 @@ export function PassCalculator() {
                   </motion.div>
                 )}
 
-                {/* State D — marks required */}
-                {r.hasKnownData && !r.impossible && !r.alreadyPassing && (
-                  <motion.div key="required" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                    <div className="flex items-baseline gap-1.5 mb-1">
-                      <motion.span
-                        key={r.minEndSemMarks}
-                        initial={{ scale: 0.8, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        className={`text-5xl font-bold font-display ${sc.color}`}
-                      >
-                        {r.minEndSemMarks ?? '—'}
-                      </motion.span>
-                      <span className={`text-xl font-medium opacity-60 ${sc.color}`}>
-                        / {r.endSemMax || '?'}
-                      </span>
-                    </div>
-                    <p className="text-xs text-muted-foreground mb-3">minimum marks to pass</p>
-                    <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--divider)' }}>
+                {/* State D — three tier recommendations */}
+                {tiers && (
+                  <motion.div
+                    key="tiers"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="space-y-2"
+                  >
+                    {tiers.map((tier, i) => (
                       <motion.div
-                        className={`h-full rounded-full ${sc.barColor}`}
-                        animate={{ width: `${endSemReqPct}%` }}
-                        transition={{ duration: 0.7, ease: 'easeOut' }}
-                      />
-                    </div>
+                        key={tier.label}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: i * 0.07, duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                        whileHover={{ scale: 1.012, transition: { type: 'spring', stiffness: 400, damping: 28 } }}
+                        className={`rounded-xl p-3.5 border cursor-default relative overflow-hidden ${tier.bgClass} ${tier.borderClass}`}
+                        style={tier.isHighlight ? { boxShadow: '0 0 20px rgba(52,211,153,0.10)' } : undefined}
+                      >
+                        {tier.isHighlight && (
+                          <motion.div
+                            className="absolute inset-0 rounded-xl pointer-events-none"
+                            animate={{ opacity: [0.4, 0.8, 0.4] }}
+                            transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+                            style={{ background: 'radial-gradient(circle at 90% 10%, rgba(52,211,153,0.15) 0%, transparent 65%)' }}
+                          />
+                        )}
+                        <p className={`text-[9px] uppercase tracking-widest font-bold mb-2 ${tier.textColor} opacity-75`}>
+                          {tier.label}
+                        </p>
+                        <div className="flex items-center justify-between gap-2 mb-1.5">
+                          <div className="flex items-baseline gap-1">
+                            <motion.span
+                              key={tier.score}
+                              initial={{ scale: 0.8, opacity: 0 }}
+                              animate={{ scale: 1, opacity: 1 }}
+                              transition={{ delay: i * 0.07 + 0.1 }}
+                              className={`text-[28px] font-bold font-display leading-none ${tier.textColor}`}
+                            >
+                              {tier.score}
+                            </motion.span>
+                            <span className={`text-sm font-medium ${tier.textColor} opacity-50`}>
+                              &nbsp;/ {tier.outOf}
+                            </span>
+                          </div>
+                          <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full shrink-0 border ${tier.bgClass} ${tier.borderClass} ${tier.textColor}`}>
+                            {tier.confidence}% Confidence
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground leading-snug">{tier.description}</p>
+                      </motion.div>
+                    ))}
+
+                    {/* Recommendation tip */}
+                    <motion.div
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.28, duration: 0.35 }}
+                      className="rounded-xl p-3.5 flex items-start gap-2.5"
+                      style={{ background: 'rgba(52,211,153,0.07)', border: '1px solid rgba(52,211,153,0.2)' }}
+                    >
+                      <Lightbulb className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        <span className="font-semibold text-emerald-300">
+                          Try scoring {safeZoneScore}+ in End Sem
+                        </span>{' '}
+                        to stay in the safe zone.
+                      </p>
+                    </motion.div>
                   </motion.div>
                 )}
 
               </AnimatePresence>
             </div>
-
-            {/* ── Divider ─────────────────────────────────────────────────── */}
-            <div className="mx-5" style={{ borderTop: '1px solid var(--divider)' }} />
-
-            {/* ── Pass Chance section ─────────────────────────────────────── */}
-            <div className="px-5 py-4">
-              <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-2 font-semibold">
-                Pass Chance
-              </p>
-              <motion.p
-                key={r.passProbability}
-                initial={{ scale: 0.85, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                className={`text-4xl font-bold font-display leading-none mb-1.5 ${sc.color}`}
-              >
-                {r.hasKnownData ? `${r.passProbability}%` : '—'}
-              </motion.p>
-              <AnimatePresence mode="wait">
-                <motion.p
-                  key={`${inp.endSemMarks}-${inp.endSemMax}`}
-                  initial={{ opacity: 0, y: 4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -4 }}
-                  transition={{ duration: 0.2 }}
-                  className="text-xs text-muted-foreground leading-snug"
-                >
-                  {inp.endSemMarks !== '' && inp.endSemMax !== ''
-                    ? `If you score ${inp.endSemMarks} out of ${inp.endSemMax}`
-                    : inp.endSemMax !== ''
-                    ? `Out of ${inp.endSemMax} in End Sem`
-                    : 'Enter End Sem score'}
-                </motion.p>
-              </AnimatePresence>
-            </div>
-          </motion.div>
+          </GlassCard>
 
           {/* CARD 4 — Expected Total */}
           <motion.div
