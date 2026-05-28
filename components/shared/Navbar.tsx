@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Menu, X, GraduationCap, LogOut, LayoutDashboard,
-  ChevronDown, Calculator, TrendingUp, CalendarCheck, Target,
+  ChevronDown, Calculator, TrendingUp, CalendarCheck, Target, Crosshair,
   Zap, MessageSquare, ExternalLink, HelpCircle,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -24,6 +24,15 @@ const calculators = [
     iconClass: 'text-indigo-400',
     iconBg: 'bg-indigo-500/15',
     activeBg: 'bg-indigo-500/10 border-indigo-500/25',
+  },
+  {
+    label: 'GPA Target',
+    description: 'Know the GPA needed this semester to reach your CGPA goal',
+    href: '/calculators/gpa-target',
+    icon: Crosshair,
+    iconClass: 'text-rose-400',
+    iconBg: 'bg-rose-500/15',
+    activeBg: 'bg-rose-500/10 border-rose-500/25',
   },
   {
     label: 'CGPA Calculator',
@@ -117,7 +126,7 @@ function CalculatorsDropdown() {
             exit={{ opacity: 0, scale: 0.96, y: -8 }}
             transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
             role="menu"
-            className="absolute left-0 top-[calc(100%+10px)] w-[440px] rounded-2xl z-50 overflow-hidden backdrop-blur-2xl"
+            className="absolute left-0 top-[calc(100%+10px)] w-[460px] rounded-2xl z-50 overflow-hidden backdrop-blur-2xl"
             style={{
               background: 'var(--dropdown-bg)',
               border: '1px solid var(--dropdown-border)',
@@ -160,6 +169,7 @@ function CalculatorsDropdown() {
                     }
                     className={cn(
                       'group relative rounded-xl border transition-colors duration-200 cursor-pointer',
+                      i === calculators.length - 1 && calculators.length % 2 !== 0 && 'col-span-2',
                       active
                         ? item.activeBg
                         : 'border-transparent hover:bg-indigo-500/[0.09] hover:border-indigo-500/30'
