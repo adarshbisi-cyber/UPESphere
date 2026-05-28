@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import { Navbar } from '@/components/shared/Navbar'
 import { AttendanceCalculator } from '@/components/calculators/AttendanceCalculator'
+import { MoreAcademicTools } from '@/components/shared/MoreAcademicTools'
+import { Footer } from '@/components/landing/Footer'
 
 export const metadata: Metadata = {
   title: 'Attendance Calculator',
@@ -34,7 +36,11 @@ export default function AttendancePage() {
         </div>
 
         <AttendanceCalculator />
+
+        <MoreAcademicTools current="/attendance" />
       </div>
+
+      <Footer />
     </main>
   )
 }

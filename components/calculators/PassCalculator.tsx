@@ -385,128 +385,144 @@ export function PassCalculator() {
             </div>
           </GlassCard>
 
-          {/* CARD 2 — End Sem Requirement */}
-          <div className={`rounded-2xl p-5 border ${sc.bg} ${sc.border}`}>
-            <p className="text-[10px] uppercase tracking-widest font-semibold text-muted-foreground mb-3">
-              End Sem Requirement
-            </p>
-
-            <AnimatePresence mode="wait">
-
-              {/* State A — no marks entered yet */}
-              {!r.hasKnownData && (
-                <motion.div
-                  key="empty"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="flex items-center gap-3"
-                >
-                  <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ background: 'var(--muted-surface)', border: '1px solid var(--divider)' }}>
-                    <HelpCircle className="w-5 h-5 text-muted-foreground/50" />
-                  </div>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    Enter Internal &amp; Mid Sem marks to calculate your minimum End Sem requirement.
-                  </p>
-                </motion.div>
-              )}
-
-              {/* State B — impossible */}
-              {r.hasKnownData && r.impossible && (
-                <motion.div
-                  key="impossible"
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="flex items-center gap-3"
-                >
-                  <div className="w-12 h-12 rounded-full bg-red-500/20 border border-red-500/30 flex items-center justify-center shrink-0">
-                    <XCircle className="w-6 h-6 text-red-400" />
-                  </div>
-                  <div>
-                    <p className="text-base font-bold font-display text-red-400 leading-tight">
-                      Mathematically Impossible
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Even full marks in End Sem can't reach {r.passingMark}%.
-                    </p>
-                  </div>
-                </motion.div>
-              )}
-
-              {/* State C — already passing */}
-              {r.hasKnownData && !r.impossible && r.alreadyPassing && (
-                <motion.div
-                  key="passing"
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="flex items-center gap-3"
-                >
-                  <div className="w-12 h-12 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center shrink-0">
-                    <CheckCircle className="w-6 h-6 text-emerald-400" />
-                  </div>
-                  <div>
-                    <p className="text-lg font-bold font-display text-emerald-400 leading-tight">Already Passing!</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">No minimum score required.</p>
-                  </div>
-                </motion.div>
-              )}
-
-              {/* State D — marks required */}
-              {r.hasKnownData && !r.impossible && !r.alreadyPassing && (
-                <motion.div key="required" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                  <div className="flex items-baseline gap-1.5 mb-1">
-                    <motion.span
-                      key={r.minEndSemMarks}
-                      initial={{ scale: 0.8, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      className={`text-5xl font-bold font-display ${sc.color}`}
-                    >
-                      {r.minEndSemMarks ?? '—'}
-                    </motion.span>
-                    <span className={`text-xl font-medium opacity-60 ${sc.color}`}>
-                      / {r.endSemMax || '?'}
-                    </span>
-                  </div>
-                  <p className="text-sm text-muted-foreground mb-3">minimum marks to pass</p>
-                  <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--divider)' }}>
-                    <motion.div
-                      className={`h-full rounded-full ${sc.barColor}`}
-                      animate={{ width: `${endSemReqPct}%` }}
-                      transition={{ duration: 0.7, ease: 'easeOut' }}
-                    />
-                  </div>
-                </motion.div>
-              )}
-
-            </AnimatePresence>
-          </div>
-
-          {/* CARD 3 — Bottom mini stats */}
-          <div className="grid grid-cols-2 gap-3">
+          {/* CARD 2+3 — Unified: End Sem Requirement + Pass Chance */}
+          <motion.div
+            key={displayStatus}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+            className={`rounded-2xl border relative overflow-hidden ${sc.border}`}
+            style={{
+              background:
+                displayStatus === 'safe'       ? 'linear-gradient(145deg, rgba(52,211,153,0.11) 0%, rgba(16,185,129,0.04) 100%)' :
+                displayStatus === 'borderline' ? 'linear-gradient(145deg, rgba(245,158,11,0.11) 0%, rgba(217,119,6,0.04) 100%)' :
+                displayStatus === 'danger'     ? 'linear-gradient(145deg, rgba(239,68,68,0.11) 0%, rgba(220,38,38,0.04) 100%)' :
+                                                 'linear-gradient(145deg, rgba(99,102,241,0.07) 0%, rgba(139,92,246,0.03) 100%)',
+            }}
+          >
+            {/* Corner glow */}
             <div
-              className="rounded-xl p-4 text-center"
-              style={{ background: 'var(--muted-surface)', border: '1px solid var(--divider)' }}
-            >
-              <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1.5 font-semibold">Expected Total</p>
-              <motion.p
-                key={r.expectedTotal}
-                initial={{ scale: 0.85, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                className="text-2xl font-bold font-display text-foreground"
-              >
-                {r.expectedTotal.toFixed(0)}
-              </motion.p>
-              <p className="text-[10px] text-muted-foreground mt-0.5">out of 100</p>
+              className="absolute -top-10 -right-10 w-32 h-32 rounded-full pointer-events-none"
+              style={{
+                background:
+                  displayStatus === 'safe'       ? 'radial-gradient(circle, rgba(52,211,153,0.18) 0%, transparent 70%)' :
+                  displayStatus === 'borderline' ? 'radial-gradient(circle, rgba(245,158,11,0.18) 0%, transparent 70%)' :
+                  displayStatus === 'danger'     ? 'radial-gradient(circle, rgba(239,68,68,0.18) 0%, transparent 70%)' :
+                                                   'radial-gradient(circle, rgba(99,102,241,0.14) 0%, transparent 70%)',
+              }}
+            />
+
+            {/* ── Requirement section ─────────────────────────────────────── */}
+            <div className="px-5 pt-5 pb-4">
+              <p className="text-[10px] uppercase tracking-widest font-semibold text-muted-foreground mb-4">
+                Minimum End Sem Marks to Pass
+              </p>
+
+              <AnimatePresence mode="wait">
+
+                {/* State A — no data */}
+                {!r.hasKnownData && (
+                  <motion.div
+                    key="empty"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="flex items-center gap-3"
+                  >
+                    <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ background: 'var(--muted-surface)', border: '1px solid var(--divider)' }}>
+                      <HelpCircle className="w-4.5 h-4.5 text-muted-foreground/40" />
+                    </div>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      Enter Internal &amp; Mid Sem marks to see your requirement.
+                    </p>
+                  </motion.div>
+                )}
+
+                {/* State B — impossible */}
+                {r.hasKnownData && r.impossible && (
+                  <motion.div
+                    key="impossible"
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="flex items-center gap-3"
+                  >
+                    <div className="w-11 h-11 rounded-full bg-red-500/20 border border-red-500/30 flex items-center justify-center shrink-0">
+                      <XCircle className="w-5 h-5 text-red-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold font-display text-red-400 leading-tight">
+                        Mathematically Impossible
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Full End Sem marks can&apos;t reach {r.passingMark}%.
+                      </p>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* State C — already passing */}
+                {r.hasKnownData && !r.impossible && r.alreadyPassing && (
+                  <motion.div
+                    key="passing"
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="flex items-center gap-3"
+                  >
+                    <div className="w-11 h-11 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center shrink-0">
+                      <CheckCircle className="w-5 h-5 text-emerald-400" />
+                    </div>
+                    <div>
+                      <p className="text-base font-bold font-display text-emerald-400 leading-tight">Already Passing!</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">No minimum score required.</p>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* State D — marks required */}
+                {r.hasKnownData && !r.impossible && !r.alreadyPassing && (
+                  <motion.div key="required" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                    <div className="flex items-baseline gap-1.5 mb-1">
+                      <motion.span
+                        key={r.minEndSemMarks}
+                        initial={{ scale: 0.8, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        className={`text-5xl font-bold font-display ${sc.color}`}
+                      >
+                        {r.minEndSemMarks ?? '—'}
+                      </motion.span>
+                      <span className={`text-xl font-medium opacity-60 ${sc.color}`}>
+                        / {r.endSemMax || '?'}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mb-3">minimum marks to pass</p>
+                    <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--divider)' }}>
+                      <motion.div
+                        className={`h-full rounded-full ${sc.barColor}`}
+                        animate={{ width: `${endSemReqPct}%` }}
+                        transition={{ duration: 0.7, ease: 'easeOut' }}
+                      />
+                    </div>
+                  </motion.div>
+                )}
+
+              </AnimatePresence>
             </div>
-            <div className={`rounded-xl p-4 text-center border ${sc.bg} ${sc.border}`}>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1.5 font-semibold">Pass Chance</p>
+
+            {/* ── Divider ─────────────────────────────────────────────────── */}
+            <div className="mx-5" style={{ borderTop: '1px solid var(--divider)' }} />
+
+            {/* ── Pass Chance section ─────────────────────────────────────── */}
+            <div className="px-5 py-4">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-2 font-semibold">
+                Pass Chance
+              </p>
               <motion.p
                 key={r.passProbability}
                 initial={{ scale: 0.85, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
-                className={`text-2xl font-bold font-display ${sc.color}`}
+                className={`text-4xl font-bold font-display leading-none mb-1.5 ${sc.color}`}
               >
                 {r.hasKnownData ? `${r.passProbability}%` : '—'}
               </motion.p>
@@ -517,7 +533,7 @@ export function PassCalculator() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -4 }}
                   transition={{ duration: 0.2 }}
-                  className="text-xs font-semibold mt-1.5 leading-snug text-slate-700 dark:text-slate-300"
+                  className="text-xs text-muted-foreground leading-snug"
                 >
                   {inp.endSemMarks !== '' && inp.endSemMax !== ''
                     ? `If you score ${inp.endSemMarks} out of ${inp.endSemMax}`
@@ -527,33 +543,61 @@ export function PassCalculator() {
                 </motion.p>
               </AnimatePresence>
             </div>
-          </div>
+          </motion.div>
+
+          {/* CARD 4 — Expected Total */}
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+            whileHover={{ scale: 1.015, transition: { type: 'spring', stiffness: 380, damping: 26 } }}
+            className="rounded-2xl p-5 cursor-default"
+            style={{
+              background: 'var(--muted-surface)',
+              border: '1px solid var(--divider)',
+            }}
+          >
+            <p className="text-xs font-bold uppercase tracking-widest text-foreground/55 mb-3.5">
+              Expected Total
+            </p>
+
+            <div className="flex items-baseline gap-2 mb-1.5">
+              <motion.span
+                key={r.expectedTotal}
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                className="text-5xl font-bold font-display text-foreground"
+              >
+                {r.hasKnownData ? r.expectedTotal.toFixed(0) : '—'}
+              </motion.span>
+              {r.hasKnownData && (
+                <span className="text-lg font-medium text-muted-foreground">/ 100</span>
+              )}
+            </div>
+
+            <p className="text-xs text-muted-foreground mb-4">
+              Based on your expected End Sem score
+            </p>
+
+            <div className="h-2 rounded-full overflow-hidden" style={{ background: 'var(--divider)' }}>
+              <motion.div
+                className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-violet-500"
+                animate={{ width: r.hasKnownData ? `${Math.min(100, r.expectedTotal)}%` : '0%' }}
+                transition={{ duration: 0.7, ease: 'easeOut' }}
+              />
+            </div>
+            <div className="flex justify-between text-[10px] text-muted-foreground/40 mt-1.5">
+              <span>0</span>
+              {r.hasKnownData && (
+                <span className="font-semibold text-muted-foreground/60">Pass: {r.passingMark}</span>
+              )}
+              <span>100</span>
+            </div>
+          </motion.div>
 
         </div>
       </div>
-
-      {/* ── Status Banner ────────────────────────────────────────────────────── */}
-      <motion.div
-        key={r.status + String(r.hasKnownData)}
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className={`rounded-2xl p-6 border ${sc.bg} ${sc.border} flex items-center gap-4`}
-      >
-        <div className={`rounded-full p-3 border ${sc.bg} ${sc.border} shrink-0`}>
-          <sc.Icon className={`w-6 h-6 ${sc.color}`} />
-        </div>
-        <div className="flex-1 min-w-0">
-          <span className={`text-xs font-semibold uppercase tracking-widest ${sc.color}`}>{sc.label}</span>
-          <p className={`text-xl font-bold font-display mt-1 ${sc.color}`}>{r.headline}</p>
-          <p className="text-sm text-muted-foreground mt-0.5">{r.subtext}</p>
-        </div>
-        {r.hasKnownData && (
-          <div className="hidden sm:block text-right shrink-0">
-            <div className={`text-4xl font-bold font-display ${sc.color}`}>{r.passProbability}%</div>
-            <div className="text-xs text-muted-foreground">pass chance</div>
-          </div>
-        )}
-      </motion.div>
 
     </div>
   )

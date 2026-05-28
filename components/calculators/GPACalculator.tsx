@@ -137,8 +137,8 @@ export function GPACalculator() {
                 <ScanLine className="w-4 h-4 text-indigo-400" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold text-foreground leading-none mb-0.5">AI Curriculum Scanner</p>
-                <p className="text-[11px] text-muted-foreground truncate">Upload ERP screenshot — auto-fill subjects & credits</p>
+                <p className="text-[13px] font-bold text-foreground leading-none mb-1">AI Course Curriculum Scanner</p>
+                <p className="text-[11px] text-muted-foreground/80 leading-relaxed">Upload your curriculum&apos;s screenshot to auto-fill subjects and credits</p>
               </div>
               <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0" style={{ background: 'rgba(99,102,241,0.15)', color: 'rgba(99,102,241,0.9)' }}>
                 NEW

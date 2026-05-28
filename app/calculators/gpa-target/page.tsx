@@ -2,52 +2,9 @@
 
 import { Navbar } from '@/components/shared/Navbar'
 import { GPATargetCalculator } from '@/components/calculators/GPATargetCalculator'
+import { MoreAcademicTools } from '@/components/shared/MoreAcademicTools'
 import { Footer } from '@/components/landing/Footer'
-import Link from 'next/link'
-import { Crosshair, Calculator, TrendingUp, CalendarCheck, Target, ArrowRight } from 'lucide-react'
-
-const related = [
-  {
-    label: 'GPA Calculator',
-    description: 'Calculate your semester SGPA instantly',
-    href: '/gpa',
-    icon: Calculator,
-    iconBg: 'bg-indigo-500/15',
-    iconClass: 'text-indigo-400',
-    hoverBorder: 'hover:border-indigo-500/30',
-    hoverBg: 'hover:bg-indigo-500/[0.05]',
-  },
-  {
-    label: 'CGPA Calculator',
-    description: 'Track your cumulative academic performance',
-    href: '/cgpa',
-    icon: TrendingUp,
-    iconBg: 'bg-violet-500/15',
-    iconClass: 'text-violet-400',
-    hoverBorder: 'hover:border-violet-500/30',
-    hoverBg: 'hover:bg-violet-500/[0.05]',
-  },
-  {
-    label: 'Attendance Planner',
-    description: 'Plan bunks and monitor attendance smartly',
-    href: '/attendance',
-    icon: CalendarCheck,
-    iconBg: 'bg-cyan-500/15',
-    iconClass: 'text-cyan-400',
-    hoverBorder: 'hover:border-cyan-500/30',
-    hoverBg: 'hover:bg-cyan-500/[0.05]',
-  },
-  {
-    label: 'Can I Pass?',
-    description: 'Predict passing probability and required marks',
-    href: '/pass',
-    icon: Target,
-    iconBg: 'bg-emerald-500/15',
-    iconClass: 'text-emerald-400',
-    hoverBorder: 'hover:border-emerald-500/30',
-    hoverBg: 'hover:bg-emerald-500/[0.05]',
-  },
-]
+import { Crosshair } from 'lucide-react'
 
 export default function GPATargetPage() {
   return (
@@ -91,38 +48,7 @@ export default function GPATargetPage() {
           <GPATargetCalculator />
         </div>
 
-        {/* ── Related tools ─────────────────────────────────────────────────── */}
-        <div className="max-w-5xl mx-auto mt-20">
-          <div className="text-center mb-8">
-            <h2 className="text-2xl font-bold font-display tracking-tight mb-2">More Academic Tools</h2>
-            <p className="text-sm text-muted-foreground">Everything you need to stay on top of your academics</p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            {related.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={[
-                  'group flex items-start gap-3 p-4 rounded-2xl border border-transparent transition-all duration-200',
-                  item.hoverBorder,
-                  item.hoverBg,
-                ].join(' ')}
-              >
-                <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform duration-200 group-hover:scale-105 ${item.iconBg}`}>
-                  <item.icon className={`w-[18px] h-[18px] ${item.iconClass}`} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="text-sm font-medium text-foreground/80 group-hover:text-foreground transition-colors duration-200 flex items-center gap-1">
-                    {item.label}
-                    <ArrowRight className="w-3 h-3 opacity-0 group-hover:opacity-100 -translate-x-1 group-hover:translate-x-0 transition-all duration-200" />
-                  </div>
-                  <div className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{item.description}</div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </div>
+        <MoreAcademicTools current="/calculators/gpa-target" />
 
       </div>
 

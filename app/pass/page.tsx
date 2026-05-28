@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import { Navbar } from '@/components/shared/Navbar'
 import { PassCalculator } from '@/components/calculators/PassCalculator'
+import { MoreAcademicTools } from '@/components/shared/MoreAcademicTools'
+import { Footer } from '@/components/landing/Footer'
 
 export const metadata: Metadata = {
   title: 'Can I Pass? Calculator',
@@ -34,7 +36,11 @@ export default function PassPage() {
         </div>
 
         <PassCalculator />
+
+        <MoreAcademicTools current="/pass" />
       </div>
+
+      <Footer />
     </main>
   )
 }

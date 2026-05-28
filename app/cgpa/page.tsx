@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import { Navbar } from '@/components/shared/Navbar'
 import { CGPACalculator } from '@/components/calculators/CGPACalculator'
+import { MoreAcademicTools } from '@/components/shared/MoreAcademicTools'
+import { Footer } from '@/components/landing/Footer'
 
 export const metadata: Metadata = {
   title: 'CGPA Calculator',
@@ -34,7 +36,11 @@ export default function CGPAPage() {
         </div>
 
         <CGPACalculator />
+
+        <MoreAcademicTools current="/cgpa" />
       </div>
+
+      <Footer />
     </main>
   )
 }

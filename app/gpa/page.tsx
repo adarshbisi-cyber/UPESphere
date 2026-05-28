@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import { Navbar } from '@/components/shared/Navbar'
 import { GPACalculator } from '@/components/calculators/GPACalculator'
+import { MoreAcademicTools } from '@/components/shared/MoreAcademicTools'
+import { Footer } from '@/components/landing/Footer'
 import { Calculator } from 'lucide-react'
 
 export const metadata: Metadata = {
@@ -44,7 +46,11 @@ export default function GPAPage() {
         <div className="max-w-5xl mx-auto">
           <GPACalculator />
         </div>
+
+        <MoreAcademicTools current="/gpa" />
       </div>
+
+      <Footer />
     </main>
   )
 }

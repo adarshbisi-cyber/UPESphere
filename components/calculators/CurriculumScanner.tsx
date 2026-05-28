@@ -415,9 +415,9 @@ export function CurriculumScanner({ onImport, onClose }: CurriculumScannerProps)
                 <Sparkles className="w-4 h-4 text-violet-400" />
               </div>
               <div>
-                <h3 className="text-sm font-bold font-display leading-tight">AI Curriculum Scanner</h3>
-                <p className="text-[11px] text-muted-foreground">
-                  {state === 'idle'    && 'Upload screenshots, fill automatically'}
+                <h3 className="text-[15px] font-bold font-display leading-tight tracking-tight">AI Course Curriculum Scanner</h3>
+                <p className="text-[11px] text-muted-foreground/80 leading-relaxed mt-0.5">
+                  {state === 'idle'    && 'Upload your curriculum screenshot to auto-fill subjects and credits'}
                   {state === 'queued'  && `${files.length} screenshot${files.length !== 1 ? 's' : ''} ready to scan`}
                   {state === 'scanning'&& `Scanning ${currentIdx + 1} of ${files.length}…`}
                   {state === 'preview' && `${parsed.length} subjects extracted`}
