@@ -7,11 +7,11 @@ import { Footer } from '@/components/landing/Footer'
 export const metadata: Metadata = {
   title: 'CGPA Calculator',
   description:
-    'Calculate cumulative CGPA, track semester trends, and predict the SGPA needed to reach your target CGPA. Free for all Indian university students.',
-  keywords: ['CGPA calculator', 'cumulative GPA', 'CGPA predictor', 'semester tracker'],
+    'Calculate cumulative CGPA and track your semester-by-semester trends. Free for all Indian university students.',
+  keywords: ['CGPA calculator', 'cumulative GPA', 'semester tracker'],
   openGraph: {
     title: 'CGPA Calculator — UPESphere',
-    description: 'Track your CGPA across semesters and predict your graduation GPA.',
+    description: 'Track your CGPA across semesters and visualize your trends.',
   },
 }
 
@@ -31,7 +31,7 @@ export default function CGPAPage() {
             </span>
           </h1>
           <p className="text-lg text-muted-foreground max-w-xl mx-auto">
-            Track your academic journey semester by semester. See trends, get insights, and simulate the SGPA needed to hit your dream CGPA.
+            Track your academic journey semester by semester. See your trends and get insights on your cumulative performance.
           </p>
         </div>
 
