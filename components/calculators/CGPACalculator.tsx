@@ -2,14 +2,14 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Trash2, Target, TrendingUp, TrendingDown, Minus } from 'lucide-react'
+import { Plus, Trash2, TrendingUp, TrendingDown, Minus } from 'lucide-react'
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine } from 'recharts'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { GlassCard } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { calculateCGPA, predictTargetSGPA } from '@/lib/calculations/cgpa'
+import { calculateCGPA } from '@/lib/calculations/cgpa'
 import { generateId, getGPAColor } from '@/lib/utils'
 import { GA } from '@/lib/analytics'
 import type { Semester } from '@/types'
@@ -33,12 +33,8 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 
 export function CGPACalculator() {
   const [semesters, setSemesters] = useState<Semester[]>(DEFAULT_SEMESTERS)
-  const [targetCGPA, setTargetCGPA] = useState(8.5)
-  const [remainingSems, setRemainingSems] = useState(4)
-  const [creditsPerSem, setCreditsPerSem] = useState(24)
 
   const result = calculateCGPA(semesters)
-  const prediction = predictTargetSGPA(semesters, targetCGPA, remainingSems, creditsPerSem)
 
   const chartData = semesters
     .filter(s => s.sgpa > 0 && s.credits > 0)
@@ -79,19 +75,6 @@ export function CGPACalculator() {
     }, 1000)
     return () => clearTimeout(cgpaTimer.current)
   }, [result.cgpa, semesters.length])
-
-  const targetTimer = useRef<ReturnType<typeof setTimeout>>()
-  const lastTarget = useRef<string>('')
-  useEffect(() => {
-    const key = `${targetCGPA}/${remainingSems}`
-    if (key === lastTarget.current) return
-    clearTimeout(targetTimer.current)
-    targetTimer.current = setTimeout(() => {
-      lastTarget.current = key
-      GA.cgpaTargetChecked(targetCGPA, remainingSems)
-    }, 1200)
-    return () => clearTimeout(targetTimer.current)
-  }, [targetCGPA, remainingSems])
 
   const TrendIcon = result.trend === 'improving' ? TrendingUp : result.trend === 'declining' ? TrendingDown : Minus
   const trendColor = result.trend === 'improving' ? 'text-emerald-400' : result.trend === 'declining' ? 'text-red-400' : 'text-yellow-400'
@@ -258,66 +241,6 @@ export function CGPACalculator() {
         </GlassCard>
       )}
 
-      {/* Target Predictor */}
-      <GlassCard className="p-6">
-        <div className="flex items-center gap-2 mb-6">
-          <Target className="w-5 h-5 text-amber-400" />
-          <h3 className="text-base font-semibold font-display">Target CGPA Predictor</h3>
-        </div>
-        <div className="grid sm:grid-cols-3 gap-4 mb-6">
-          <div>
-            <Label className="text-xs mb-2 block">Target CGPA</Label>
-            <Input
-              type="number"
-              min={0}
-              max={10}
-              step={0.1}
-              value={targetCGPA}
-              onChange={e => setTargetCGPA(Number(e.target.value))}
-              className="text-center"
-            />
-          </div>
-          <div>
-            <Label className="text-xs mb-2 block">Remaining Semesters</Label>
-            <Input
-              type="number"
-              min={1}
-              max={12}
-              value={remainingSems}
-              onChange={e => setRemainingSems(Number(e.target.value))}
-              className="text-center"
-            />
-          </div>
-          <div>
-            <Label className="text-xs mb-2 block">Credits / Semester</Label>
-            <Input
-              type="number"
-              min={1}
-              value={creditsPerSem}
-              onChange={e => setCreditsPerSem(Number(e.target.value))}
-              className="text-center"
-            />
-          </div>
-        </div>
-        <motion.div
-          key={prediction.sgpaNeeded}
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className={`rounded-xl p-5 border ${prediction.achievable ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-red-500/10 border-red-500/20'}`}
-        >
-          <div className="flex items-center gap-3">
-            <div className={`text-4xl font-bold font-display ${prediction.achievable ? 'text-emerald-400' : 'text-red-400'}`}>
-              {prediction.sgpaNeeded > 0 ? prediction.sgpaNeeded.toFixed(2) : '—'}
-            </div>
-            <div>
-              <div className={`text-sm font-medium ${prediction.achievable ? 'text-emerald-300' : 'text-red-300'}`}>
-                {prediction.achievable ? 'SGPA needed per semester' : 'Not achievable'}
-              </div>
-              <div className="text-sm text-muted-foreground mt-0.5">{prediction.message}</div>
-            </div>
-          </div>
-        </motion.div>
-      </GlassCard>
     </div>
   )
 }
