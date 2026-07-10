@@ -240,13 +240,34 @@ export function CaseCompExperience() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: '-60px' }}
               transition={{ duration: 0.5, ease: EASE, delay: i * 0.1 }}
+              whileHover={{ y: -4 }}
             >
-              <GlassCard className={cn('h-full p-6 border', c.tone === 'peak' ? 'border-indigo-500/25 bg-indigo-500/[0.04]' : 'border-white/10 bg-white/[0.02]')}>
-                <div className="flex items-baseline justify-between mb-1">
-                  <span className={cn('text-xs font-semibold uppercase tracking-widest', c.tone === 'peak' ? 'text-indigo-300' : 'text-muted-foreground')}>{c.tag}</span>
-                  <span className="text-lg font-bold font-display">{c.window}</span>
+              <GlassCard className={cn(
+                'relative h-full p-6 border overflow-hidden transition-shadow',
+                c.tone === 'peak'
+                  ? 'border-indigo-500/45 bg-gradient-to-br from-indigo-500/[0.14] to-violet-500/[0.07] shadow-xl shadow-indigo-500/15 ring-1 ring-inset ring-indigo-500/15'
+                  : 'border-black/8 dark:border-white/10 bg-black/[0.015] dark:bg-white/[0.02]'
+              )}>
+                {c.tone === 'peak' && (
+                  <>
+                    <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-indigo-500 via-violet-500 to-cyan-400" />
+                    <div className="pointer-events-none absolute -top-16 -right-10 w-40 h-40 rounded-full bg-indigo-500/20 blur-3xl" />
+                  </>
+                )}
+                <div className="relative flex items-center justify-between mb-1">
+                  <span className={cn(
+                    'text-xs font-semibold uppercase tracking-widest inline-flex items-center gap-1.5',
+                    c.tone === 'peak' ? 'text-indigo-600 dark:text-indigo-300' : 'text-muted-foreground'
+                  )}>
+                    {c.tone === 'peak' && <Star className="w-3 h-3 fill-current" />}
+                    {c.tag}
+                  </span>
+                  <span className={cn(
+                    'text-lg font-bold font-display',
+                    c.tone === 'peak' ? 'bg-gradient-to-r from-indigo-500 to-violet-500 bg-clip-text text-transparent' : 'text-foreground'
+                  )}>{c.window}</span>
                 </div>
-                <p className="text-sm text-muted-foreground leading-relaxed mt-3">{c.body}</p>
+                <p className="relative text-sm text-muted-foreground leading-relaxed mt-3">{c.body}</p>
               </GlassCard>
             </motion.div>
           ))}
@@ -286,7 +307,8 @@ export function CaseCompExperience() {
             </div>
             <div className="flex flex-wrap gap-4 mt-4 text-[11px] text-muted-foreground">
               <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-gradient-to-br from-indigo-500 to-violet-600 shadow-sm shadow-indigo-500/40" /> Peak — register early</span>
-              <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-indigo-500/30" /> Busy / building up</span>
+              <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-indigo-500/40" /> Busy — active</span>
+              <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-cyan-500/40" /> Builds — warming up</span>
               <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-black/10 dark:bg-white/15" /> Quiet — off-season</span>
             </div>
           </GlassCard>

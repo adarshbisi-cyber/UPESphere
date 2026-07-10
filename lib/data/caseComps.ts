@@ -232,7 +232,7 @@ export const HEAT_MAP: { month: string; level: HeatLevel }[] = [
 export const HEAT_STYLE: Record<HeatLevel, { label: string; cell: string; text: string; sub: string }> = {
   peak:   { label: 'Peak — register early', cell: 'bg-gradient-to-br from-indigo-500 to-violet-600 border-transparent shadow-lg shadow-indigo-500/30 ring-1 ring-inset ring-white/15', text: 'text-white', sub: 'text-white/80' },
   busy:   { label: 'Busy / building up',    cell: 'bg-indigo-500/30 border-indigo-400/45',                                                                                        text: 'text-indigo-700 dark:text-indigo-100', sub: 'text-indigo-600/80 dark:text-indigo-200/70' },
-  builds: { label: 'Building up',           cell: 'bg-indigo-500/14 border-indigo-400/30',                                                                                        text: 'text-indigo-700 dark:text-indigo-200', sub: 'text-indigo-600/70 dark:text-indigo-200/60' },
+  builds: { label: 'Building up',           cell: 'bg-cyan-500/25 border-cyan-400/50',                                                                                            text: 'text-cyan-700 dark:text-cyan-200', sub: 'text-cyan-600/80 dark:text-cyan-200/70' },
   quiet:  { label: 'Quiet — off-season',    cell: 'bg-black/[0.03] border-black/10 dark:bg-white/[0.04] dark:border-white/10',                                                     text: 'text-slate-500 dark:text-muted-foreground', sub: 'text-slate-400 dark:text-muted-foreground/70' },
 }
 
