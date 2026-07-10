@@ -381,7 +381,7 @@ export function PassCalculator() {
             </div>
 
             <p className="text-[11px] text-muted-foreground/50 text-center mt-3 leading-relaxed">
-              Both "Scored" and "Out Of" fields are editable — enter custom values for any exam.
+              Both “Scored” and “Out Of” fields are editable — enter custom values for any exam.
             </p>
 
             <div className="mt-4 pt-4 border-t border-[var(--divider)]">
