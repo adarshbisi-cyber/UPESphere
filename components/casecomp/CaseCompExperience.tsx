@@ -42,7 +42,7 @@ function SectionHead({ eyebrow, title, sub }: { eyebrow: string; title: React.Re
 }
 
 // ── Filter chip ───────────────────────────────────────────────────────────
-function Chip({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+function Chip({ active, onClick, group, children }: { active: boolean; onClick: () => void; group: string; children: React.ReactNode }) {
   return (
     <button
       onClick={onClick}
@@ -50,12 +50,12 @@ function Chip({ active, onClick, children }: { active: boolean; onClick: () => v
         'relative px-3 py-1.5 rounded-full text-xs font-medium border transition-colors duration-200 select-none',
         active
           ? 'text-white border-transparent'
-          : 'text-muted-foreground border-white/10 hover:text-foreground hover:border-white/25 hover:bg-white/5'
+          : 'text-muted-foreground border-black/10 dark:border-white/10 hover:text-foreground hover:border-black/25 dark:hover:border-white/25 hover:bg-black/[0.04] dark:hover:bg-white/5'
       )}
     >
       {active && (
         <motion.span
-          layoutId="chip-active"
+          layoutId={`chip-active-${group}`}
           className="absolute inset-0 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 -z-10"
           transition={{ type: 'spring', stiffness: 380, damping: 30 }}
         />
@@ -338,23 +338,23 @@ export function CaseCompExperience() {
           <div className="space-y-3">
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60 mr-1 inline-flex items-center gap-1"><CalendarDays className="w-3 h-3" />Month</span>
-              <Chip active={month === 'all'} onClick={() => setMonth('all')}>All year</Chip>
+              <Chip group="month" active={month === 'all'} onClick={() => setMonth('all')}>All year</Chip>
               {ACTIVE_MONTHS.map(m => (
-                <Chip key={m} active={month === m} onClick={() => setMonth(m)}>{MONTHS[m - 1]}</Chip>
+                <Chip key={m} group="month" active={month === m} onClick={() => setMonth(m)}>{MONTHS[m - 1]}</Chip>
               ))}
             </div>
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60 mr-1 inline-flex items-center gap-1"><Target className="w-3 h-3" />Track</span>
-              <Chip active={track === 'all'} onClick={() => setTrack('all')}>All tracks</Chip>
+              <Chip group="track" active={track === 'all'} onClick={() => setTrack('all')}>All tracks</Chip>
               {TRACKS.map(t => (
-                <Chip key={t} active={track === t} onClick={() => setTrack(t)}>{t}</Chip>
+                <Chip key={t} group="track" active={track === t} onClick={() => setTrack(t)}>{t}</Chip>
               ))}
             </div>
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60 mr-1 inline-flex items-center gap-1"><Building2 className="w-3 h-3" />Institution</span>
-              <Chip active={inst === 'all'} onClick={() => setInst('all')}>All</Chip>
+              <Chip group="inst" active={inst === 'all'} onClick={() => setInst('all')}>All</Chip>
               {INSTITUTIONS.map(x => (
-                <Chip key={x} active={inst === x} onClick={() => setInst(x)}>{x}</Chip>
+                <Chip key={x} group="inst" active={inst === x} onClick={() => setInst(x)}>{x}</Chip>
               ))}
             </div>
           </div>
