@@ -227,11 +227,13 @@ export const HEAT_MAP: { month: string; level: HeatLevel }[] = [
   { month: 'DEC', level: 'peak' },
 ]
 
-export const HEAT_STYLE: Record<HeatLevel, { label: string; cell: string; text: string }> = {
-  peak:   { label: 'Peak — register early', cell: 'bg-indigo-500/25 border-indigo-400/40', text: 'text-indigo-200' },
-  busy:   { label: 'Busy / building up',    cell: 'bg-violet-500/18 border-violet-400/30', text: 'text-violet-200' },
-  builds: { label: 'Building up',           cell: 'bg-cyan-500/15 border-cyan-400/25',     text: 'text-cyan-200' },
-  quiet:  { label: 'Quiet — off-season',    cell: 'bg-white/[0.04] border-white/10',       text: 'text-muted-foreground' },
+// Single-hue intensity ramp: hotter month = more saturated / more solid.
+// Peak is a solid gradient with white text so it dominates in light *and* dark.
+export const HEAT_STYLE: Record<HeatLevel, { label: string; cell: string; text: string; sub: string }> = {
+  peak:   { label: 'Peak — register early', cell: 'bg-gradient-to-br from-indigo-500 to-violet-600 border-transparent shadow-lg shadow-indigo-500/30 ring-1 ring-inset ring-white/15', text: 'text-white', sub: 'text-white/80' },
+  busy:   { label: 'Busy / building up',    cell: 'bg-indigo-500/30 border-indigo-400/45',                                                                                        text: 'text-indigo-700 dark:text-indigo-100', sub: 'text-indigo-600/80 dark:text-indigo-200/70' },
+  builds: { label: 'Building up',           cell: 'bg-indigo-500/14 border-indigo-400/30',                                                                                        text: 'text-indigo-700 dark:text-indigo-200', sub: 'text-indigo-600/70 dark:text-indigo-200/60' },
+  quiet:  { label: 'Quiet — off-season',    cell: 'bg-black/[0.03] border-black/10 dark:bg-white/[0.04] dark:border-white/10',                                                     text: 'text-slate-500 dark:text-muted-foreground', sub: 'text-slate-400 dark:text-muted-foreground/70' },
 }
 
 // ── Lead time: when to hit register ───────────────────────────────────────

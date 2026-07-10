@@ -275,18 +275,19 @@ export function CaseCompExperience() {
                     whileInView={{ opacity: 1, scale: 1 }}
                     viewport={{ once: true }}
                     transition={{ duration: 0.35, ease: EASE, delay: i * 0.035 }}
+                    whileHover={{ y: -2 }}
                     className={cn('rounded-lg border py-3 text-center', s.cell)}
                   >
                     <div className={cn('text-xs font-bold', s.text)}>{h.month}</div>
-                    <div className={cn('text-[9px] uppercase tracking-wide mt-0.5', s.text, 'opacity-70')}>{h.level}</div>
+                    <div className={cn('text-[9px] uppercase tracking-wide mt-0.5', s.sub)}>{h.level}</div>
                   </motion.div>
                 )
               })}
             </div>
             <div className="flex flex-wrap gap-4 mt-4 text-[11px] text-muted-foreground">
-              <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-indigo-500/40" /> Peak — register early</span>
-              <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-violet-500/30" /> Busy / building up</span>
-              <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-white/15" /> Quiet — off-season</span>
+              <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-gradient-to-br from-indigo-500 to-violet-600 shadow-sm shadow-indigo-500/40" /> Peak — register early</span>
+              <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-indigo-500/30" /> Busy / building up</span>
+              <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-black/10 dark:bg-white/15" /> Quiet — off-season</span>
             </div>
           </GlassCard>
         </motion.div>
