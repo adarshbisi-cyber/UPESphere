@@ -78,8 +78,12 @@ function generateGPAInsights(
 
   if (sorted.length > 0) {
     const weakest = sorted[0]
-    const subName = weakest.name?.trim() || 'Your weakest subject'
-    insights.push(`"${subName}" is pulling your GPA down the most — prioritise it.`)
+    const subName = weakest.name?.trim()
+    if (subName) {
+      insights.push(`"${subName}" is pulling your GPA down the most — prioritise it.`)
+    } else {
+      insights.push('Your lowest-scoring subject is pulling your GPA down the most — prioritise it.')
+    }
   }
 
   return insights
