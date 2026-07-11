@@ -13,7 +13,7 @@ import {
 const EASE = [0.22, 1, 0.36, 1] as const
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-const CATEGORIES: EventCategory[] = ['academic', 'exam', 'holiday']
+const CATEGORIES: EventCategory[] = ['academic', 'exam', 'fest', 'holiday']
 
 const monthIndex = (y: number, m: number) => y * 12 + m
 const MIN_IDX = monthIndex(CALENDAR_MIN.year, CALENDAR_MIN.month)

@@ -4,7 +4,7 @@
 // marks "Holiday on account of ..." are holidays; examination rows are exams;
 // everything else (classes, registrations, results, fests, fee dates) is academic.
 
-export type EventCategory = 'academic' | 'exam' | 'holiday'
+export type EventCategory = 'academic' | 'exam' | 'holiday' | 'fest'
 
 export interface AcademicEvent {
   id: string
@@ -39,6 +39,13 @@ export const CATEGORY_STYLE: Record<
     legend: 'bg-rose-500',
     barText: 'text-rose-700 dark:text-rose-200',
   },
+  fest: {
+    label: 'UPES Fest',
+    dot: 'bg-emerald-500',
+    pill: 'bg-emerald-500/15 border-emerald-500/30 text-emerald-700 dark:text-emerald-200',
+    legend: 'bg-emerald-500',
+    barText: 'text-emerald-700 dark:text-emerald-200',
+  },
 }
 
 // Navigable range of the calendar (first event is 30 Jun 2026, last is 16 Aug 2027).
@@ -72,7 +79,7 @@ export const ACADEMIC_EVENTS: AcademicEvent[] = [
   { id: 'tq-mid-1', title: 'TQ Feedback — Mid Semester (Portal link enabled)', start: '2026-09-22', end: '2026-09-30', category: 'academic' },
   { id: 'holiday-gandhi', title: 'Holiday — Gandhi Jayanti', start: '2026-10-02', end: '2026-10-02', category: 'holiday' },
   { id: 'mid-sem-odd', title: 'Mid Semester Examination (Odd Semester — All Courses)', start: '2026-10-05', end: '2026-10-10', category: 'exam' },
-  { id: 'spandan', title: 'Spandan — Sports Event', start: '2026-10-15', end: '2026-10-18', category: 'academic' },
+  { id: 'spandan', title: 'Spandan — Sports Event', start: '2026-10-15', end: '2026-10-18', category: 'fest' },
   { id: 'convocation', title: 'Convocation Week', start: '2026-10-23', end: '2026-10-27', category: 'academic' },
   { id: 'bpharma-sessional-2a', title: 'B.Pharma Internal Second Sessional Examination', start: '2026-10-26', end: '2026-10-30', category: 'exam' },
   { id: 'holiday-diwali', title: 'Holiday — Diwali Break', start: '2026-11-09', end: '2026-11-14', category: 'holiday' },
@@ -101,7 +108,7 @@ export const ACADEMIC_EVENTS: AcademicEvent[] = [
   { id: 'holiday-idulfitr', title: 'Holiday — Id-ul-Fitr*', start: '2027-03-10', end: '2027-03-10', category: 'holiday' },
   { id: 'holiday-holi', title: 'Holiday — Holi', start: '2027-03-22', end: '2027-03-22', category: 'holiday' },
   { id: 'holiday-goodfriday', title: 'Holiday — Good Friday', start: '2027-03-26', end: '2027-03-26', category: 'holiday' },
-  { id: 'urja', title: 'Urja', start: '2027-04-02', end: '2027-04-04', category: 'academic' },
+  { id: 'urja', title: 'Urja', start: '2027-04-02', end: '2027-04-04', category: 'fest' },
   { id: 'summer-reg', title: 'Summer Semester Registration (Odd & Even)', start: '2027-04-15', end: '2027-04-30', category: 'academic' },
   { id: 'bpharma-sessional-2b', title: 'B.Pharma Internal Second Sessional Examination', start: '2027-04-19', end: '2027-04-24', category: 'exam' },
   { id: 'last-teaching-even', title: 'Last Day of Teaching (Even Semester)', start: '2027-05-01', end: '2027-05-01', category: 'academic' },
