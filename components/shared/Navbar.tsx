@@ -7,15 +7,26 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Menu, X, GraduationCap, LogOut, LayoutDashboard,
   ChevronDown, Calculator, TrendingUp, CalendarCheck, Target, Crosshair,
-  Zap, MessageSquare, ExternalLink, CalendarRange,
+  Zap, MessageSquare, ExternalLink, CalendarRange, CalendarDays,
 } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { cn } from '@/lib/utils'
 
-// ── Calculators data ─────────────────────────────────────────────────────────
-const calculators = [
+// ── Nav dropdown data ────────────────────────────────────────────────────────
+type NavItem = {
+  label: string
+  description: string
+  href: string
+  icon: LucideIcon
+  iconClass: string
+  iconBg: string
+  activeBg: string
+}
+
+const calculators: NavItem[] = [
   {
     label: 'GPA Calculator',
     description: 'Calculate your semester GPA instantly',
@@ -61,7 +72,28 @@ const calculators = [
     iconBg: 'bg-emerald-500/15',
     activeBg: 'bg-emerald-500/10 border-emerald-500/25',
   },
-] as const
+]
+
+const calendarItems: NavItem[] = [
+  {
+    label: 'Case Comp Calendar',
+    description: "India's case comps & B-fests, mapped by month",
+    href: '/case-comp',
+    icon: CalendarRange,
+    iconClass: 'text-indigo-400',
+    iconBg: 'bg-indigo-500/15',
+    activeBg: 'bg-indigo-500/10 border-indigo-500/25',
+  },
+  {
+    label: 'Academic Calendar',
+    description: "Your college's 2026–27 dates, exams & holidays",
+    href: '/academic-calendar',
+    icon: CalendarDays,
+    iconClass: 'text-emerald-400',
+    iconBg: 'bg-emerald-500/15',
+    activeBg: 'bg-emerald-500/10 border-emerald-500/25',
+  },
+]
 
 const itemVariants = {
   hidden: { opacity: 0, y: 7 },
@@ -72,12 +104,18 @@ const itemVariants = {
   }),
 }
 
-// ── CalculatorsDropdown ───────────────────────────────────────────────────────
-function CalculatorsDropdown() {
+// ── NavDropdown (Calculators, Calendar, …) ────────────────────────────────────
+function NavDropdown({ label, triggerIcon: TriggerIcon, headerLabel, items, footerText }: {
+  label: string
+  triggerIcon: LucideIcon
+  headerLabel: string
+  items: NavItem[]
+  footerText: string
+}) {
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
-  const isActive = calculators.some(c => pathname.startsWith(c.href))
+  const isActive = items.some(c => pathname.startsWith(c.href))
 
   useEffect(() => {
     const onDown = (e: MouseEvent) => {
@@ -108,8 +146,8 @@ function CalculatorsDropdown() {
             : 'text-muted-foreground hover:text-foreground hover:bg-white/5 border-transparent'
         )}
       >
-        <Calculator className="w-3.5 h-3.5" />
-        Calculators
+        <TriggerIcon className="w-3.5 h-3.5" />
+        {label}
         <motion.span
           animate={{ rotate: open ? 180 : 0 }}
           transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
@@ -143,13 +181,13 @@ function CalculatorsDropdown() {
                 <Zap className="w-3 h-3 text-white" />
               </div>
               <span className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-                Academic Toolkit
+                {headerLabel}
               </span>
             </div>
 
             {/* 2-column grid */}
             <div className="grid grid-cols-2 gap-1.5 p-2.5">
-              {calculators.map((item, i) => {
+              {items.map((item, i) => {
                 const active = pathname.startsWith(item.href)
                 return (
                   <motion.div
@@ -170,7 +208,7 @@ function CalculatorsDropdown() {
                     }
                     className={cn(
                       'group relative rounded-xl border transition-colors duration-200 cursor-pointer',
-                      i === calculators.length - 1 && calculators.length % 2 !== 0 && 'col-span-2',
+                      i === items.length - 1 && items.length % 2 !== 0 && 'col-span-2',
                       active
                         ? item.activeBg
                         : 'border-transparent hover:bg-indigo-500/[0.09] hover:border-indigo-500/30'
@@ -225,8 +263,83 @@ function CalculatorsDropdown() {
               className="flex items-center justify-between px-4 py-2.5 border-t"
               style={{ borderColor: 'var(--divider)' }}
             >
-              <span className="text-[11px] text-muted-foreground/50">More tools coming soon</span>
+              <span className="text-[11px] text-muted-foreground/50">{footerText}</span>
               <Zap className="w-3 h-3 text-muted-foreground/35" />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
+
+// ── MobileNavAccordion (Calculators, Calendar, … on mobile) ───────────────────
+function MobileNavAccordion({ label, triggerIcon: TriggerIcon, items, onNavigate }: {
+  label: string
+  triggerIcon: LucideIcon
+  items: NavItem[]
+  onNavigate: () => void
+}) {
+  const pathname = usePathname()
+  const [open, setOpen] = useState(false)
+  const isActive = items.some(c => pathname.startsWith(c.href))
+
+  return (
+    <div>
+      <button
+        onClick={() => setOpen(o => !o)}
+        className={cn(
+          'w-full flex items-center justify-between px-4 py-3 text-sm rounded-xl transition-colors',
+          isActive
+            ? 'text-indigo-400 bg-indigo-500/10'
+            : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
+        )}
+      >
+        <span className="font-medium inline-flex items-center gap-3">
+          <TriggerIcon className="w-4 h-4" />
+          {label}
+        </span>
+        <motion.span
+          animate={{ rotate: open ? 180 : 0 }}
+          transition={{ duration: 0.22 }}
+          className="flex items-center"
+        >
+          <ChevronDown className="w-4 h-4" />
+        </motion.span>
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            <div className="pl-3 pb-1 pt-0.5 space-y-0.5">
+              {items.map((item) => {
+                const active = pathname.startsWith(item.href)
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={onNavigate}
+                    className={cn(
+                      'flex items-center gap-3 px-4 py-2.5 text-sm rounded-xl transition-colors',
+                      active
+                        ? 'text-foreground bg-white/8 font-medium'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
+                    )}
+                  >
+                    <div className={cn('w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0', item.iconBg)}>
+                      <item.icon className={cn('w-3.5 h-3.5', item.iconClass)} />
+                    </div>
+                    {item.label}
+                    {active && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-indigo-400" />}
+                  </Link>
+                )
+              })}
             </div>
           </motion.div>
         )}
@@ -321,9 +434,6 @@ export function Navbar() {
   const pathname = usePathname()
   const [scrolled, setScrolled] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
-  const [mobileCalcOpen, setMobileCalcOpen] = useState(false)
-
-  const isCalcActive = calculators.some(c => pathname.startsWith(c.href))
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20)
@@ -334,12 +444,10 @@ export function Navbar() {
   // close mobile menu on navigation
   useEffect(() => {
     setMobileOpen(false)
-    setMobileCalcOpen(false)
   }, [pathname])
 
   const closeMobile = () => {
     setMobileOpen(false)
-    setMobileCalcOpen(false)
   }
 
   return (
@@ -370,19 +478,20 @@ export function Navbar() {
 
           {/* Desktop Nav */}
           <nav className="hidden md:flex items-center gap-0.5">
-            <CalculatorsDropdown />
-            <Link
-              href="/case-comp"
-              className={cn(
-                'flex items-center gap-1.5 px-3.5 py-2 text-sm rounded-xl border border-transparent transition-all duration-200',
-                pathname === '/case-comp'
-                  ? 'text-foreground bg-white/5'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
-              )}
-            >
-              <CalendarRange className="w-3.5 h-3.5" />
-              Case Comp Calendar
-            </Link>
+            <NavDropdown
+              label="Calculators"
+              triggerIcon={Calculator}
+              headerLabel="Academic Toolkit"
+              items={calculators}
+              footerText="More tools coming soon"
+            />
+            <NavDropdown
+              label="Calendar"
+              triggerIcon={CalendarRange}
+              headerLabel="Planning & Calendars"
+              items={calendarItems}
+              footerText="More calendars coming soon"
+            />
             <Link
               href="/dashboard"
               className={cn(
@@ -457,82 +566,10 @@ export function Navbar() {
             <div className="px-4 py-3 space-y-0.5">
 
               {/* Calculators accordion */}
-              <div>
-                <button
-                  onClick={() => setMobileCalcOpen(o => !o)}
-                  className={cn(
-                    'w-full flex items-center justify-between px-4 py-3 text-sm rounded-xl transition-colors',
-                    isCalcActive
-                      ? 'text-indigo-400 bg-indigo-500/10'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
-                  )}
-                >
-                  <span className="font-medium inline-flex items-center gap-3">
-                    <Calculator className="w-4 h-4" />
-                    Calculators
-                  </span>
-                  <motion.span
-                    animate={{ rotate: mobileCalcOpen ? 180 : 0 }}
-                    transition={{ duration: 0.22 }}
-                    className="flex items-center"
-                  >
-                    <ChevronDown className="w-4 h-4" />
-                  </motion.span>
-                </button>
+              <MobileNavAccordion label="Calculators" triggerIcon={Calculator} items={calculators} onNavigate={closeMobile} />
 
-                <AnimatePresence>
-                  {mobileCalcOpen && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: 'auto', opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.2 }}
-                      className="overflow-hidden"
-                    >
-                      <div className="pl-3 pb-1 pt-0.5 space-y-0.5">
-                        {calculators.map((item) => {
-                          const active = pathname.startsWith(item.href)
-                          return (
-                            <Link
-                              key={item.href}
-                              href={item.href}
-                              onClick={closeMobile}
-                              className={cn(
-                                'flex items-center gap-3 px-4 py-2.5 text-sm rounded-xl transition-colors',
-                                active
-                                  ? 'text-foreground bg-white/8 font-medium'
-                                  : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
-                              )}
-                            >
-                              <div className={cn('w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0', item.iconBg)}>
-                                <item.icon className={cn('w-3.5 h-3.5', item.iconClass)} />
-                              </div>
-                              {item.label}
-                              {active && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-indigo-400" />}
-                            </Link>
-                          )
-                        })}
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-
-              {/* Case Comp Calendar */}
-              <Link
-                href="/case-comp"
-                onClick={closeMobile}
-                className={cn(
-                  'flex items-center gap-3 px-4 py-3 text-sm rounded-xl transition-colors',
-                  pathname === '/case-comp'
-                    ? 'text-foreground bg-white/5 font-medium'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
-                )}
-              >
-                <CalendarRange className="w-4 h-4" />
-                Case Comp Calendar
-                {pathname === '/case-comp' && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-indigo-400" />}
-              </Link>
+              {/* Calendar accordion */}
+              <MobileNavAccordion label="Calendar" triggerIcon={CalendarRange} items={calendarItems} onNavigate={closeMobile} />
 
               {/* Dashboard */}
               <Link
