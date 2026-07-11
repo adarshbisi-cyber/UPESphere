@@ -21,7 +21,8 @@ export const CATEGORY_STYLE: Record<
   academic: {
     label: 'Academic',
     dot: 'bg-indigo-500',
-    pill: 'bg-indigo-500/15 border-indigo-500/25 text-indigo-700 dark:text-indigo-200',
+    // Dark mode: white text — indigo-200 on the translucent indigo fill was too low-contrast.
+    pill: 'bg-indigo-500/15 border-indigo-500/25 text-indigo-700 dark:text-white',
     legend: 'bg-indigo-500',
     barText: 'text-indigo-700 dark:text-indigo-200',
   },
