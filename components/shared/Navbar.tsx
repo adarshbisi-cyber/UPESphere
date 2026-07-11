@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Menu, X, GraduationCap, LogOut, LayoutDashboard,
   ChevronDown, Calculator, TrendingUp, CalendarCheck, Target, Crosshair,
-  Zap, MessageSquare, ExternalLink, HelpCircle,
+  Zap, MessageSquare, ExternalLink, CalendarRange,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
@@ -108,6 +108,7 @@ function CalculatorsDropdown() {
             : 'text-muted-foreground hover:text-foreground hover:bg-white/5 border-transparent'
         )}
       >
+        <Calculator className="w-3.5 h-3.5" />
         Calculators
         <motion.span
           animate={{ rotate: open ? 180 : 0 }}
@@ -371,27 +372,28 @@ export function Navbar() {
           <nav className="hidden md:flex items-center gap-0.5">
             <CalculatorsDropdown />
             <Link
+              href="/case-comp"
+              className={cn(
+                'flex items-center gap-1.5 px-3.5 py-2 text-sm rounded-xl border border-transparent transition-all duration-200',
+                pathname === '/case-comp'
+                  ? 'text-foreground bg-white/5'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
+              )}
+            >
+              <CalendarRange className="w-3.5 h-3.5" />
+              Case Comp Calendar
+            </Link>
+            <Link
               href="/dashboard"
               className={cn(
-                'px-3.5 py-2 text-sm rounded-xl border border-transparent transition-all duration-200',
+                'flex items-center gap-1.5 px-3.5 py-2 text-sm rounded-xl border border-transparent transition-all duration-200',
                 pathname === '/dashboard'
                   ? 'text-foreground bg-white/5'
                   : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
               )}
             >
+              <LayoutDashboard className="w-3.5 h-3.5" />
               Dashboard
-            </Link>
-            <Link
-              href="/faq"
-              className={cn(
-                'flex items-center gap-1.5 px-3.5 py-2 text-sm rounded-xl border border-transparent transition-all duration-200',
-                pathname === '/faq'
-                  ? 'text-foreground bg-white/5'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
-              )}
-            >
-              <HelpCircle className="w-3.5 h-3.5" />
-              FAQ
             </Link>
             <a
               href="https://forms.gle/nNT7KWYXobfXBUTM8"
@@ -465,7 +467,10 @@ export function Navbar() {
                       : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
                   )}
                 >
-                  <span className="font-medium">Calculators</span>
+                  <span className="font-medium inline-flex items-center gap-3">
+                    <Calculator className="w-4 h-4" />
+                    Calculators
+                  </span>
                   <motion.span
                     animate={{ rotate: mobileCalcOpen ? 180 : 0 }}
                     transition={{ duration: 0.22 }}
@@ -513,6 +518,22 @@ export function Navbar() {
                 </AnimatePresence>
               </div>
 
+              {/* Case Comp Calendar */}
+              <Link
+                href="/case-comp"
+                onClick={closeMobile}
+                className={cn(
+                  'flex items-center gap-3 px-4 py-3 text-sm rounded-xl transition-colors',
+                  pathname === '/case-comp'
+                    ? 'text-foreground bg-white/5 font-medium'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
+                )}
+              >
+                <CalendarRange className="w-4 h-4" />
+                Case Comp Calendar
+                {pathname === '/case-comp' && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-indigo-400" />}
+              </Link>
+
               {/* Dashboard */}
               <Link
                 href="/dashboard"
@@ -526,22 +547,6 @@ export function Navbar() {
               >
                 <LayoutDashboard className="w-4 h-4" />
                 Dashboard
-              </Link>
-
-              {/* FAQ */}
-              <Link
-                href="/faq"
-                onClick={closeMobile}
-                className={cn(
-                  'flex items-center gap-3 px-4 py-3 text-sm rounded-xl transition-colors',
-                  pathname === '/faq'
-                    ? 'text-foreground bg-white/5 font-medium'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
-                )}
-              >
-                <HelpCircle className="w-4 h-4" />
-                FAQ
-                {pathname === '/faq' && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-indigo-400" />}
               </Link>
 
               {/* Feedback */}

@@ -4,8 +4,10 @@ import { GraduationCap, Github } from 'lucide-react'
 const links = {
   Tools: [
     { label: 'GPA Calculator', href: '/gpa' },
+    { label: 'GPA Target', href: '/calculators/gpa-target' },
     { label: 'CGPA Calculator', href: '/cgpa' },
     { label: 'Attendance Tracker', href: '/attendance' },
+    { label: 'Expected Total', href: '/calculators/expected-total' },
     { label: 'Dashboard', href: '/dashboard' },
   ],
   Company: [
