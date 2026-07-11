@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Menu, X, GraduationCap, LogOut, LayoutDashboard,
   ChevronDown, Calculator, TrendingUp, CalendarCheck, Target, Crosshair,
-  Zap, MessageSquare, ExternalLink, CalendarRange,
+  Zap, MessageSquare, ExternalLink, CalendarRange, CalendarDays,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -83,6 +83,15 @@ const calendarItems: NavItem[] = [
     iconClass: 'text-indigo-400',
     iconBg: 'bg-indigo-500/15',
     activeBg: 'bg-indigo-500/10 border-indigo-500/25',
+  },
+  {
+    label: 'Academic Calendar',
+    description: "Your college's 2026–27 dates, exams & holidays",
+    href: '/academic-calendar',
+    icon: CalendarDays,
+    iconClass: 'text-emerald-400',
+    iconBg: 'bg-emerald-500/15',
+    activeBg: 'bg-emerald-500/10 border-emerald-500/25',
   },
 ]
 
