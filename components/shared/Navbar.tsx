@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Menu, X, GraduationCap, LogOut, LayoutDashboard,
   ChevronDown, Calculator, TrendingUp, CalendarCheck, Target, Crosshair,
-  Zap, MessageSquare, ExternalLink, CalendarRange, CalendarDays,
+  Zap, MessageSquare, ExternalLink, CalendarRange, CalendarDays, Briefcase,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -493,6 +493,18 @@ export function Navbar() {
               footerText="More calendars coming soon"
             />
             <Link
+              href="/career"
+              className={cn(
+                'flex items-center gap-1.5 px-3.5 py-2 text-sm rounded-xl border border-transparent transition-all duration-200',
+                pathname === '/career'
+                  ? 'text-foreground bg-white/5'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
+              )}
+            >
+              <Briefcase className="w-3.5 h-3.5" />
+              Career
+            </Link>
+            <Link
               href="/dashboard"
               className={cn(
                 'flex items-center gap-1.5 px-3.5 py-2 text-sm rounded-xl border border-transparent transition-all duration-200',
@@ -570,6 +582,22 @@ export function Navbar() {
 
               {/* Calendar accordion */}
               <MobileNavAccordion label="Calendar" triggerIcon={CalendarRange} items={calendarItems} onNavigate={closeMobile} />
+
+              {/* Career */}
+              <Link
+                href="/career"
+                onClick={closeMobile}
+                className={cn(
+                  'flex items-center gap-3 px-4 py-3 text-sm rounded-xl transition-colors',
+                  pathname === '/career'
+                    ? 'text-foreground bg-white/5 font-medium'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
+                )}
+              >
+                <Briefcase className="w-4 h-4" />
+                Career
+                {pathname === '/career' && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-indigo-400" />}
+              </Link>
 
               {/* Dashboard */}
               <Link
