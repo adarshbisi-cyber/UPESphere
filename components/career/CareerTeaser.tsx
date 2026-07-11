@@ -19,7 +19,7 @@ const TEASERS = ['Internship board', 'Placement prep', 'Opportunity matching', '
 
 export function CareerTeaser() {
   return (
-    <section className="relative min-h-[calc(100svh-4rem)] flex items-center justify-center px-4 sm:px-6 lg:px-8 pt-24 pb-20 overflow-hidden">
+    <section className="relative min-h-[calc(100svh-4rem)] flex items-center justify-center px-4 sm:px-6 lg:px-8 pt-28 pb-28 overflow-hidden">
       {/* ambient glows */}
       <div className="pointer-events-none absolute inset-0 -z-10">
         <div className="absolute top-1/4 left-1/3 w-[520px] h-[520px] rounded-full bg-indigo-600/15 blur-[130px]" />
@@ -67,7 +67,7 @@ export function CareerTeaser() {
         </motion.p>
 
         {/* teaser chips */}
-        <motion.div variants={item} className="flex flex-wrap items-center justify-center gap-2 mt-8">
+        <motion.div variants={item} className="flex flex-wrap items-center justify-center gap-2.5 mt-10">
           {TEASERS.map(t => (
             <span key={t} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs text-foreground/80 border border-white/10 bg-white/[0.03]">
               <Sparkles className="w-3 h-3 text-indigo-400" /> {t}
@@ -76,7 +76,7 @@ export function CareerTeaser() {
         </motion.div>
 
         {/* CTAs */}
-        <motion.div variants={item} className="flex flex-wrap items-center justify-center gap-3 mt-10">
+        <motion.div variants={item} className="flex flex-wrap items-center justify-center gap-3 mt-14">
           <a
             href="https://forms.gle/nNT7KWYXobfXBUTM8"
             target="_blank"
