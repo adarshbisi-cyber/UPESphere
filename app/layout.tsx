@@ -52,9 +52,8 @@ export const metadata: Metadata = {
     description: 'Track your academic life smarter.',
   },
   robots: { index: true, follow: true },
-  icons: {
-    icon: '/favicon.ico',
-  },
+  // Favicon / touch icon are provided by the file-based conventions
+  // app/icon.png and app/apple-icon.png (auto-detected by Next.js).
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -10,19 +10,13 @@ const links = {
     { label: 'Expected Total', href: '/calculators/expected-total' },
     { label: 'Dashboard', href: '/dashboard' },
   ],
-  Company: [
-    { label: 'About', href: '#' },
-    { label: 'Privacy Policy', href: '#' },
-    { label: 'Terms of Service', href: '#' },
-    { label: 'Contact', href: '#' },
-  ],
 }
 
 export function Footer() {
   return (
     <footer className="border-t border-border bg-background">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
           {/* Brand */}
           <div className="lg:col-span-2">
             <Link href="/" className="flex items-center gap-2.5 mb-4">
