@@ -82,7 +82,7 @@ export function CommunityTeaser() {
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium text-white bg-gradient-to-r from-violet-500 to-indigo-500 shadow-lg shadow-violet-500/25 hover:shadow-violet-500/40 transition-shadow"
           >
-            Save your spot <ArrowRight className="w-4 h-4" />
+            Suggest a feature <ArrowRight className="w-4 h-4" />
           </a>
           <Link
             href="/"

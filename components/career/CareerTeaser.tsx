@@ -83,7 +83,7 @@ export function CareerTeaser() {
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium text-white bg-gradient-to-r from-indigo-500 to-violet-500 shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 transition-shadow"
           >
-            Get on the early list <ArrowRight className="w-4 h-4" />
+            Suggest a feature <ArrowRight className="w-4 h-4" />
           </a>
           <Link
             href="/"
