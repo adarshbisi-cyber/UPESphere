@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { Navbar } from '@/components/shared/Navbar'
 import { Footer } from '@/components/landing/Footer'
-import { CaseCompExperience } from '@/components/casecomp/CaseCompExperience'
+import { CaseCompTabs } from '@/components/casecomp/CaseCompTabs'
 
 export const metadata: Metadata = {
   title: 'Case Comp Calendar',
@@ -18,7 +18,7 @@ export default function CaseCompPage() {
   return (
     <main className="min-h-screen bg-background text-foreground">
       <Navbar />
-      <CaseCompExperience />
+      <CaseCompTabs />
       <Footer />
     </main>
   )

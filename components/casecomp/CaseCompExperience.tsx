@@ -168,7 +168,7 @@ export function CaseCompExperience() {
   }
 
   return (
-    <div className="pt-24 pb-24">
+    <div className="pt-6 pb-24">
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
       <section className="relative px-4 sm:px-6 lg:px-8 overflow-hidden">
         {/* ambient glows */}
