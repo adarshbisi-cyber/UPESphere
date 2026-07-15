@@ -9,6 +9,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { generateId } from '@/lib/utils'
 import { GA } from '@/lib/analytics'
+import { parseSubjectsFromOCR, type ParsedSubject } from '@/lib/curriculum-parser'
 import type { Subject } from '@/types'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -21,100 +22,6 @@ interface UploadedFile {
   file: File
   preview: string
   status: FileStatus
-}
-
-interface ParsedSubject {
-  id: string
-  name: string
-  credits: number
-  selected: boolean
-  confidence: 'high' | 'low'
-}
-
-// ─── OCR Text Parser ──────────────────────────────────────────────────────────
-
-const CODE_RE = /[A-Z]{2,8}-?\d+[_-]?\d*/
-
-const TRAILING_TYPE_RE = new RegExp(
-  '\\s+(' +
-  [
-    'Non[\\s-]Time[\\s-]Table',
-    'Open\\s+Elective',
-    'Professional\\s+Elective',
-    'Project\\s+Work',
-    'Community\\s+Service',
-    'Audit\\s+Course',
-    'Value\\s+Added',
-    'Dissertation',
-    'Internship',
-    'Elective',
-    'Tutorial',
-    'Seminar',
-    'Core',
-    'Lab',
-  ].join('|') +
-  ')\\s*$',
-  'i'
-)
-
-function cleanCourseName(raw: string): string {
-  const step1 = raw
-    .replace(new RegExp(`^${CODE_RE.source}\\s+`), '')
-    .replace(new RegExp(`\\s*\\(${CODE_RE.source}\\)\\s*`, 'g'), ' ')
-    .replace(new RegExp(`\\s+${CODE_RE.source}$`), '')
-    .replace(/^\d{1,3}[\s.)]+/, '')
-    .replace(/\|/g, '')
-    .replace(/_+/g, ' ')
-    .replace(/\s{2,}/g, ' ')
-    .trim()
-  const step2 = step1.replace(TRAILING_TYPE_RE, '').trim()
-  return step2.length >= 3 ? step2 : step1
-}
-
-const SKIP_PATTERNS = [
-  /^[-=|+#*]+$/,
-  /^(sl\.?\s*no|s\.?\s*no|course\s*code|subject\s*name|credits?|l\s*t\s*p|hours?|subject\s*code|total|remarks|grade|semester|theory|practical)/i,
-  /^\d{1,2}\.?\s*$/,
-  /^(page\s*\d|www\.|http)/i,
-]
-
-function parseSubjectsFromOCR(rawText: string, seen: Set<string>): ParsedSubject[] {
-  const lines = rawText
-    .split('\n')
-    .map(l => l.trim().replace(/\s+/g, ' '))
-    .filter(l => l.length >= 4)
-
-  const results: ParsedSubject[] = []
-
-  const addResult = (name: string, credits: number, confidence: 'high' | 'low') => {
-    const cleaned = cleanCourseName(name)
-    const key = cleaned.toLowerCase().replace(/\s+/g, '')
-    if (
-      cleaned.length >= 3 &&
-      /[a-zA-Z]{2,}/.test(cleaned) &&
-      credits >= 1 && credits <= 9 &&
-      !seen.has(key)
-    ) {
-      seen.add(key)
-      results.push({ id: generateId(), name: cleaned, credits, selected: true, confidence })
-    }
-  }
-
-  for (const line of lines) {
-    if (SKIP_PATTERNS.some(p => p.test(line))) continue
-    const m = line.match(/^(.+?)\s+(\d(?:\.0)?)\s*$/)
-    if (m) addResult(m[1], Math.round(parseFloat(m[2])), 'high')
-  }
-
-  if (results.length < 2) {
-    for (const line of lines) {
-      if (SKIP_PATTERNS.some(p => p.test(line))) continue
-      const m = line.match(/([A-Za-z][A-Za-z\s&,:()\-–]{3,60}?)\s+(\d)\b/)
-      if (m) addResult(m[1], parseInt(m[2]), 'low')
-    }
-  }
-
-  return results.slice(0, 20)
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
