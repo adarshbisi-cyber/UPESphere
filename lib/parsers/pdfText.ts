@@ -11,10 +11,10 @@ let workerConfigured = false
 async function getPdfJs() {
   const pdfjs = await import('pdfjs-dist')
   if (!workerConfigured) {
-    pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-      'pdfjs-dist/build/pdf.worker.min.mjs',
-      import.meta.url
-    ).toString()
+    // Served as-is from /public (not run through webpack/Terser) — the worker
+    // file is native ESM, which breaks Next.js's minifier if webpack tries to
+    // bundle it via `new URL(..., import.meta.url)` asset resolution instead.
+    pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
     workerConfigured = true
   }
   return pdfjs
