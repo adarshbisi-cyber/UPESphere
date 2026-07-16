@@ -4,10 +4,11 @@ import { forwardRef, useMemo, useState } from 'react'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import {
   Search, Star, CalendarDays, Trophy, BellRing, ArrowDown,
-  Building2, Target, Compass, AlertTriangle, Sparkles,
+  Building2, Target, Compass, AlertTriangle, Sparkles, GraduationCap,
 } from 'lucide-react'
 import { GlassCard } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
+import { CorporateCases } from '@/components/casecomp/CorporateCases'
 import {
   CASE_COMPS, TRACKS, INSTITUTIONS, MONTHS, MONTHS_FULL,
   TRACK_STYLE, INSTITUTION_STYLE, CLUSTERS, HEAT_MAP, HEAT_STYLE,
@@ -142,6 +143,7 @@ const EventCard = forwardRef<HTMLDivElement, { comp: (typeof CASE_COMPS)[number]
 // ── Main experience ───────────────────────────────────────────────────────
 export function CaseCompExperience() {
   const reduce = useReducedMotion()
+  const [mode, setMode] = useState<'bschool' | 'corporate'>('bschool')
   const [query, setQuery] = useState('')
   const [month, setMonth] = useState<number | 'all'>('all')
   const [track, setTrack] = useState<Track | 'all'>('all')
@@ -224,6 +226,40 @@ export function CaseCompExperience() {
         </motion.div>
       </section>
 
+      {/* ── Mode toggle: B-school Cases ↔ Corporate Cases ─────────────────── */}
+      <div className="px-4 sm:px-6 lg:px-8 mt-16 max-w-6xl mx-auto flex justify-center">
+        <div className="inline-flex p-1 rounded-full border border-white/10 bg-white/[0.03] backdrop-blur-sm">
+          {(['bschool', 'corporate'] as const).map(m => {
+            const active = mode === m
+            return (
+              <button
+                key={m}
+                onClick={() => setMode(m)}
+                className={cn(
+                  'relative inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-colors z-10',
+                  active ? 'text-white' : 'text-muted-foreground hover:text-foreground'
+                )}
+              >
+                {active && (
+                  <motion.span
+                    layoutId="festmap-mode"
+                    className="absolute inset-0 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 -z-10"
+                    transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                  />
+                )}
+                {m === 'bschool'
+                  ? <><GraduationCap className="w-4 h-4" /> B-school Cases</>
+                  : <><Building2 className="w-4 h-4" /> Corporate Cases</>}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {mode === 'corporate' ? (
+        <CorporateCases />
+      ) : (
+        <>
       {/* ── Big picture ──────────────────────────────────────────────────── */}
       <section className="px-4 sm:px-6 lg:px-8 mt-28 max-w-6xl mx-auto">
         <SectionHead
@@ -501,6 +537,8 @@ export function CaseCompExperience() {
           ))}
         </div>
       </section>
+        </>
+      )}
     </div>
   )
 }
