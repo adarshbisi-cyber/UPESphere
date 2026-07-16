@@ -185,15 +185,15 @@ export function CaseCompExperience() {
           </motion.div>
 
           <motion.h1 variants={heroItem} className="text-4xl sm:text-6xl font-bold font-display tracking-tight leading-[1.05]">
-            India&rsquo;s Case-Comp &amp;{' '}
+            India&rsquo;s Case-Comp{' '}
             <span className="bg-gradient-to-r from-indigo-400 via-violet-400 to-cyan-400 bg-clip-text text-transparent">
-              B-Fest Calendar
+              Calendar
             </span>
           </motion.h1>
 
           <motion.p variants={heroItem} className="text-lg text-muted-foreground mt-5 max-w-2xl mx-auto leading-relaxed">
-            Every IIM, IIT and DU fest worth competing in, mapped across the year — prize pools,
-            flagship events, and exactly when to set your Unstop alerts.
+            Every B-school fest and corporate case competition worth entering, mapped across the year —
+            flagship events, prize pools, and exactly when to set your Unstop alerts.
           </motion.p>
 
           <motion.div variants={heroItem} className="flex flex-wrap items-center justify-center gap-3 mt-8">
@@ -226,46 +226,12 @@ export function CaseCompExperience() {
         </motion.div>
       </section>
 
-      {/* ── Mode toggle: B-school Cases ↔ Corporate Cases ─────────────────── */}
-      <div className="px-4 sm:px-6 lg:px-8 mt-16 max-w-6xl mx-auto flex justify-center">
-        <div className="inline-flex p-1 rounded-full border border-white/10 bg-white/[0.03] backdrop-blur-sm">
-          {(['bschool', 'corporate'] as const).map(m => {
-            const active = mode === m
-            return (
-              <button
-                key={m}
-                onClick={() => setMode(m)}
-                className={cn(
-                  'relative inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-colors z-10',
-                  active ? 'text-white' : 'text-muted-foreground hover:text-foreground'
-                )}
-              >
-                {active && (
-                  <motion.span
-                    layoutId="festmap-mode"
-                    className="absolute inset-0 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 -z-10"
-                    transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-                  />
-                )}
-                {m === 'bschool'
-                  ? <><GraduationCap className="w-4 h-4" /> B-school Cases</>
-                  : <><Building2 className="w-4 h-4" /> Corporate Cases</>}
-              </button>
-            )
-          })}
-        </div>
-      </div>
-
-      {mode === 'corporate' ? (
-        <CorporateCases />
-      ) : (
-        <>
-      {/* ── Big picture ──────────────────────────────────────────────────── */}
+      {/* ── Big picture (constant across both modes) ──────────────────────── */}
       <section className="px-4 sm:px-6 lg:px-8 mt-28 max-w-6xl mx-auto">
         <SectionHead
           eyebrow="The Big Picture"
-          title={<>Two heavy clusters, <span className="text-muted-foreground">one summer lull.</span></>}
-          sub="The whole circuit bunches into two windows. If you only optimise one quarter, make it Jan–March — it carries most of the year's prize money and competition count."
+          title={<>Two peak windows, <span className="text-muted-foreground">one short lull.</span></>}
+          sub="A spring fest peak, a brief mid-year lull, then a heavy second half where B-school fests and corporate flagships overlap. If you only optimise one stretch, make it Jan–April or Aug–Nov."
         />
 
         <div className="grid md:grid-cols-3 gap-4">
@@ -351,6 +317,40 @@ export function CaseCompExperience() {
         </motion.div>
       </section>
 
+      {/* ── Mode toggle: below Big Picture, above The Calendar ─────────────── */}
+      <div className="px-4 sm:px-6 lg:px-8 mt-24 max-w-6xl mx-auto flex justify-center">
+        <div className="inline-flex p-1 rounded-full border border-white/10 bg-white/[0.03] backdrop-blur-sm">
+          {(['bschool', 'corporate'] as const).map(m => {
+            const active = mode === m
+            return (
+              <button
+                key={m}
+                onClick={() => setMode(m)}
+                className={cn(
+                  'relative inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-colors z-10',
+                  active ? 'text-white' : 'text-muted-foreground hover:text-foreground'
+                )}
+              >
+                {active && (
+                  <motion.span
+                    layoutId="festmap-mode"
+                    className="absolute inset-0 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 -z-10"
+                    transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                  />
+                )}
+                {m === 'bschool'
+                  ? <><GraduationCap className="w-4 h-4" /> B-school Cases</>
+                  : <><Building2 className="w-4 h-4" /> Corporate Cases</>}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {mode === 'corporate' ? (
+        <CorporateCases />
+      ) : (
+        <>
       {/* ── The calendar ─────────────────────────────────────────────────── */}
       <section id="calendar" className="px-4 sm:px-6 lg:px-8 mt-28 max-w-6xl mx-auto scroll-mt-24">
         <SectionHead
