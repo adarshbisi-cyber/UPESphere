@@ -6,8 +6,8 @@ import { Search, Building2, CalendarDays, GraduationCap, Trophy, Infinity as Inf
 import { GlassCard } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import {
-  CASE_COMP_DATABASE, DB_CATEGORY_META, DB_CATEGORY_ORDER, ELIGIBILITIES,
-  type DbCategory, type Eligibility,
+  CASE_COMP_DATABASE, DB_CATEGORY_META, DB_CATEGORY_ORDER, ELIGIBILITIES, SECTORS,
+  type DbCategory, type Eligibility, type Sector,
 } from '@/lib/data/caseCompDatabase'
 
 const EASE = [0.22, 1, 0.36, 1] as const
@@ -59,6 +59,11 @@ function CompCard({ comp }: { comp: (typeof CASE_COMP_DATABASE)[number] }) {
         <span className="text-[10px] font-medium px-1.5 py-0.5 rounded border border-white/10 bg-white/[0.04] inline-flex items-center gap-1">
           <GraduationCap className="w-2.5 h-2.5" /> {comp.eligibility}
         </span>
+        {comp.sector && (
+          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full border border-indigo-500/30 bg-indigo-500/10 text-indigo-600 dark:text-indigo-300">
+            {comp.sector}
+          </span>
+        )}
         {comp.categories.map(c => {
           const m = DB_CATEGORY_META[c]
           return (
@@ -83,6 +88,7 @@ function CompCard({ comp }: { comp: (typeof CASE_COMP_DATABASE)[number] }) {
 export function CaseCompDatabase() {
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState<DbCategory | 'all'>('all')
+  const [sector, setSector] = useState<Sector | 'all'>('all')
   const [month, setMonth] = useState<MonthFilter>('all')
   const [elig, setElig] = useState<Eligibility | 'all'>('all')
   const [visible, setVisible] = useState(PAGE_SIZE)
@@ -91,13 +97,14 @@ export function CaseCompDatabase() {
     const q = query.trim().toLowerCase()
     return CASE_COMP_DATABASE.filter(c => {
       if (category !== 'all' && !c.categories.includes(category)) return false
+      if (sector !== 'all' && c.sector !== sector) return false
       if (elig !== 'all' && c.eligibility !== elig) return false
       if (month === 'flex' && !c.flexible) return false
       if (typeof month === 'number' && !c.months.includes(month)) return false
       if (q && !(`${c.name} ${c.sponsor} ${c.format}`.toLowerCase().includes(q))) return false
       return true
     })
-  }, [query, category, month, elig])
+  }, [query, category, sector, month, elig])
 
   const shown = filtered.slice(0, visible)
   const resetPage = () => setVisible(PAGE_SIZE)
@@ -147,6 +154,13 @@ export function CaseCompDatabase() {
             <Chip active={month === 'flex'} onClick={() => { setMonth('flex'); resetPage() }}>Flexible</Chip>
           </div>
           <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60 mr-1">Sector</span>
+            <Chip active={sector === 'all'} onClick={() => { setSector('all'); resetPage() }}>All</Chip>
+            {SECTORS.map(sec => (
+              <Chip key={sec} active={sector === sec} onClick={() => { setSector(sec); resetPage() }}>{sec}</Chip>
+            ))}
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5">
             <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60 mr-1">Eligibility</span>
             <Chip active={elig === 'all'} onClick={() => { setElig('all'); resetPage() }}>All</Chip>
             {ELIGIBILITIES.map(e => (
@@ -154,15 +168,20 @@ export function CaseCompDatabase() {
             ))}
           </div>
         </div>
+        {sector !== 'all' && (
+          <p className="text-[11px] text-muted-foreground/70 mt-3">
+            Sector filtering covers the industry-classified competitions. Comps grouped by another dimension (India, MBA-focus, special-interest) aren&rsquo;t sector-tagged.
+          </p>
+        )}
       </GlassCard>
 
       <div className="flex items-center justify-between mb-4">
         <span className="text-sm text-muted-foreground">
           <span className="text-foreground font-semibold">{filtered.length}</span> {filtered.length === 1 ? 'competition' : 'competitions'}
         </span>
-        {(query || category !== 'all' || month !== 'all' || elig !== 'all') && (
+        {(query || category !== 'all' || sector !== 'all' || month !== 'all' || elig !== 'all') && (
           <button
-            onClick={() => { setQuery(''); setCategory('all'); setMonth('all'); setElig('all'); resetPage() }}
+            onClick={() => { setQuery(''); setCategory('all'); setSector('all'); setMonth('all'); setElig('all'); resetPage() }}
             className="text-xs text-indigo-300 hover:text-indigo-200 transition-colors"
           >
             Clear filters
