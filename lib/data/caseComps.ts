@@ -203,11 +203,11 @@ export interface Cluster {
 
 export const CLUSTERS: Cluster[] = [
   { tag: 'Cluster 1', window: 'Jan–Apr', tone: 'peak',
-    body: 'IRIS, Manfest-Varchasva, GES, Technex, Techkriti, Cognizance, Shaastra and nearly every DU society fest land here. The densest, highest-stakes stretch of the year.' },
-  { tag: 'The Drought', window: 'May–Jul', tone: 'quiet',
-    body: 'End-sem exams and the summer break stall the flagship physical fests. Use it for solo Unstop comps, internships, and prepping submissions for the August restart.' },
-  { tag: 'Cluster 2', window: 'Aug–Dec', tone: 'peak',
-    body: "Venix, Techniche, Red Brick Summit, Atharv Ranbhoomi, Ensemble-Valhalla, 7 Lakes Fest and Eureka! (₹2 Cr) at IIT-B's E-Summit. The B-school and start-up heavy half." },
+    body: 'B-school fest season — IRIS, Manfest-Varchasva, GES, Techkriti, Cognizance, Shaastra and the DU society fests. The densest, highest-stakes stretch of the year.' },
+  { tag: 'The Lull', window: 'May–Jun', tone: 'quiet',
+    body: 'End-sem exams and the summer break stall the flagship fests. Use it for solo Unstop comps, internships, and prepping submissions for the July restart.' },
+  { tag: 'Cluster 2', window: 'Jul–Dec', tone: 'peak',
+    body: 'The big second half — corporate flagships (AB InBev, HUL LIME, P&G, Amazon…) open from July and overlap the B-school fest wave (Venix, Red Brick, Ensemble-Valhalla, Eureka! ₹2 Cr).' },
 ]
 
 export type HeatLevel = 'peak' | 'busy' | 'builds' | 'quiet'
@@ -219,7 +219,7 @@ export const HEAT_MAP: { month: string; level: HeatLevel }[] = [
   { month: 'APR', level: 'busy' },
   { month: 'MAY', level: 'quiet' },
   { month: 'JUN', level: 'quiet' },
-  { month: 'JUL', level: 'quiet' },
+  { month: 'JUL', level: 'builds' },
   { month: 'AUG', level: 'builds' },
   { month: 'SEP', level: 'builds' },
   { month: 'OCT', level: 'peak' },

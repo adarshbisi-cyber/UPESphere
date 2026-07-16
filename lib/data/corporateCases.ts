@@ -1,0 +1,65 @@
+// Corporate case competitions (India), from the source CSV. Sponsor is
+// derived best-effort from the name; month is the typical registration month.
+
+export interface CorporateCase {
+  id: string
+  name: string
+  sponsor: string
+  month: number
+}
+
+export const CORPORATE_CASES: CorporateCase[] = [
+  { id: "ab-inbev-the-bud-challenge", name: "AB InBev - The BUD Challenge", sponsor: "AB InBev", month: 7 },
+  { id: "icici-lombard-s-illuminate", name: "ICICI Lombard's ILLuminate", sponsor: "ICICI Lombard", month: 7 },
+  { id: "colgate-transcend", name: "Colgate Transcend", sponsor: "Colgate", month: 7 },
+  { id: "rb-global-challenge", name: "RB Global Challenge", sponsor: "RB", month: 7 },
+  { id: "tas-invictas", name: "TAS invicTAS", sponsor: "TAS", month: 7 },
+  { id: "vodafone-vantage", name: "Vodafone Vantage", sponsor: "Vodafone", month: 7 },
+  { id: "amazon-ace", name: "Amazon Ace", sponsor: "Amazon", month: 7 },
+  { id: "p-g-ceo-challenge", name: "P&G CEO Challenge", sponsor: "P&G", month: 7 },
+  { id: "hul-lime", name: "HUL LIME", sponsor: "HUL", month: 8 },
+  { id: "xiaomi-summit", name: "Xiaomi Summit", sponsor: "Xiaomi", month: 8 },
+  { id: "infosys-ingenious", name: "Infosys Ingenious", sponsor: "Infosys", month: 8 },
+  { id: "ninjakart-hustle", name: "Ninjakart Hustle", sponsor: "Ninjakart", month: 8 },
+  { id: "nestle-4p-challenge", name: "Nestle 4P Challenge", sponsor: "Nestle", month: 8 },
+  { id: "rbs-case-study-challenge", name: "RBS Case study challenge", sponsor: "RBS", month: 8 },
+  { id: "flipkart-wired", name: "Flipkart WiRED", sponsor: "Flipkart", month: 8 },
+  { id: "mahindra-war-room", name: "Mahindra War Room", sponsor: "Mahindra", month: 8 },
+  { id: "airtel-icreate", name: "Airtel iCreate", sponsor: "Airtel", month: 8 },
+  { id: "asian-paints-canvas", name: "Asian Paints Canvas", sponsor: "Asian", month: 8 },
+  { id: "google-case-challenge", name: "Google Case Challenge", sponsor: "Google", month: 8 },
+  { id: "bajaj-finserv-atom", name: "Bajaj Finserv Atom", sponsor: "Bajaj", month: 8 },
+  { id: "itc-interrobang", name: "ITC Interrobang", sponsor: "ITC", month: 8 },
+  { id: "tas-tbla", name: "TAS TBLA", sponsor: "TAS", month: 8 },
+  { id: "l-or-al-sustainability-challenge", name: "L’Oréal Sustainability Challenge", sponsor: "L’Oréal", month: 9 },
+  { id: "accenture-b-school-challenge", name: "Accenture B-School Challenge", sponsor: "Accenture", month: 9 },
+  { id: "phillips-carbon-black-ltd-pcbl-challengers", name: "Phillips Carbon Black Ltd. PCBL Challengers", sponsor: "Phillips", month: 9 },
+  { id: "icici-beat-the-curve", name: "ICICI Beat The Curve", sponsor: "ICICI", month: 9 },
+  { id: "lodha-group-soar-for-more", name: "Lodha Group - Soar For More", sponsor: "Lodha Group", month: 10 },
+  { id: "marico-over-the-wall", name: "Marico Over The Wall", sponsor: "Marico", month: 10 },
+  { id: "renew-power-re-lead", name: "ReNew Power Re-lead", sponsor: "ReNew", month: 10 },
+  { id: "hul-finace", name: "HUL FinAce", sponsor: "HUL", month: 10 },
+  { id: "myntra-stylbiz", name: "Myntra Stylbiz", sponsor: "Myntra", month: 10 },
+  { id: "capgemini-l-innovateur", name: "Capgemini L'Innovateur", sponsor: "Capgemini", month: 10 },
+  { id: "everest-national-case-study-competition", name: "Everest National Case Study Competition", sponsor: "Everest", month: 10 },
+  { id: "exl-acumen", name: "EXL Acumen", sponsor: "EXL", month: 10 },
+  { id: "elara-capital", name: "Elara Capital", sponsor: "Elara", month: 10 },
+  { id: "optum-stratethon", name: "Optum Stratethon", sponsor: "Optum", month: 10 },
+  { id: "tvs-credit-e-p-i-c", name: "TVS Credit E.P.I.C", sponsor: "TVS", month: 10 },
+  { id: "titan-elevate", name: "Titan Elevate", sponsor: "Titan", month: 10 },
+  { id: "acuvon-case-challenge", name: "Acuvon Case Challenge", sponsor: "Acuvon", month: 10 },
+  { id: "tata-steel-steel-a-thon", name: "Tata Steel Steel-a-Thon", sponsor: "Tata", month: 10 },
+  { id: "aditya-birla-group-avant-garde", name: "Aditya Birla Group Avant-Garde", sponsor: "Aditya", month: 10 },
+  { id: "samsung-e-d-g-e", name: "Samsung E.D.G.E", sponsor: "Samsung", month: 10 },
+  { id: "rpg-blizzard", name: "RPG Blizzard", sponsor: "RPG", month: 11 },
+  { id: "piramal-tangram", name: "Piramal Tangram", sponsor: "Piramal", month: 11 },
+  { id: "hero-campus-challenge", name: "Hero Campus Challenge", sponsor: "Hero", month: 11 },
+  { id: "hul-techtonic", name: "HUL - TechTonic", sponsor: "HUL", month: 11 },
+  { id: "gsk-e-3-case-study-competition", name: "GSK E^3 Case Study Competition", sponsor: "GSK", month: 11 },
+  { id: "udaan-take-off", name: "Udaan - Take-Off", sponsor: "Udaan", month: 11 },
+  { id: "oyo-the-catalyst", name: "OYO - The Catalyst", sponsor: "OYO", month: 11 },
+  { id: "meero-case-study", name: "Meero Case Study", sponsor: "Meero", month: 11 },
+  { id: "reliance-t-u-p", name: "Reliance T.U.P.", sponsor: "Reliance", month: 12 },
+  { id: "mondelez-the-new-normal", name: "Mondelez - The New Normal", sponsor: "Mondelez", month: 12 },
+  { id: "tata-motors-mindrover", name: "Tata Motors MindRover", sponsor: "Tata", month: 12 },
+]

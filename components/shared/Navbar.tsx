@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Menu, X, GraduationCap, LogOut, LayoutDashboard,
   ChevronDown, Calculator, TrendingUp, CalendarCheck, Target, Crosshair,
-  Zap, MessageSquare, ExternalLink, CalendarRange, CalendarDays, Briefcase, Users,
+  Zap, MessageSquare, ExternalLink, CalendarRange, CalendarDays, Briefcase, Users, Code2,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -92,6 +92,15 @@ const calendarItems: NavItem[] = [
     iconClass: 'text-emerald-400',
     iconBg: 'bg-emerald-500/15',
     activeBg: 'bg-emerald-500/10 border-emerald-500/25',
+  },
+  {
+    label: 'Hackathon Calendar',
+    description: 'Global tech, fintech & India hackathons by track',
+    href: '/hackathons',
+    icon: Code2,
+    iconClass: 'text-cyan-400',
+    iconBg: 'bg-cyan-500/15',
+    activeBg: 'bg-cyan-500/10 border-cyan-500/25',
   },
 ]
 
