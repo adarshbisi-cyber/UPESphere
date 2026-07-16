@@ -6,6 +6,7 @@ import { Navbar } from '@/components/shared/Navbar'
 import { StatsCard } from '@/components/dashboard/StatsCard'
 import { CGPATrend } from '@/components/dashboard/CGPATrend'
 import { InsightsPanel } from '@/components/dashboard/InsightsPanel'
+import { WorkspaceCompletion } from '@/components/dashboard/WorkspaceCompletion'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { createClient } from '@/lib/supabase/client'
 import {
@@ -173,6 +174,9 @@ export default function DashboardPage() {
               : 'Start by calculating your GPA to populate your dashboard.'}
           </p>
         </div>
+
+        {/* Workspace completion */}
+        {user && <WorkspaceCompletion userId={user.id} />}
 
         {/* Stats Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
