@@ -15,6 +15,15 @@ alter table public.profiles
   add column if not exists onboarding_completed boolean not null default false,
   add column if not exists resume_file_url text;
 
+-- ONE-TIME BACKFILL — run this once, right after the ALTER above.
+-- New signups correctly default to onboarding_completed = false (they should
+-- go through the new setup flow). Without this backfill, every EXISTING
+-- account would also default to false and get redirected to /workspace/setup
+-- on their next dashboard visit — spare pre-existing users from a flow that
+-- didn't exist when they signed up. Skip this statement only if you *want*
+-- existing accounts to go through onboarding too.
+update public.profiles set onboarding_completed = true where onboarding_completed = false;
+
 
 -- ===== CURRICULUM SUBJECTS (draft, no grade yet) =====
 -- Populated by the onboarding "Curriculum" step (parsed from an uploaded

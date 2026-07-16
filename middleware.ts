@@ -25,6 +25,22 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL('/dashboard', req.url))
   }
 
+  // First-time users land on their Academic Workspace setup instead of the
+  // dashboard. Only checked for /dashboard itself — not every protected
+  // route — so a returning user who skipped steps can still browse normally
+  // and finish setup later from there, per the "complete it later" design.
+  if (req.nextUrl.pathname.startsWith('/dashboard') && session) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('onboarding_completed')
+      .eq('id', session.user.id)
+      .single()
+
+    if (profile && profile.onboarding_completed === false) {
+      return NextResponse.redirect(new URL('/workspace/setup', req.url))
+    }
+  }
+
   return res
 }
 
