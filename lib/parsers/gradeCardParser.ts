@@ -8,6 +8,7 @@
 // back to a row-regex scan if no recognisable header row is found.
 
 import type { TextItem } from './types'
+import { groupIntoRows } from './textLines'
 
 export interface ParsedSubjectRow {
   code: string
@@ -29,24 +30,8 @@ export interface GradeCardParseResult {
   semesters: ParsedSemesterBlock[]
 }
 
-const ROW_Y_TOLERANCE = 2 // pt — same visual row despite baseline micro-shifts
 const HEADER_LABELS = ['course code', 'course name', 'credits', 'grade', 'result']
 const CODE_RE = /^[A-Z]{2,6}\d{3,6}$/ // e.g. DSQT7006, EMPL008
-
-function groupRows(items: TextItem[]): TextItem[][] {
-  const sorted = [...items].sort((a, b) => b.y - a.y || a.x - b.x)
-  const rows: TextItem[][] = []
-  for (const item of sorted) {
-    const row = rows.find(r => Math.abs(r[0].y - item.y) <= ROW_Y_TOLERANCE)
-    if (row) row.push(item)
-    else rows.push([item])
-  }
-  // Items were grouped in y-descending order; within a row, baseline micro-shifts
-  // (bold labels, mixed fonts) mean the grouping order isn't reliably x-ascending.
-  // Re-sort each row's items by x now that the row membership is settled.
-  for (const row of rows) row.sort((a, b) => a.x - b.x)
-  return rows
-}
 
 function rowText(row: TextItem[]): string {
   return row.map(i => i.str).join(' ').replace(/\s+/g, ' ').trim()
@@ -104,7 +89,7 @@ function extractLabelledValue(rows: TextItem[][], label: string): string | null 
 
 export function parseGradeCardItems(pages: TextItem[][]): GradeCardParseResult {
   const allItems = pages.flat().filter(i => i.str.trim().length > 0)
-  const rows = groupRows(allItems)
+  const rows = groupIntoRows(allItems)
 
   const studentName = extractLabelledValue(rows, 'Name')
   const program = extractLabelledValue(rows, 'Program')
