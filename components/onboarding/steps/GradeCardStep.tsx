@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { GraduationCap, ArrowRight, Loader2, Check, AlertTriangle } from 'lucide-react'
+import { GraduationCap, ArrowRight, Loader2, Check, AlertTriangle, RotateCcw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { FileDropzone } from '@/components/onboarding/FileDropzone'
 import { extractPdfTextItems, hasExtractableText } from '@/lib/parsers/pdfText'
@@ -51,6 +51,8 @@ export function GradeCardStep({
     }
   }
 
+  const changeFile = () => { setFile(null); setSemesters([]); setStatus('idle') }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -92,28 +94,41 @@ export function GradeCardStep({
       )}
 
       {status === 'reviewing' && (
-        <div className="space-y-3 max-h-72 overflow-y-auto mb-2">
-          {semesters.map((sem, i) => (
-            <div key={i} className="rounded-xl p-3.5" style={{ background: 'var(--muted-surface)' }}>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-semibold">{sem.semesterLabel ?? `Semester ${i + 1}`}</span>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  {sem.sgpa !== null && <span className="text-emerald-400 font-mono">{sem.sgpa} SGPA</span>}
-                  {sem.totalCredits !== null && <span>{sem.totalCredits} cr</span>}
+        <div className="mb-2">
+          <div className="flex items-center justify-between mb-2 px-1">
+            <span className="text-xs font-semibold text-emerald-400">
+              {semesters.length} semester{semesters.length !== 1 ? 's' : ''} found
+            </span>
+            <button
+              onClick={changeFile}
+              className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1 transition-colors"
+            >
+              <RotateCcw className="w-3 h-3" /> Change file
+            </button>
+          </div>
+          <div className="space-y-3 max-h-72 overflow-y-auto">
+            {semesters.map((sem, i) => (
+              <div key={i} className="rounded-xl p-3.5" style={{ background: 'var(--muted-surface)' }}>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-semibold">{sem.semesterLabel ?? `Semester ${i + 1}`}</span>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    {sem.sgpa !== null && <span className="text-emerald-400 font-mono">{sem.sgpa} SGPA</span>}
+                    {sem.totalCredits !== null && <span>{sem.totalCredits} cr</span>}
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  {sem.subjects.map((s, j) => (
+                    <div key={j} className="flex items-center gap-2 text-xs">
+                      <Check className="w-3 h-3 text-emerald-400 shrink-0" />
+                      <span className="flex-1 truncate text-foreground/80">{s.name}</span>
+                      <span className="font-mono text-muted-foreground">{s.credits}cr</span>
+                      <span className="font-semibold text-indigo-400 w-6 text-right">{s.grade}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
-              <div className="space-y-1">
-                {sem.subjects.map((s, j) => (
-                  <div key={j} className="flex items-center gap-2 text-xs">
-                    <Check className="w-3 h-3 text-emerald-400 shrink-0" />
-                    <span className="flex-1 truncate text-foreground/80">{s.name}</span>
-                    <span className="font-mono text-muted-foreground">{s.credits}cr</span>
-                    <span className="font-semibold text-indigo-400 w-6 text-right">{s.grade}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       )}
 
