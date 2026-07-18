@@ -13,6 +13,10 @@ export interface TimetableSlot {
   endTime: string    // 'HH:MM'
   subject: string
   room: string | null
+  // Not extracted by this parser (no source data for it yet) — optional so
+  // display components can show it "when available" without every call site
+  // needing to set it.
+  faculty?: string | null
 }
 
 const DAY_NAMES: Record<string, string> = {

@@ -14,6 +14,7 @@ export interface BasicInfo {
   university: string
   course: string
   semester: number
+  totalSemesters: number
   graduationYear: number | null
 }
 
@@ -26,30 +27,91 @@ export async function saveBasicInfo(userId: string, info: BasicInfo) {
       university: info.university,
       course: info.course,
       current_semester: info.semester,
+      total_semesters: info.totalSemesters,
       graduation_year: info.graduationYear,
     })
     .eq('id', userId)
   if (error) throw error
 }
 
+// Program length (how many semesters the degree has). Null for accounts that
+// onboarded before this field existed — the Degree Progress card falls back
+// to a default and lets them set it inline.
+export async function getTotalSemesters(userId: string): Promise<number | null> {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('total_semesters')
+    .eq('id', userId)
+    .single()
+  if (error) throw error
+  return (data?.total_semesters as number | null) ?? null
+}
+
+export async function updateTotalSemesters(userId: string, total: number) {
+  const supabase = createClient()
+  const { error } = await supabase
+    .from('profiles')
+    .update({ total_semesters: total })
+    .eq('id', userId)
+  if (error) throw error
+}
+
+// Re-saving replaces the previous curriculum outright (delete-then-insert)
+// rather than appending — both because a re-upload from onboarding retries
+// shouldn't leave duplicate rows behind, and because "Update curriculum"
+// from the Dashboard means replace, not append.
 export async function saveCurriculumSubjects(
   userId: string,
   subjects: { name: string; credits: number }[]
 ) {
-  if (subjects.length === 0) return
   const supabase = createClient()
+  const { error: deleteErr } = await supabase.from('curriculum_subjects').delete().eq('user_id', userId)
+  if (deleteErr) throw deleteErr
+  if (subjects.length === 0) return
   const { error } = await supabase.from('curriculum_subjects').insert(
     subjects.map(s => ({ user_id: userId, name: s.name, credits: s.credits }))
   )
   if (error) throw error
 }
 
-export async function saveTimetableSlots(userId: string, slots: TimetableSlot[]) {
-  if (slots.length === 0) return
+export interface TimetableVersion {
+  id: string
+  version: number
+  effectiveFrom: string // 'YYYY-MM-DD'
+}
+
+// Every timetable upload becomes a new version tagged with when it takes
+// effect, rather than overwriting the last one — old schedules stay around
+// for history, and a change can be scheduled ("starts next Monday") instead
+// of always applying immediately.
+export async function saveTimetableVersion(
+  userId: string,
+  slots: TimetableSlot[],
+  effectiveFrom: Date
+) {
   const supabase = createClient()
+  const { data: existing, error: fetchErr } = await supabase
+    .from('timetable_versions')
+    .select('version')
+    .eq('user_id', userId)
+    .order('version', { ascending: false })
+    .limit(1)
+  if (fetchErr) throw fetchErr
+  const nextVersion = (existing?.[0]?.version ?? 0) + 1
+
+  const { data: versionRow, error: versionErr } = await supabase
+    .from('timetable_versions')
+    .insert({ user_id: userId, version: nextVersion, effective_from: effectiveFrom.toISOString().slice(0, 10) })
+    .select('id')
+    .single()
+  if (versionErr) throw versionErr
+
+  if (slots.length === 0) return
   const { error } = await supabase.from('timetable_slots').insert(
     slots.map(s => ({
       user_id: userId,
+      version_id: versionRow.id,
       day_of_week: s.day,
       start_time: s.startTime,
       end_time: s.endTime,
@@ -58,6 +120,61 @@ export async function saveTimetableSlots(userId: string, slots: TimetableSlot[])
     }))
   )
   if (error) throw error
+}
+
+export async function getTimetableVersions(userId: string): Promise<TimetableVersion[]> {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from('timetable_versions')
+    .select('id, version, effective_from')
+    .eq('user_id', userId)
+    // Secondary sort by version breaks ties deterministically when two
+    // versions share the same effective_from (e.g. a migration backfill and
+    // a same-day re-upload both landing on "today") — the higher version
+    // number (the more recently created one) always wins the tie.
+    .order('effective_from', { ascending: true })
+    .order('version', { ascending: true })
+  if (error) throw error
+  return (data ?? []).map(r => ({ id: r.id, version: r.version, effectiveFrom: r.effective_from as string }))
+}
+
+// The version currently in effect: the most recent one whose effective_from
+// is today or earlier. If every version is still in the future, there's no
+// active timetable yet (an upcoming one is scheduled but hasn't started).
+export async function getActiveTimetable(
+  userId: string
+): Promise<{ version: TimetableVersion; slots: TimetableSlot[] } | null> {
+  const versions = await getTimetableVersions(userId)
+  const todayStr = new Date().toISOString().slice(0, 10)
+  const active = [...versions].reverse().find(v => v.effectiveFrom <= todayStr)
+  if (!active) return null
+
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from('timetable_slots')
+    .select('day_of_week, start_time, end_time, subject, room')
+    .eq('version_id', active.id)
+  if (error) throw error
+
+  // Defensive dedup: a retried save (double-click, or a retry after a
+  // transient error) can leave more than one identical row for the same
+  // class within a single version — never show the same slot twice.
+  const seen = new Set<string>()
+  const slots: TimetableSlot[] = []
+  for (const r of data ?? []) {
+    const key = `${r.day_of_week}|${r.start_time}|${r.end_time}|${r.subject}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    slots.push({
+      day: r.day_of_week as string,
+      date: null,
+      startTime: r.start_time as string,
+      endTime: r.end_time as string,
+      subject: r.subject as string,
+      room: r.room as string | null,
+    })
+  }
+  return { version: active, slots }
 }
 
 export interface GradeCardSemesterInput {
@@ -81,6 +198,16 @@ export async function saveGradeCardSemesters(userId: string, semesters: GradeCar
 
     const semesterNumberMatch = sem.semesterLabel?.match(/(\d+)/)
     const semesterNumber = semesterNumberMatch ? parseInt(semesterNumberMatch[1], 10) : i + 1
+
+    // Re-uploading the same semester (onboarding retry, or "Update" from the
+    // Dashboard) replaces it — delete any existing semester row with this
+    // number first. gpa_records/subjects cascade away with it.
+    const { error: deleteErr } = await supabase
+      .from('semesters')
+      .delete()
+      .eq('user_id', userId)
+      .eq('semester_number', semesterNumber)
+    if (deleteErr) throw deleteErr
 
     const { data: semesterRow, error: semesterErr } = await supabase
       .from('semesters')
@@ -117,18 +244,25 @@ export async function saveGradeCardSemesters(userId: string, semesters: GradeCar
       .single()
     if (gpaErr) throw gpaErr
 
-    const { error: subjectsErr } = await supabase.from('subjects').insert(
-      sem.subjects.map((s: ParsedSubjectRow) => ({
-        user_id: userId,
-        gpa_record_id: gpaRecord.id,
-        semester_id: semesterRow.id,
-        name: s.name,
-        credits: s.credits,
-        grade: s.grade,
-        grade_points: GRADE_POINTS_10[s.grade] ?? 0,
-      }))
-    )
-    if (subjectsErr) throw subjectsErr
+    // public.subjects has a `check (credits > 0)` constraint, but grade cards
+    // often list 0-credit entries (audit courses, NSS, induction programs).
+    // Those stay in gpa_records.subjects (no such constraint) but are excluded
+    // here — otherwise one 0-credit row fails the whole batch insert.
+    const creditedSubjects = sem.subjects.filter((s: ParsedSubjectRow) => s.credits > 0)
+    if (creditedSubjects.length > 0) {
+      const { error: subjectsErr } = await supabase.from('subjects').insert(
+        creditedSubjects.map((s: ParsedSubjectRow) => ({
+          user_id: userId,
+          gpa_record_id: gpaRecord.id,
+          semester_id: semesterRow.id,
+          name: s.name,
+          credits: s.credits,
+          grade: s.grade,
+          grade_points: GRADE_POINTS_10[s.grade] ?? 0,
+        }))
+      )
+      if (subjectsErr) throw subjectsErr
+    }
   }
 }
 
@@ -142,14 +276,37 @@ export async function uploadResume(userId: string, file: File): Promise<string> 
     .upload(path, file, { upsert: true })
   if (uploadErr) throw uploadErr
 
-  const { data } = supabase.storage.from('resumes').getPublicUrl(path)
+  // The "resumes" bucket is private, so we store the storage path (not a
+  // public URL, which wouldn't resolve) — generate a signed URL on demand
+  // whenever the resume actually needs to be viewed or downloaded.
   const { error: updateErr } = await supabase
     .from('profiles')
-    .update({ resume_file_url: data.publicUrl })
+    .update({ resume_file_url: path })
     .eq('id', userId)
   if (updateErr) throw updateErr
 
-  return data.publicUrl
+  return path
+}
+
+export async function getResumeSignedUrl(path: string): Promise<string | null> {
+  const supabase = createClient()
+  const { data, error } = await supabase.storage
+    .from('resumes')
+    .createSignedUrl(path, 60 * 60)
+  if (error) return null
+  return data.signedUrl
+}
+
+// Which semester numbers already have a saved grade sheet — lets the
+// "Add Semester" modal warn before a pick silently replaces existing data.
+export async function getUsedSemesterNumbers(userId: string): Promise<number[]> {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from('semesters')
+    .select('semester_number')
+    .eq('user_id', userId)
+  if (error) throw error
+  return Array.from(new Set((data ?? []).map(r => r.semester_number as number))).sort((a, b) => a - b)
 }
 
 export interface WorkspaceStatus {
@@ -177,6 +334,110 @@ export async function getWorkspaceStatus(userId: string): Promise<WorkspaceStatu
     gradeCard: (semestersRes.count ?? 0) > 0,
     resume: !!profileRes.data?.resume_file_url,
   }
+}
+
+// Richer per-item status for the dashboard's Academic Workspace cards: whether
+// each document exists, when it was last updated, and a count (semesters for
+// grade sheets). getWorkspaceStatus stays the lean boolean version used by the
+// onboarding-completion math.
+export interface WorkspaceItemDetail {
+  done: boolean
+  lastUpdated: string | null
+  count: number
+}
+export interface WorkspaceDetails {
+  profile: WorkspaceItemDetail
+  curriculum: WorkspaceItemDetail
+  timetable: WorkspaceItemDetail
+  gradeCard: WorkspaceItemDetail
+  resume: WorkspaceItemDetail
+}
+
+export async function getWorkspaceDetails(userId: string): Promise<WorkspaceDetails> {
+  const supabase = createClient()
+
+  const [profileRes, curriculumRes, timetableRes, semestersRes] = await Promise.all([
+    supabase.from('profiles').select('university, course, resume_file_url, updated_at').eq('id', userId).single(),
+    // count: 'exact' returns the full match count regardless of the limit, so
+    // one query yields both "how many" and "the most recent one".
+    supabase.from('curriculum_subjects').select('created_at', { count: 'exact' }).eq('user_id', userId).order('created_at', { ascending: false }).limit(1),
+    supabase.from('timetable_slots').select('created_at', { count: 'exact' }).eq('user_id', userId).order('created_at', { ascending: false }).limit(1),
+    supabase.from('semesters').select('updated_at, created_at', { count: 'exact' }).eq('user_id', userId).order('updated_at', { ascending: false }).limit(1),
+  ])
+
+  const profile = profileRes.data
+  const semRow = semestersRes.data?.[0] as { updated_at?: string; created_at?: string } | undefined
+  return {
+    profile: { done: !!(profile?.university && profile?.course), lastUpdated: profile?.updated_at ?? null, count: 0 },
+    curriculum: { done: (curriculumRes.count ?? 0) > 0, lastUpdated: curriculumRes.data?.[0]?.created_at ?? null, count: curriculumRes.count ?? 0 },
+    timetable: { done: (timetableRes.count ?? 0) > 0, lastUpdated: timetableRes.data?.[0]?.created_at ?? null, count: timetableRes.count ?? 0 },
+    gradeCard: { done: (semestersRes.count ?? 0) > 0, lastUpdated: semRow?.updated_at ?? semRow?.created_at ?? null, count: semestersRes.count ?? 0 },
+    resume: { done: !!profile?.resume_file_url, lastUpdated: null, count: profile?.resume_file_url ? 1 : 0 },
+  }
+}
+
+export interface StoredBasicInfo {
+  fullName: string
+  university: string
+  course: string
+  semester: number
+  totalSemesters: number
+  graduationYear: number | null
+}
+
+export async function getBasicInfo(userId: string): Promise<StoredBasicInfo> {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('full_name, university, course, current_semester, total_semesters, graduation_year')
+    .eq('id', userId)
+    .single()
+  if (error) throw error
+  return {
+    fullName: data?.full_name ?? '',
+    university: data?.university ?? '',
+    course: data?.course ?? '',
+    semester: data?.current_semester ?? 1,
+    totalSemesters: data?.total_semesters ?? 8,
+    graduationYear: data?.graduation_year ?? null,
+  }
+}
+
+export interface GradeSheet {
+  id: string
+  semesterNumber: number
+  name: string
+  sgpa: number | null
+  totalCredits: number | null
+}
+
+export async function getGradeSheets(userId: string): Promise<GradeSheet[]> {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from('semesters')
+    .select('id, semester_number, name, sgpa, total_credits')
+    .eq('user_id', userId)
+    .order('semester_number', { ascending: true })
+  if (error) throw error
+  return (data ?? []).map(r => ({
+    id: r.id as string,
+    semesterNumber: r.semester_number as number,
+    name: r.name as string,
+    sgpa: r.sgpa as number | null,
+    totalCredits: r.total_credits as number | null,
+  }))
+}
+
+// Deletes one semester's grade sheet. gpa_records and subjects rows cascade
+// away with it (foreign keys are ON DELETE CASCADE).
+export async function deleteGradeSheet(userId: string, semesterId: string) {
+  const supabase = createClient()
+  const { error } = await supabase
+    .from('semesters')
+    .delete()
+    .eq('user_id', userId)
+    .eq('id', semesterId)
+  if (error) throw error
 }
 
 export function workspaceCompletionPct(status: WorkspaceStatus): number {
