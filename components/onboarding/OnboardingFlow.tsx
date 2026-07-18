@@ -13,11 +13,12 @@ import { GradeCardStep } from '@/components/onboarding/steps/GradeCardStep'
 import { ResumeStep } from '@/components/onboarding/steps/ResumeStep'
 import { FinalStep } from '@/components/onboarding/steps/FinalStep'
 import {
-  saveBasicInfo, saveCurriculumSubjects, saveTimetableSlots, saveGradeCardSemesters,
+  saveBasicInfo, saveCurriculumSubjects, saveTimetableVersion, saveGradeCardSemesters,
   uploadResume, getWorkspaceStatus, markOnboardingComplete, type BasicInfo,
 } from '@/lib/onboarding/api'
 import type { TimetableSlot } from '@/lib/parsers/timetableParser'
 import type { ParsedSemesterBlock } from '@/lib/parsers/gradeCardParser'
+import { describeSaveError } from '@/lib/onboarding/errors'
 
 // Real, counted steps (Welcome and Final bookend the flow but aren't counted).
 type StepId = 'welcome' | 'basicInfo' | 'curriculum' | 'timetable' | 'gradeCard' | 'resume' | 'final'
@@ -54,7 +55,7 @@ export function OnboardingFlow({ userId }: { userId: string }) {
         await fn(...args)
       } catch (err) {
         console.error(err)
-        setSaveError("Couldn't save that — check your connection and try again.")
+        setSaveError(describeSaveError(err))
       } finally {
         setSaving(false)
       }
@@ -117,7 +118,7 @@ export function OnboardingFlow({ userId }: { userId: string }) {
             <TimetableStep
               onSkip={() => setStep('gradeCard')}
               onContinue={runStep(async (slots: TimetableSlot[]) => {
-                await saveTimetableSlots(userId, slots)
+                await saveTimetableVersion(userId, slots, new Date())
                 setStep('gradeCard')
               })}
             />
@@ -135,7 +136,7 @@ export function OnboardingFlow({ userId }: { userId: string }) {
 
           {step === 'resume' && (
             <ResumeStep
-              onSkip={finish}
+              onSkip={runStep(finish)}
               onContinue={runStep(async file => {
                 await uploadResume(userId, file)
                 await finish()

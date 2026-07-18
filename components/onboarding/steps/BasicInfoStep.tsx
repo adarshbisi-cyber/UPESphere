@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import type { BasicInfo } from '@/lib/onboarding/api'
 
 const SEMESTERS = Array.from({ length: 10 }, (_, i) => i + 1)
+const PROGRAM_LENGTHS = [2, 4, 6, 8, 10, 12]
 
 export function BasicInfoStep({
   initial,
@@ -21,6 +22,7 @@ export function BasicInfoStep({
   const [university, setUniversity] = useState(initial.university ?? '')
   const [course, setCourse] = useState(initial.course ?? '')
   const [semester, setSemester] = useState(initial.semester ?? 1)
+  const [totalSemesters, setTotalSemesters] = useState(initial.totalSemesters ?? 8)
   const [graduationYear, setGraduationYear] = useState(initial.graduationYear?.toString() ?? '')
 
   const canContinue = fullName.trim() && university.trim() && course.trim()
@@ -62,9 +64,21 @@ export function BasicInfoStep({
             </select>
           </div>
           <div>
-            <Label htmlFor="gradYear" className="mb-1.5 block text-muted-foreground/70">Graduation Year <span className="text-muted-foreground/50">(optional)</span></Label>
-            <Input id="gradYear" type="number" value={graduationYear} onChange={e => setGraduationYear(e.target.value)} placeholder="2027" />
+            <Label htmlFor="totalSemesters" className="mb-1.5 block">Program Length</Label>
+            <select
+              id="totalSemesters"
+              value={totalSemesters}
+              onChange={e => setTotalSemesters(Number(e.target.value))}
+              className="flex h-10 w-full rounded-xl border px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50"
+              style={{ borderColor: 'var(--divider)', background: 'var(--muted-surface)' }}
+            >
+              {PROGRAM_LENGTHS.map(n => <option key={n} value={n}>{n} semesters</option>)}
+            </select>
           </div>
+        </div>
+        <div>
+          <Label htmlFor="gradYear" className="mb-1.5 block text-muted-foreground/70">Graduation Year <span className="text-muted-foreground/50">(optional)</span></Label>
+          <Input id="gradYear" type="number" value={graduationYear} onChange={e => setGraduationYear(e.target.value)} placeholder="2027" />
         </div>
       </div>
 
@@ -77,6 +91,7 @@ export function BasicInfoStep({
           university: university.trim(),
           course: course.trim(),
           semester,
+          totalSemesters,
           graduationYear: graduationYear ? parseInt(graduationYear, 10) : null,
         })}
       >
