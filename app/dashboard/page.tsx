@@ -3,20 +3,14 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Navbar } from '@/components/shared/Navbar'
-import { StatsCard } from '@/components/dashboard/StatsCard'
 import { CGPATrend } from '@/components/dashboard/CGPATrend'
-import { InsightsPanel } from '@/components/dashboard/InsightsPanel'
+import { AcademicWorkspace } from '@/components/dashboard/AcademicWorkspace'
+import { SummaryCards } from '@/components/dashboard/SummaryCards'
+import { TodaysClasses } from '@/components/dashboard/TodaysClasses'
+import { WeeklyTimetable } from '@/components/dashboard/WeeklyTimetable'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { createClient } from '@/lib/supabase/client'
-import {
-  GraduationCap,
-  BarChart3,
-  Calendar,
-  Flame,
-  Activity,
-  BookOpen,
-  Plus,
-} from 'lucide-react'
+import { BarChart3, Activity, Plus } from 'lucide-react'
 
 interface Semester {
   id: string
@@ -26,15 +20,21 @@ interface Semester {
   total_credits: number
 }
 
-interface AttendanceRecord {
-  attended: number
-  total: number
-  required_percentage: number
-}
-
 interface DashboardData {
   semesters: Semester[]
-  attendance: AttendanceRecord[]
+}
+
+const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+const MONTHS = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+]
+
+function getGreeting(hour: number): { label: string; subtitle: string } {
+  if (hour >= 5 && hour < 12) return { label: 'Good Morning', subtitle: "Let's make today productive." }
+  if (hour >= 12 && hour < 17) return { label: 'Good Afternoon', subtitle: 'Hope your classes are going well.' }
+  if (hour >= 17 && hour < 21) return { label: 'Good Evening', subtitle: "You're making great progress today." }
+  return { label: 'Welcome Back', subtitle: "Don't forget to rest and recharge." }
 }
 
 function computeCgpa(semesters: Semester[]) {
@@ -45,24 +45,20 @@ function computeCgpa(semesters: Semester[]) {
   return weighted / totalCredits
 }
 
-function computeAttendance(records: AttendanceRecord[]) {
-  if (!records.length) return null
-  const totalAttended = records.reduce((s, r) => s + r.attended, 0)
-  const totalClasses = records.reduce((s, r) => s + r.total, 0)
-  if (!totalClasses) return null
-  const pct = (totalAttended / totalClasses) * 100
-  const req = records[0]?.required_percentage ?? 75
-  const safeBunks = Math.max(0, Math.floor(totalAttended * 100 / req) - totalClasses)
-  return { pct, safeBunks, status: pct >= req ? 'Safe zone' : 'At risk' }
-}
-
 export default function DashboardPage() {
   const { user, loading: authLoading } = useAuth()
   const router = useRouter()
   const [data, setData] = useState<DashboardData | null>(null)
   const [fetching, setFetching] = useState(true)
+  const [now, setNow] = useState<Date | null>(null)
 
   const supabase = createClient()
+
+  useEffect(() => {
+    setNow(new Date())
+    const id = setInterval(() => setNow(new Date()), 60_000)
+    return () => clearInterval(id)
+  }, [])
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -74,18 +70,19 @@ export default function DashboardPage() {
     if (!user) return
 
     const fetchData = async () => {
-      const [{ data: semesters }, { data: attendance }] = await Promise.all([
-        supabase
-          .from('semesters')
-          .select('id, semester_number, name, sgpa, total_credits')
-          .eq('user_id', user.id)
-          .order('semester_number', { ascending: true }),
-        supabase
-          .from('attendance_records')
-          .select('attended, total, required_percentage')
-          .eq('user_id', user.id),
-      ])
-      setData({ semesters: semesters ?? [], attendance: attendance ?? [] })
+      const { data: semesters } = await supabase
+        .from('semesters')
+        .select('id, semester_number, name, sgpa, total_credits')
+        .eq('user_id', user.id)
+        .order('semester_number', { ascending: true })
+      // The save layer now replaces rather than duplicates on re-upload, but
+      // dedupe defensively here too — old rows from before that fix (or any
+      // future write path that doesn't go through it) shouldn't repeat a
+      // semester's label on the trend graph or get double-counted in CGPA.
+      const dedupedSemesters = Array.from(
+        new Map((semesters ?? []).map(s => [s.semester_number, s])).values()
+      )
+      setData({ semesters: dedupedSemesters })
       setFetching(false)
     }
 
@@ -98,12 +95,14 @@ export default function DashboardPage() {
     user?.email?.split('@')[0] ??
     'Student'
 
+  // Computed from client-local time only (never server time — the greeting
+  // must match the visitor's own clock, not wherever the server happens to
+  // run), so `now` starts null and is filled in by an effect after mount.
+  const { label: greeting, subtitle: greetingSubtitle } = getGreeting(now?.getHours() ?? 12)
+  const dayName = now ? WEEKDAYS[now.getDay()] : ''
+  const dateLabel = now ? `${now.getDate()} ${MONTHS[now.getMonth()]} ${now.getFullYear()}` : ''
+
   const hasSemesters = (data?.semesters?.length ?? 0) > 0
-  const latestSem = hasSemesters ? data!.semesters[data!.semesters.length - 1] : null
-  const prevSem = (data?.semesters?.length ?? 0) >= 2 ? data!.semesters[data!.semesters.length - 2] : null
-  const cgpa = data ? computeCgpa(data.semesters) : null
-  const prevCgpa = data ? computeCgpa(data.semesters.slice(0, -1)) : null
-  const attendance = data ? computeAttendance(data.attendance) : null
 
   const trendData = (data?.semesters ?? []).map((s, i, arr) => {
     const cgpaUpTo = computeCgpa(arr.slice(0, i + 1))
@@ -114,25 +113,7 @@ export default function DashboardPage() {
     }
   })
 
-  const sgpaTrend =
-    latestSem && prevSem
-      ? latestSem.sgpa > prevSem.sgpa
-        ? 'up'
-        : latestSem.sgpa < prevSem.sgpa
-        ? 'down'
-        : 'stable'
-      : undefined
-
-  const cgpaTrend =
-    cgpa && prevCgpa
-      ? cgpa > prevCgpa
-        ? 'up'
-        : cgpa < prevCgpa
-        ? 'down'
-        : 'stable'
-      : undefined
-
-  if (authLoading || fetching) {
+  if (authLoading || fetching || now === null) {
     return (
       <main className="min-h-screen bg-background text-foreground">
         <Navbar />
@@ -140,11 +121,7 @@ export default function DashboardPage() {
           <div className="animate-pulse space-y-4">
             <div className="h-8 w-64 rounded-xl bg-white/5" />
             <div className="h-6 w-96 rounded-xl bg-white/5" />
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mt-8">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="h-32 rounded-2xl bg-white/5" />
-              ))}
-            </div>
+            <div className="h-40 rounded-2xl bg-white/5 mt-8" />
           </div>
         </div>
       </main>
@@ -156,98 +133,56 @@ export default function DashboardPage() {
       <Navbar />
       <div className="pt-24 pb-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-10">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-sm font-medium mb-3">
-            <Activity className="w-3.5 h-3.5" />
-            Academic Dashboard
+        <div className="mb-10 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6">
+          <div>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-sm font-medium mb-3">
+              <Activity className="w-3.5 h-3.5" />
+              Academic Dashboard
+            </div>
+            <h1 className="text-4xl font-bold font-display tracking-tight mb-2">
+              {greeting},{' '}
+              <span className="bg-gradient-to-r from-indigo-400 to-violet-400 bg-clip-text text-transparent">
+                {displayName}
+              </span>
+            </h1>
+            <p className="text-muted-foreground">{greetingSubtitle}</p>
           </div>
-          <h1 className="text-4xl font-bold font-display tracking-tight mb-2">
-            Welcome back,{' '}
-            <span className="bg-gradient-to-r from-indigo-400 to-violet-400 bg-clip-text text-transparent">
-              {displayName}
-            </span>
-          </h1>
-          <p className="text-muted-foreground">
-            {hasSemesters
-              ? `${data!.semesters.length} semester${data!.semesters.length !== 1 ? 's' : ''} tracked — keep going.`
-              : 'Start by calculating your GPA to populate your dashboard.'}
-          </p>
+
+          <div
+            className="shrink-0 rounded-2xl px-5 py-3.5"
+            style={{
+              background: 'linear-gradient(135deg, var(--glass-from), var(--glass-to))',
+              border: '1px solid var(--glass-border)',
+              boxShadow: 'var(--glass-shadow)',
+              backdropFilter: 'blur(24px)',
+            }}
+          >
+            <div className="text-sm font-semibold font-display text-foreground">{dayName}</div>
+            <div className="text-xs text-muted-foreground mt-0.5">{dateLabel}</div>
+          </div>
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
-          <StatsCard
-            title="Current SGPA"
-            value={latestSem ? latestSem.sgpa.toFixed(2) : '—'}
-            subtitle={latestSem ? `Semester ${latestSem.semester_number}` : 'No data yet'}
-            trend={sgpaTrend}
-            trendValue={
-              sgpaTrend && latestSem && prevSem
-                ? `${latestSem.sgpa > prevSem.sgpa ? '+' : ''}${(latestSem.sgpa - prevSem.sgpa).toFixed(2)}`
-                : undefined
-            }
-            color="indigo"
-            icon={<GraduationCap className="w-4 h-4" />}
-            delay={0}
-          />
-          <StatsCard
-            title="CGPA"
-            value={cgpa != null ? cgpa.toFixed(2) : '—'}
-            subtitle={hasSemesters ? `${data!.semesters.length} semester${data!.semesters.length !== 1 ? 's' : ''}` : 'No data yet'}
-            trend={cgpaTrend}
-            trendValue={
-              cgpaTrend && cgpa && prevCgpa
-                ? `${cgpa > prevCgpa ? '+' : ''}${(cgpa - prevCgpa).toFixed(2)}`
-                : undefined
-            }
-            color="violet"
-            icon={<BarChart3 className="w-4 h-4" />}
-            delay={0.05}
-          />
-          <StatsCard
-            title="Attendance"
-            value={attendance ? `${attendance.pct.toFixed(0)}%` : '—'}
-            subtitle={attendance?.status ?? 'No data yet'}
-            trend={attendance ? (attendance.pct >= 75 ? 'up' : 'down') : undefined}
-            trendValue={attendance ? 'on track' : undefined}
-            color="cyan"
-            icon={<Calendar className="w-4 h-4" />}
-            delay={0.1}
-          />
-          <StatsCard
-            title="Safe Bunks"
-            value={attendance ? attendance.safeBunks : '—'}
-            subtitle="Remaining"
-            color="emerald"
-            icon={<BookOpen className="w-4 h-4" />}
-            delay={0.15}
-          />
-          <StatsCard
-            title="Health Score"
-            value={
-              cgpa && attendance
-                ? Math.round((cgpa / 10) * 50 + (attendance.pct / 100) * 50)
-                : '—'
-            }
-            subtitle="Academic"
-            trend={cgpa ? 'up' : undefined}
-            trendValue={cgpa ? 'Good' : undefined}
-            color="amber"
-            icon={<Flame className="w-4 h-4" />}
-            delay={0.2}
-          />
-        </div>
+        {/* Academic Workspace */}
+        {user && <AcademicWorkspace userId={user.id} />}
+
+        {/* Summary cards */}
+        {user && data && <SummaryCards userId={user.id} semesters={data.semesters} />}
+
+        {/* Today + Weekly Timetable */}
+        {user && (
+          <div className="grid lg:grid-cols-5 gap-6 mb-8">
+            <div className="lg:col-span-2">
+              <TodaysClasses userId={user.id} />
+            </div>
+            <div className="lg:col-span-3">
+              <WeeklyTimetable userId={user.id} />
+            </div>
+          </div>
+        )}
 
         {/* Main content area */}
         {hasSemesters ? (
-          <div className="grid lg:grid-cols-5 gap-6">
-            <div className="lg:col-span-3">
-              <CGPATrend data={trendData} />
-            </div>
-            <div className="lg:col-span-2">
-              <InsightsPanel />
-            </div>
-          </div>
+          <CGPATrend data={trendData} />
         ) : (
           <div className="rounded-2xl border border-indigo-500/20 bg-indigo-500/5 p-10 text-center mb-6">
             <div className="w-14 h-14 rounded-2xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center mx-auto mb-4">
