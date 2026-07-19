@@ -212,7 +212,7 @@ export function GPATargetCalculator() {
 
             <motion.div
               key={displayGPA}
-              initial={{ scale: 0.82, opacity: 0, y: 10 }}
+              initial={{ scale: 0.95, opacity: 0, y: 10 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               transition={{ type: 'spring', stiffness: 260, damping: 22 }}
               className={`text-[56px] sm:text-[80px] leading-none font-bold font-display ${diff.text}`}

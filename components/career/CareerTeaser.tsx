@@ -3,8 +3,9 @@
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { Briefcase, ArrowRight, Sparkles } from 'lucide-react'
+import { EASE_OUT } from '@/lib/utils'
 
-const EASE = [0.22, 1, 0.36, 1] as const
+const EASE = EASE_OUT
 
 const stagger = {
   hidden: {},

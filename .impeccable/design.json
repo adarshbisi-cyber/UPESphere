@@ -1,0 +1,111 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-07-19T00:00:00.000Z",
+  "title": "Design System: UPESphere",
+  "extensions": {
+    "colorMeta": {
+      "indigo-primary": { "role": "primary", "displayName": "Indigo Primary", "canonical": "hsl(238 84% 67%)", "tonalRamp": ["#060846", "#0b0f83", "#1016bc", "#2c32ed", "#6469f2", "#989bf6", "#c7c8fa", "#e8e8fd"] },
+      "violet-secondary": { "role": "secondary", "displayName": "Violet Secondary", "canonical": "oklch(62% 0.23 300)", "tonalRamp": ["#180449", "#2e0788", "#410ac2", "#6325f4", "#8d5ff7", "#b394f9", "#d5c5fc", "#eee7fe"] },
+      "cyan-accent": { "role": "tertiary", "displayName": "Cyan Accent", "canonical": "oklch(75% 0.14 220)", "tonalRamp": ["#023f4a", "#04768b", "#06a9c6", "#20d8f8", "#5ce2fa", "#92ecfc", "#c4f5fd", "#e6fbfe"] },
+      "emerald-success": { "role": "tertiary", "displayName": "Emerald Success", "canonical": "oklch(72% 0.16 155)", "tonalRamp": ["#064631", "#0b835b", "#10bc83", "#2cedac", "#64f2c2", "#98f6d7", "#c7fae9", "#e8fdf6"] },
+      "surface-dark": { "role": "neutral", "displayName": "Surface (Dark)", "canonical": "hsl(240 10% 3.9%)", "tonalRamp": ["#252528", "#45454a", "#62626a", "#888891", "#a7a7ae", "#c5c5c9", "#dfdfe2", "#f2f2f3"] },
+      "surface-light": { "role": "neutral", "displayName": "Surface (Light)", "canonical": "hsl(240 20% 98.5%)", "tonalRamp": ["#252528", "#45454a", "#62626a", "#888891", "#a7a7ae", "#c5c5c9", "#dfdfe2", "#f2f2f3"] },
+      "destructive": { "role": "error", "displayName": "Destructive", "canonical": "hsl(0 84% 60%)", "tonalRamp": ["#450a0a", "#7f1d1d", "#b91c1c", "#dc2626", "#ef4444", "#f87171", "#fca5a5", "#fee2e2"] }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Hero headline and page-level H1s only — Space Grotesk, reserved for genuine headings and trusted numbers (SGPA/CGPA/attendance)." },
+      "body": { "displayName": "Body", "purpose": "Paragraph copy and descriptions — Inter, capped ~65-75ch." },
+      "label": { "displayName": "Label", "purpose": "Form labels, stat-card titles, nav items, badges — Inter, medium weight." },
+      "micro": { "displayName": "Micro", "purpose": "Dominant dense-caption size (11px) — stat-card subtitles, timetable popover details, today's-classes status text." },
+      "micro-sub": { "displayName": "Micro Sub", "purpose": "Second, more de-emphasized tier (10px) directly under a Micro line — 'Updated {date}', '% Complete', compact day headers." },
+      "micro-dense": { "displayName": "Micro Dense", "purpose": "Tightest contexts only (9px) — Weekly Timetable hour ticks and grid-cell slot content, the LIVE NOW badge." }
+    },
+    "shadows": [
+      { "name": "glass-ambient", "value": "0 4px 24px rgba(99,102,241,0.07), 0 1px 4px rgba(0,0,0,0.05)", "purpose": "Default resting shadow under every glass card and glass button (light mode value; dark mode swaps to 0 8px 32px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.04))." },
+      { "name": "dropdown-shadow", "value": "0 8px 40px rgba(99,102,241,0.10), 0 2px 10px rgba(0,0,0,0.08), 0 0 0 1px rgba(99,102,241,0.10)", "purpose": "Heavier, more opaque shadow for floating menus/popovers so underlying content never bleeds through." },
+      { "name": "arrow-btn-glow", "value": "0 0 18px rgba(99,102,241,0.22)", "purpose": "Tight colored halo around the circular scroll-arrow affordance." }
+    ],
+    "motion": [
+      { "name": "ease-out-strong", "value": "cubic-bezier(0.22, 1, 0.36, 1)", "purpose": "Shared entrance/exit easing token (EASE_OUT in lib/utils.ts) used across the app's Framer Motion transitions." },
+      { "name": "press-fast", "value": "150ms", "purpose": "Transform-only active:scale-[0.98] press feedback on buttons, decoupled from the slower 200ms color/shadow transition." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "lg", "value": "1024px" },
+      { "name": "2xl", "value": "1400px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The signature CTA treatment — indigo-to-violet gradient fill, used sparingly for the single most important action on a screen.",
+      "html": "<button class=\"ds-btn-primary\">Calculate GPA</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; height: 2.5rem; padding: 0.5rem 1rem; border-radius: 0.75rem; border: none; font-size: 0.875rem; font-weight: 500; font-family: Inter, system-ui, sans-serif; color: #ffffff; background: linear-gradient(to right, #6366f1, #8b5cf6); box-shadow: 0 10px 15px -3px rgba(99,102,241,0.25); transition: box-shadow 0.2s, transform 0.15s; cursor: pointer; } .ds-btn-primary:hover { box-shadow: 0 20px 25px -5px rgba(99,102,241,0.4); } .ds-btn-primary:active { transform: scale(0.98); } .ds-btn-primary:focus-visible { outline: 2px solid rgba(99,102,241,0.5); outline-offset: 2px; }"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Secondary action — transparent fill, hairline border, backdrop blur.",
+      "html": "<button class=\"ds-btn-outline\">Continue with Google</button>",
+      "css": ".ds-btn-outline { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; height: 2.5rem; padding: 0.5rem 1rem; border-radius: 0.75rem; border: 1px solid rgba(255,255,255,0.10); backdrop-filter: blur(4px); font-size: 0.875rem; font-weight: 500; font-family: Inter, system-ui, sans-serif; color: #fafafa; background: transparent; transition: background-color 0.2s, border-color 0.2s; cursor: pointer; } .ds-btn-outline:hover { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.20); } .ds-btn-outline:focus-visible { outline: 2px solid rgba(99,102,241,0.5); outline-offset: 2px; }"
+    },
+    {
+      "name": "Glass Card",
+      "kind": "card",
+      "refersTo": "card-glass",
+      "description": "The dominant surface of the whole system — translucent gradient fill, blurred, thinly bordered in low-alpha indigo, ambient tinted shadow.",
+      "html": "<div class=\"ds-card-glass\"><h3 class=\"ds-card-glass__title\">Semester SGPA</h3><p class=\"ds-card-glass__value\">8.74</p></div>",
+      "css": ".ds-card-glass { border-radius: 1rem; padding: 1.5rem; backdrop-filter: blur(12px); background: linear-gradient(135deg, rgba(255,255,255,0.07), rgba(255,255,255,0.03)); border: 1px solid rgba(255,255,255,0.10); box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.04); color: #fafafa; font-family: Inter, system-ui, sans-serif; } .ds-card-glass__title { font-size: 0.8125rem; color: #a7a7ae; margin: 0 0 0.5rem; } .ds-card-glass__value { font-family: 'Space Grotesk', system-ui, sans-serif; font-weight: 700; font-size: 1.5rem; margin: 0; }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input-default",
+      "description": "Flat (non-glass) surface — one of the few places the system uses a plain neutral fill instead of translucent glass.",
+      "html": "<input class=\"ds-input\" type=\"email\" placeholder=\"you@university.edu\" />",
+      "css": ".ds-input { height: 2.5rem; width: 100%; border-radius: 0.75rem; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.05); padding: 0.5rem 0.75rem; font-size: 0.875rem; font-family: Inter, system-ui, sans-serif; color: #fafafa; transition: border-color 0.2s, box-shadow 0.2s; } .ds-input::placeholder { color: rgba(167,167,174,0.7); } .ds-input:focus-visible { outline: none; border-color: rgba(99,102,241,0.5); box-shadow: 0 0 0 2px rgba(99,102,241,0.5); }"
+    },
+    {
+      "name": "Nav Link",
+      "kind": "nav",
+      "refersTo": "nav-link",
+      "description": "Flat top-level navigation link — no underline, tint-only hover/active states.",
+      "html": "<a class=\"ds-nav-link ds-nav-link--active\" href=\"#\">Dashboard</a>",
+      "css": ".ds-nav-link { display: inline-flex; align-items: center; gap: 0.375rem; padding: 0.5rem 0.875rem; border-radius: 0.75rem; font-size: 0.875rem; font-family: Inter, system-ui, sans-serif; color: #a7a7ae; text-decoration: none; transition: background-color 0.2s, color 0.2s; } .ds-nav-link:hover { color: #fafafa; background: rgba(255,255,255,0.05); } .ds-nav-link--active { color: #fafafa; background: rgba(255,255,255,0.05); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Academic Command Console",
+    "overview": "UPESphere reads like a fintech dashboard for a student's academic life, not a calculator site. It's a near-black console in dark mode (an airy near-white one in light mode) where every panel is a soft indigo-violet glass surface — translucent, blurred, thinly bordered — floating on a faint colored glow instead of a hard shadow. PRODUCT.md's brief that students should \"check regularly, the way they'd check a banking app\" is a literal design instruction here: dark-by-default like a trading terminal, one saturated identity gradient (indigo → violet, occasionally → cyan) reserved for calls to action, the wordmark, and numbers that matter — everything else stays quiet.\n\nIt explicitly rejects the \"free calculator site\" look named in PRODUCT.md's anti-references: no banner-ad chrome, no cartoon mascots, no gamified badge clutter. Precision reads as restraint — flat neutral surfaces, one accent hue family, glass instead of gray boxes.",
+    "keyCharacteristics": [
+      "Dark-by-default (next-themes, defaultTheme=\"dark\"), with full light-mode parity through paired HSL tokens.",
+      "One identity gradient — indigo → violet, occasionally → cyan — carried by glass borders, shadows, focus rings, CTAs, and the wordmark, never the whole screen.",
+      "Elevation expressed as blur + tinted glow, never a flat drop shadow.",
+      "Space Grotesk display type over Inter body type: a geometric, slightly technical heading voice over a humanist reading voice.",
+      "Color as trust signal, not decoration — used sparingly enough that its appearance always means \"this matters.\""
+    ],
+    "rules": [
+      { "name": "The Glass-Not-Flat Rule", "body": "A \"surface\" in this system is rarely a flat neutral swatch — it's a translucent gradient (--glass-from → --glass-to) over a backdrop-blur, bordered in low-alpha indigo (--glass-border) rather than the flat --border token. Reach for the flat neutral tokens only on genuinely flat controls (inputs, secondary buttons); everything meant to feel \"raised\" is glass.", "section": "colors" },
+      { "name": "The One Gradient Rule", "body": "Indigo → violet (→ cyan) is the only gradient in the system. It appears on primary CTAs, the wordmark, and at most one emphasized phrase per headline — never on body copy, never stacked on more than one heading per screen.", "section": "colors" },
+      { "name": "The Display-Is-Rare Rule", "body": "font-display (Space Grotesk) marks a genuine heading or a number the student is meant to trust (SGPA, CGPA, attendance %) — not every bold word. Body and UI chrome stay in Inter.", "section": "typography" },
+      { "name": "The Blur-Over-Black Rule", "body": "Elevation is blur plus a colored glow, never a flat gray drop shadow. A shadow with no indigo/violet tint reads as a bug, not a stylistic choice.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do keep the indigo → violet gradient to primary CTAs, the wordmark, and at most one emphasized headline phrase per screen.",
+      "Do express elevation as blur plus an indigo/violet-tinted shadow (--glass-shadow), never a flat black drop shadow.",
+      "Do anchor popovers' transform-origin to their trigger so scale-in animations read as originating from the click point.",
+      "Do check body and placeholder text against its actual background before shipping — the dark near-black canvas needs near-white text, not mid-gray \"for elegance.\"",
+      "Do gate hover-only transform effects behind (hover: hover) and (pointer: fine) so touch input never gets stuck in a hover state."
+    ],
+    "donts": [
+      "Don't ship a cluttered, ad-heavy \"free calculator\" look — this is PRODUCT.md's explicit anti-reference: no banner-ad chrome, no cartoon mascots, no gamified badge clutter.",
+      "Don't add a second gradient-text treatment to the same screen — one wordmark or one emphasized phrase, never both plus every card heading too.",
+      "Don't nest glass on glass (a GlassCard inside another GlassCard) — one translucent layer per surface, flat neutral tokens underneath it.",
+      "Don't use border-left/border-right as a colored accent stripe on cards or list rows — a full border, a background tint, or a leading icon instead.",
+      "Don't drop a plain gray box-shadow (e.g. rgba(0,0,0,0.2) with no hue) onto a raised surface — every shadow in this system carries the indigo/violet tint."
+    ]
+  }
+}

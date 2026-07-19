@@ -3,6 +3,7 @@
 import { useRef } from 'react'
 import Link from 'next/link'
 import { motion, useInView } from 'framer-motion'
+import { EASE_OUT } from '@/lib/utils'
 import { Calculator, Crosshair, TrendingUp, CalendarCheck, Target, ArrowRight } from 'lucide-react'
 
 const ALL_TOOLS = [
@@ -75,7 +76,7 @@ const cardVariants = {
   visible: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.38, ease: [0.22, 1, 0.36, 1] },
+    transition: { duration: 0.38, ease: EASE_OUT },
   },
 }
 
@@ -95,7 +96,7 @@ export function MoreAcademicTools({ current }: Props) {
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={inView ? { opacity: 1, y: 0 } : {}}
-        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+        transition={{ duration: 0.4, ease: EASE_OUT }}
         className="text-center mb-10"
       >
         <h2 className="text-2xl font-bold font-display tracking-tight mb-2">

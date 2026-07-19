@@ -18,7 +18,7 @@ const SCROLL_HEIGHT = 420
 const POPOVER_WIDTH = 224
 const POPOVER_MARGIN = 8
 
-interface HoverState {
+interface ActiveState {
   key: string
   slot: TimetableSlot
   rect: DOMRect
@@ -32,7 +32,8 @@ interface HoverState {
 // positioned relative to that box gets clipped the moment it overflows,
 // worst at the leftmost/rightmost columns. Viewport-fixed coordinates sidestep
 // that entirely and also get clamped to the window so they never run off-screen.
-function popoverStyle(rect: DOMRect): React.CSSProperties {
+function popoverStyle(rect: DOMRect | null): React.CSSProperties {
+  if (!rect) return { display: 'none' }
   const showBelow = window.innerHeight - rect.bottom > 160 || rect.top < 160
   let left = rect.left + rect.width / 2 - POPOVER_WIDTH / 2
   left = Math.max(POPOVER_MARGIN, Math.min(left, window.innerWidth - POPOVER_WIDTH - POPOVER_MARGIN))
@@ -47,7 +48,10 @@ function popoverStyle(rect: DOMRect): React.CSSProperties {
 export function WeeklyTimetable({ userId }: { userId: string }) {
   const [data, setData] = useState<{ version: TimetableVersion; slots: TimetableSlot[] } | null | undefined>(undefined)
   const [now, setNow] = useState(() => new Date())
-  const [hover, setHover] = useState<HoverState | null>(null)
+  const [active, setActive] = useState<ActiveState | null>(null)
+
+  const openSlot = (key: string, slot: TimetableSlot, rect: DOMRect) => setActive({ key, slot, rect })
+  const closeSlot = (key: string) => setActive(prev => (prev?.key === key ? null : prev))
   const scrollRef = useRef<HTMLDivElement>(null)
   const scrolledRef = useRef(false)
 
@@ -179,22 +183,37 @@ export function WeeklyTimetable({ userId }: { userId: string }) {
                         const top = (toMinutes(s.startTime) - gridStart) * PX_PER_MINUTE
                         const height = Math.max(28, (toMinutes(s.endTime) - toMinutes(s.startTime)) * PX_PER_MINUTE)
                         const color = colorForSubject(s.subject)
-                        const isHovered = hover?.key === key
+                        const isActive = active?.key === key
+                        const label = `${s.subject}, ${formatTimeRange12h(s.startTime, s.endTime)}${s.room ? `, ${formatRoom(s.room)}` : ''}`
                         return (
                           <div
                             key={key}
-                            className="absolute left-0 right-0"
-                            style={{ top, height, zIndex: isHovered ? 30 : 10 }}
-                            onMouseEnter={e => setHover({ key, slot: s, rect: e.currentTarget.getBoundingClientRect() })}
-                            onMouseLeave={() => setHover(null)}
+                            role="button"
+                            tabIndex={0}
+                            aria-label={label}
+                            className="absolute left-0 right-0 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60"
+                            style={{ top, height, zIndex: isActive ? 30 : 10 }}
+                            onMouseEnter={e => openSlot(key, s, e.currentTarget.getBoundingClientRect())}
+                            onMouseLeave={() => closeSlot(key)}
+                            onFocus={e => openSlot(key, s, e.currentTarget.getBoundingClientRect())}
+                            onBlur={() => closeSlot(key)}
+                            onClick={e => openSlot(key, s, e.currentTarget.getBoundingClientRect())}
+                            onKeyDown={e => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault()
+                                openSlot(key, s, e.currentTarget.getBoundingClientRect())
+                              } else if (e.key === 'Escape') {
+                                closeSlot(key)
+                              }
+                            }}
                           >
                             <div
-                              className="h-full w-full rounded-md px-1.5 py-1 overflow-hidden cursor-default"
+                              className="h-full w-full rounded-md px-1.5 py-1 overflow-hidden cursor-pointer"
                               style={{ background: `${color}26`, border: `1px solid ${color}55` }}
                             >
                               <div className="text-[9px] font-bold leading-tight line-clamp-2" style={{ color }}>{s.subject}</div>
-                              <div className="text-[8px] text-muted-foreground leading-tight mt-0.5">{formatTimeRange12h(s.startTime, s.endTime)}</div>
-                              {s.room && <div className="text-[7.5px] text-muted-foreground/80 leading-tight mt-0.5 truncate">{formatRoom(s.room)}</div>}
+                              <div className="text-[9px] text-muted-foreground leading-tight mt-0.5">{formatTimeRange12h(s.startTime, s.endTime)}</div>
+                              {s.room && <div className="text-[9px] text-muted-foreground/80 leading-tight mt-0.5 truncate">{formatRoom(s.room)}</div>}
                             </div>
                           </div>
                         )
@@ -208,24 +227,25 @@ export function WeeklyTimetable({ userId }: { userId: string }) {
         </div>
       )}
 
-      {hover && typeof document !== 'undefined' && createPortal(
+      {active && typeof document !== 'undefined' && createPortal(
         <div
+          role="tooltip"
           className="z-50 rounded-xl p-3 pointer-events-none"
           style={{
-            ...popoverStyle(hover.rect),
+            ...popoverStyle(active.rect),
             background: 'linear-gradient(135deg, var(--glass-from), var(--glass-to))',
             border: '1px solid var(--glass-border)',
             boxShadow: 'var(--glass-shadow)',
             backdropFilter: 'blur(24px)',
           }}
         >
-          <div className="text-xs font-bold mb-1.5" style={{ color: colorForSubject(hover.slot.subject) }}>{hover.slot.subject}</div>
-          <div className="text-[11px] text-foreground/80 mb-1">{formatTimeRange12h(hover.slot.startTime, hover.slot.endTime)}</div>
-          {hover.slot.room && (
-            <div className="text-[11px] text-muted-foreground mb-1">{formatRoom(hover.slot.room)}</div>
+          <div className="text-xs font-bold mb-1.5" style={{ color: colorForSubject(active.slot.subject) }}>{active.slot.subject}</div>
+          <div className="text-[11px] text-foreground/80 mb-1">{formatTimeRange12h(active.slot.startTime, active.slot.endTime)}</div>
+          {active.slot.room && (
+            <div className="text-[11px] text-muted-foreground mb-1">{formatRoom(active.slot.room)}</div>
           )}
-          <div className="text-[11px] text-muted-foreground">Duration: {formatDuration(hover.slot.startTime, hover.slot.endTime)}</div>
-          {hover.slot.faculty && <div className="text-[11px] text-muted-foreground mt-1">Faculty: {hover.slot.faculty}</div>}
+          <div className="text-[11px] text-muted-foreground">Duration: {formatDuration(active.slot.startTime, active.slot.endTime)}</div>
+          {active.slot.faculty && <div className="text-[11px] text-muted-foreground mt-1">Faculty: {active.slot.faculty}</div>}
         </div>,
         document.body
       )}

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { calculateGPA } from '@/lib/calculations/gpa'
-import { generateId } from '@/lib/utils'
+import { generateId, EASE_OUT } from '@/lib/utils'
 import type { Subject } from '@/types'
 
 const DEFAULT_SUBJECTS: Subject[] = [
@@ -37,7 +37,7 @@ export function GPADemo() {
     }
     const controls = animate(from, to, {
       duration: Math.min(0.7, Math.abs(from - to) * 1.8),
-      ease: [0.22, 1, 0.36, 1],
+      ease: EASE_OUT,
       onUpdate: (v) => {
         prevGpaRef.current = v
         setDisplayGpa(v)

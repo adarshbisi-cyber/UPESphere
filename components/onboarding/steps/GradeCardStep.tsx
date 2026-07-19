@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input'
 import { FileDropzone } from '@/components/onboarding/FileDropzone'
 import { extractPdfTextItems, hasExtractableText } from '@/lib/parsers/pdfText'
 import { parseGradeCardItems, type ParsedSemesterBlock } from '@/lib/parsers/gradeCardParser'
-import { generateId } from '@/lib/utils'
+import { generateId, EASE_OUT } from '@/lib/utils'
 
 type Status = 'idle' | 'parsing' | 'reviewing' | 'error'
 
@@ -143,7 +143,7 @@ export function GradeCardStep({
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+      transition={{ duration: 0.4, ease: EASE_OUT }}
       className="max-w-md mx-auto w-full"
     >
       <h2 className="text-2xl font-bold font-display tracking-tight mb-1.5 text-center">Import Academic Results</h2>

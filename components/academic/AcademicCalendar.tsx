@@ -4,13 +4,13 @@ import { useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronLeft, ChevronRight, CalendarDays, Dot, Sparkles } from 'lucide-react'
 import { GlassCard } from '@/components/ui/card'
-import { cn } from '@/lib/utils'
+import { cn, EASE_OUT } from '@/lib/utils'
 import {
   ACADEMIC_EVENTS, CATEGORY_STYLE, CALENDAR_MIN, CALENDAR_MAX, CALENDAR_DEFAULT,
   toISO, eventsOnDay, eventsInMonth, type AcademicEvent, type EventCategory,
 } from '@/lib/data/academicCalendar'
 
-const EASE = [0.22, 1, 0.36, 1] as const
+const EASE = EASE_OUT
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 const CATEGORIES: EventCategory[] = ['academic', 'exam', 'fest', 'holiday']

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { EASE_OUT } from '@/lib/utils'
 import { Shield, AlertTriangle, XCircle, BookOpen, FileText, GraduationCap, Target, CheckCircle, HelpCircle, Lightbulb } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { GlassCard } from '@/components/ui/card'
@@ -430,7 +431,7 @@ export function PassCalculator() {
                 <motion.div
                   initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.05, duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                  transition={{ delay: 0.05, duration: 0.35, ease: EASE_OUT }}
                   className="sm:pr-4 sm:border-r pb-4 sm:pb-0"
                   style={{ borderColor: 'var(--divider)' }}
                 >
@@ -438,14 +439,9 @@ export function PassCalculator() {
                     Internal + Mid Sem
                   </p>
                   <div className="flex items-baseline gap-1 mb-2.5">
-                    <motion.span
-                      key={r.knownScore}
-                      initial={{ scale: 0.85, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      className="text-3xl font-bold font-display text-foreground"
-                    >
+                    <span className="text-3xl font-bold font-display text-foreground">
                       {r.knownScore.toFixed(1)}
-                    </motion.span>
+                    </span>
                     <span className="text-sm text-muted-foreground font-medium">&nbsp;/ 70 pts</span>
                   </div>
                   <div className="h-1.5 rounded-full overflow-hidden mb-1.5" style={{ background: 'var(--divider)' }}>
@@ -462,7 +458,7 @@ export function PassCalculator() {
                 <motion.div
                   initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.08, duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                  transition={{ delay: 0.08, duration: 0.35, ease: EASE_OUT }}
                   className="sm:pl-4 pt-4 sm:pt-0 border-t sm:border-t-0"
                   style={{ borderColor: 'var(--divider)' }}
                 >
@@ -470,15 +466,9 @@ export function PassCalculator() {
                     Expected Total
                   </p>
                   <div className="flex items-baseline gap-1 mb-2.5">
-                    <motion.span
-                      key={r.expectedTotal}
-                      initial={{ scale: 0.8, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-                      className="text-3xl font-bold font-display text-foreground"
-                    >
+                    <span className="text-3xl font-bold font-display text-foreground">
                       {r.hasKnownData ? r.expectedTotal.toFixed(0) : '—'}
-                    </motion.span>
+                    </span>
                     {r.hasKnownData && (
                       <span className="text-sm text-muted-foreground font-medium">&nbsp;/ 100</span>
                     )}
@@ -612,7 +602,7 @@ export function PassCalculator() {
                         key={tier.label}
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: i * 0.07, duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                        transition={{ delay: i * 0.07, duration: 0.35, ease: EASE_OUT }}
                         whileHover={{ scale: 1.012, transition: { type: 'spring', stiffness: 400, damping: 28 } }}
                         className={`rounded-xl p-3.5 border cursor-default relative overflow-hidden ${tier.bgClass} ${tier.borderClass}`}
                         style={tier.isHighlight ? { boxShadow: '0 0 20px rgba(52,211,153,0.10)' } : undefined}
@@ -630,15 +620,9 @@ export function PassCalculator() {
                         </p>
                         <div className="flex items-center justify-between gap-2 mb-1.5">
                           <div className="flex items-baseline gap-1">
-                            <motion.span
-                              key={tier.score}
-                              initial={{ scale: 0.8, opacity: 0 }}
-                              animate={{ scale: 1, opacity: 1 }}
-                              transition={{ delay: i * 0.07 + 0.1 }}
-                              className={`text-[28px] font-bold font-display leading-none ${tier.textColor}`}
-                            >
+                            <span className={`text-[28px] font-bold font-display leading-none ${tier.textColor}`}>
                               {tier.score}
-                            </motion.span>
+                            </span>
                             <span className={`text-sm font-medium ${tier.textColor} opacity-50`}>
                               &nbsp;/ {tier.outOf}
                             </span>

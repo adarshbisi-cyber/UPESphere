@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge'
 import { GlassCard } from '@/components/ui/card'
 import { calculateGPA, GRADE_POINTS_10 } from '@/lib/calculations/gpa'
-import { generateId, getGPAColor } from '@/lib/utils'
+import { generateId, getGPAColor, EASE_OUT } from '@/lib/utils'
 import { useToast } from '@/components/ui/use-toast'
 import { CurriculumScanner } from './CurriculumScanner'
 import { GA } from '@/lib/analytics'
@@ -89,7 +89,7 @@ export function GPACalculator() {
     if (Math.abs(from - to) < 0.005) { prevGpaRef.current = to; setDisplayGpa(to); return }
     const controls = animate(from, to, {
       duration: Math.min(0.7, Math.abs(from - to) * 1.8),
-      ease: [0.22, 1, 0.36, 1],
+      ease: EASE_OUT,
       onUpdate: (v) => { prevGpaRef.current = v; setDisplayGpa(v) },
       onComplete: () => { prevGpaRef.current = to },
     })

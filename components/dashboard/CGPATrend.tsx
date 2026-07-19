@@ -29,15 +29,17 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 
 interface CGPATrendProps {
   data?: typeof DEMO_DATA
+  title?: string
+  subtitle?: string
 }
 
-export function CGPATrend({ data = DEMO_DATA }: CGPATrendProps) {
+export function CGPATrend({ data = DEMO_DATA, title = 'Academic Trend', subtitle = 'SGPA vs CGPA over semesters' }: CGPATrendProps) {
   return (
     <GlassCard className="p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h3 className="text-base font-semibold font-display">Academic Trend</h3>
-          <p className="text-xs text-muted-foreground mt-0.5">SGPA vs CGPA over semesters</p>
+          <h3 className="text-base font-semibold font-display">{title}</h3>
+          <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>
         </div>
         <div className="flex items-center gap-4 text-xs">
           <span className="flex items-center gap-1.5">
@@ -50,7 +52,7 @@ export function CGPATrend({ data = DEMO_DATA }: CGPATrendProps) {
           </span>
         </div>
       </div>
-      <div className="h-60">
+      <div className="h-60" role="img" aria-label={`Area chart: ${title}. ${subtitle}. A screen-reader-friendly table of the same data follows.`}>
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={data} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
             <defs>
@@ -72,6 +74,28 @@ export function CGPATrend({ data = DEMO_DATA }: CGPATrendProps) {
           </AreaChart>
         </ResponsiveContainer>
       </div>
+
+      {/* Screen-reader-only data table — "insight over time" is the product's whole
+          differentiator over a one-off calculator, so it needs a non-visual equivalent. */}
+      <table className="sr-only">
+        <caption>{title} — {subtitle}</caption>
+        <thead>
+          <tr>
+            <th scope="col">Semester</th>
+            <th scope="col">SGPA</th>
+            <th scope="col">CGPA</th>
+          </tr>
+        </thead>
+        <tbody>
+          {data.map(d => (
+            <tr key={d.semester}>
+              <th scope="row">{d.semester}</th>
+              <td>{d.sgpa}</td>
+              <td>{d.cgpa}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </GlassCard>
   )
 }

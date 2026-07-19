@@ -1,6 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
+import { EASE_OUT } from '@/lib/utils'
 
 export function ProgressBar({ step, total }: { step: number; total: number }) {
   const pct = Math.round((step / total) * 100)
@@ -18,7 +19,7 @@ export function ProgressBar({ step, total }: { step: number; total: number }) {
           style={{ background: 'linear-gradient(to right, #6366f1, #8b5cf6)' }}
           initial={{ width: 0 }}
           animate={{ width: `${pct}%` }}
-          transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: 0.4, ease: EASE_OUT }}
         />
       </div>
     </div>

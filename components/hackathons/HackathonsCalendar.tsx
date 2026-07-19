@@ -4,10 +4,10 @@ import { useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Search, Building2, CalendarDays, Trophy, Infinity as InfinityIcon, Code2, Sparkles } from 'lucide-react'
 import { GlassCard } from '@/components/ui/card'
-import { cn } from '@/lib/utils'
+import { cn, EASE_OUT } from '@/lib/utils'
 import { HACKATHONS, HACKATHON_CATEGORIES } from '@/lib/data/hackathons'
 
-const EASE = [0.22, 1, 0.36, 1] as const
+const EASE = EASE_OUT
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 const PAGE_SIZE = 30
 
@@ -39,10 +39,16 @@ function Chip({ active, onClick, children }: { active: boolean; onClick: () => v
   )
 }
 
-function HackCard({ h }: { h: (typeof HACKATHONS)[number] }) {
+function HackCard({ h, index }: { h: (typeof HACKATHONS)[number]; index: number }) {
   const meta = CAT_META[h.category] ?? { short: h.category, pill: 'bg-white/5 border-white/10 text-foreground/80', dot: 'bg-slate-500' }
   return (
-    <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.05] to-white/[0.02] p-4 flex flex-col gap-2">
+    <motion.div
+      initial={{ opacity: 0, y: 16, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ duration: 0.35, delay: Math.min(index, 12) * 0.04, ease: EASE }}
+      whileHover={{ y: -4 }}
+      className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.05] to-white/[0.02] p-4 flex flex-col gap-2"
+    >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <h3 className="text-sm font-semibold font-display leading-tight">{h.name}</h3>
@@ -70,7 +76,7 @@ function HackCard({ h }: { h: (typeof HACKATHONS)[number] }) {
           <Trophy className="w-3 h-3 shrink-0" /> <span className="line-clamp-1">{h.prize}</span>
         </p>
       )}
-    </div>
+    </motion.div>
   )
 }
 
@@ -163,7 +169,7 @@ export function HackathonsCalendar() {
         ) : (
           <>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {shown.map(h => <HackCard key={h.id} h={h} />)}
+              {shown.map((h, i) => <HackCard key={h.id} h={h} index={i} />)}
             </div>
             {visible < filtered.length && (
               <div className="text-center mt-8">

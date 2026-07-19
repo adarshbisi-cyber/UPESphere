@@ -2,6 +2,7 @@
 
 import { useRef } from 'react'
 import { motion } from 'framer-motion'
+import { EASE_OUT } from '@/lib/utils'
 import { ScanLine, Calculator, Activity, CalendarCheck, Crosshair, LayoutDashboard } from 'lucide-react'
 
 const features = [
@@ -68,7 +69,7 @@ const container = {
 
 const item = {
   hidden: { opacity: 0, y: 30 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] } },
+  show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: EASE_OUT } },
 }
 
 function FeatureCard({ feature }: { feature: (typeof features)[0] }) {

@@ -1,7 +1,8 @@
 'use client'
 
 import { useRef } from 'react'
-import { motion, useMotionValue, useTransform, animate } from 'framer-motion'
+import { motion, useMotionValue, useTransform, animate, useReducedMotion } from 'framer-motion'
+import { EASE_OUT } from '@/lib/utils'
 import Link from 'next/link'
 import { ArrowRight, Sparkles, TrendingUp, BookOpen, CheckCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -36,6 +37,7 @@ function MagneticButton({ children }: { children: React.ReactNode }) {
 }
 
 export function Hero() {
+  const reduce = useReducedMotion()
   // Mouse parallax for hero card
   const heroRef = useRef<HTMLElement>(null)
   const mouseX = useMotionValue(0)
@@ -69,14 +71,14 @@ export function Hero() {
         {/* Blob 1 — large indigo, slow organic drift */}
         <motion.div
           className="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-500/10 rounded-full blur-[120px]"
-          animate={{ x: [0, 45, -18, 12, 0], y: [0, -28, 22, -12, 0], scale: [1, 1.08, 0.96, 1.04, 1] }}
-          transition={{ duration: 28, repeat: Infinity, ease: 'linear' }}
+          animate={reduce ? { scale: [1, 1.04, 1] } : { x: [0, 45, -18, 12, 0], y: [0, -28, 22, -12, 0], scale: [1, 1.08, 0.96, 1.04, 1] }}
+          transition={{ duration: reduce ? 8 : 28, repeat: Infinity, ease: 'linear' }}
         />
         {/* Blob 2 — violet, different phase */}
         <motion.div
           className="absolute bottom-1/3 right-1/4 w-80 h-80 bg-violet-500/10 rounded-full blur-[100px]"
-          animate={{ x: [0, -32, 18, -8, 0], y: [0, 22, -28, 14, 0], scale: [1, 0.96, 1.08, 0.98, 1] }}
-          transition={{ duration: 22, repeat: Infinity, ease: 'linear', delay: 4 }}
+          animate={reduce ? { scale: [1, 1.03, 1] } : { x: [0, -32, 18, -8, 0], y: [0, 22, -28, 14, 0], scale: [1, 0.96, 1.08, 0.98, 1] }}
+          transition={{ duration: reduce ? 8 : 22, repeat: Infinity, ease: 'linear', delay: reduce ? 0 : 4 }}
         />
         {/* Blob 3 — centre ambient, breathes */}
         <motion.div
@@ -171,10 +173,10 @@ export function Hero() {
 
         {/* Hero mockup card — parallax on mouse */}
         <motion.div
-          initial={{ opacity: 0, y: 60, scale: 0.95 }}
+          initial={{ opacity: 0, y: reduce ? 0 : 60, scale: reduce ? 1 : 0.95 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ duration: 0.8, delay: 0.6, ease: [0.22, 1, 0.36, 1] }}
-          style={{ x: cardX, y: cardY }}
+          transition={{ duration: 0.8, delay: 0.6, ease: EASE_OUT }}
+          style={{ x: reduce ? 0 : cardX, y: reduce ? 0 : cardY }}
           className="mt-20 max-w-4xl mx-auto"
         >
           <div

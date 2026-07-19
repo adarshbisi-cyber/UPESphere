@@ -69,7 +69,7 @@ const SelectContent = React.forwardRef<
   <SelectPrimitive.Portal>
     <SelectPrimitive.Content
       ref={ref}
-      style={{ background: 'hsl(var(--card))', border: '1px solid var(--divider)' }}
+      style={{ background: 'hsl(var(--card))', border: '1px solid var(--divider)', transformOrigin: 'var(--radix-select-content-transform-origin)' }}
       className={cn(
         'relative z-50 max-h-96 min-w-[8rem] overflow-hidden rounded-xl text-popover-foreground shadow-2xl backdrop-blur-md',
         'data-[state=open]:animate-in data-[state=closed]:animate-out',

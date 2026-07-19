@@ -259,14 +259,9 @@ export function AttendanceCalculator() {
                   </defs>
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <motion.span
-                    key={result.currentPercentage}
-                    initial={{ scale: 0.8 }}
-                    animate={{ scale: 1 }}
-                    className={`text-4xl font-bold font-display ${cfg.color}`}
-                  >
+                  <span className={`text-4xl font-bold font-display ${cfg.color}`}>
                     {result.currentPercentage.toFixed(1)}%
-                  </motion.span>
+                  </span>
                   <Badge
                     variant={result.status === 'safe' ? 'emerald' : result.status === 'warning' ? 'amber' : 'red'}
                     className="mt-1 text-xs"
@@ -349,14 +344,9 @@ export function AttendanceCalculator() {
             <div className="text-xs text-muted-foreground mt-1">Total Classes</div>
           </div>
           <div className="text-center rounded-xl bg-emerald-500/10 border border-emerald-500/20 p-4">
-            <motion.div
-              key={maxBunks}
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="text-3xl font-bold font-display text-emerald-400"
-            >
+            <div className="text-3xl font-bold font-display text-emerald-400">
               {maxBunks}
-            </motion.div>
+            </div>
             <div className="text-xs text-muted-foreground mt-1">Can Bunk</div>
           </div>
           <div className="text-center rounded-xl p-4" style={{ background: 'var(--muted-surface)', border: '1px solid var(--divider)' }}>
