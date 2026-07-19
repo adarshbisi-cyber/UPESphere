@@ -4,7 +4,7 @@ import { Suspense, useEffect, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { GraduationCap, Loader2, AlertCircle } from 'lucide-react'
+import { GraduationCap, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react'
 import type { EmailOtpType } from '@supabase/supabase-js'
 import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase/client'
@@ -19,7 +19,7 @@ import { createClient } from '@/lib/supabase/client'
 function ConfirmInner() {
   const router = useRouter()
   const params = useSearchParams()
-  const [status, setStatus] = useState<'verifying' | 'error'>('verifying')
+  const [status, setStatus] = useState<'verifying' | 'success' | 'error'>('verifying')
   const supabase = createClient()
   const ran = useRef(false)
 
@@ -41,15 +41,19 @@ function ConfirmInner() {
         setStatus('error')
         return
       }
-      // Verified — a session now exists. Recovery links go set a new password;
-      // everything else proceeds to the app (middleware routes to onboarding
-      // if setup isn't finished).
-      if (type === 'recovery') {
-        router.replace('/reset-password')
-      } else {
-        router.replace('/dashboard')
-        router.refresh()
-      }
+      // Verified — a session now exists. Show a brief success state before
+      // navigating (recovery links go set a new password; everything else
+      // proceeds to the app, where middleware routes to onboarding if setup
+      // isn't finished).
+      setStatus('success')
+      setTimeout(() => {
+        if (type === 'recovery') {
+          router.replace('/reset-password')
+        } else {
+          router.replace('/dashboard')
+          router.refresh()
+        }
+      }, 600)
     })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -84,6 +88,19 @@ function ConfirmInner() {
               </div>
               <h1 className="text-xl font-bold font-display mb-1">Verifying your email…</h1>
               <p className="text-sm text-muted-foreground">This only takes a moment.</p>
+            </>
+          ) : status === 'success' ? (
+            <>
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ type: 'spring', stiffness: 260, damping: 20 }}
+                className="w-14 h-14 rounded-full bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center mx-auto mb-4"
+              >
+                <CheckCircle2 className="w-7 h-7 text-emerald-400" />
+              </motion.div>
+              <h1 className="text-xl font-bold font-display mb-1">Verified!</h1>
+              <p className="text-sm text-muted-foreground">Taking you to your dashboard…</p>
             </>
           ) : (
             <>

@@ -162,15 +162,9 @@ export function CGPACalculator() {
         <div className="lg:col-span-2 space-y-4">
           <GlassCard className="p-6 text-center">
             <div className="text-xs text-muted-foreground uppercase tracking-widest mb-2">Your CGPA</div>
-            <motion.div
-              key={result.cgpa}
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-              className={`text-7xl font-bold font-display ${getGPAColor(result.cgpa)}`}
-            >
+            <div className={`text-7xl font-bold font-display ${getGPAColor(result.cgpa)}`}>
               {result.cgpa.toFixed(2)}
-            </motion.div>
+            </div>
             <div className="mt-3 flex items-center justify-center gap-3 text-sm">
               <div className="text-center">
                 <div className="text-foreground/80 font-medium">{result.percentageEquivalent}%</div>

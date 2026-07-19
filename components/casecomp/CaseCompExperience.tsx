@@ -7,7 +7,7 @@ import {
   Building2, Target, Compass, AlertTriangle, Sparkles, GraduationCap,
 } from 'lucide-react'
 import { GlassCard } from '@/components/ui/card'
-import { cn } from '@/lib/utils'
+import { cn, EASE_OUT } from '@/lib/utils'
 import { CorporateCases } from '@/components/casecomp/CorporateCases'
 import {
   CASE_COMPS, TRACKS, INSTITUTIONS, MONTHS, MONTHS_FULL,
@@ -16,7 +16,7 @@ import {
   type Track, type Institution,
 } from '@/lib/data/caseComps'
 
-const EASE = [0.22, 1, 0.36, 1] as const
+const EASE = EASE_OUT
 
 // Only surface month chips that actually hold events.
 const ACTIVE_MONTHS = Array.from(new Set(CASE_COMPS.map(c => c.month))).sort((a, b) => a - b)
@@ -68,6 +68,7 @@ function Chip({ active, onClick, group, children }: { active: boolean; onClick: 
 
 // ── Event card ────────────────────────────────────────────────────────────
 const EventCard = forwardRef<HTMLDivElement, { comp: (typeof CASE_COMPS)[number] }>(function EventCard({ comp }, ref) {
+  const reduce = useReducedMotion()
   const inst = INSTITUTION_STYLE[comp.institution]
   return (
     <motion.div
@@ -77,7 +78,7 @@ const EventCard = forwardRef<HTMLDivElement, { comp: (typeof CASE_COMPS)[number]
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, scale: 0.96, transition: { duration: 0.15 } }}
       transition={{ duration: 0.4, ease: EASE }}
-      whileHover={{ y: -5 }}
+      whileHover={reduce ? undefined : { y: -5 }}
       className={cn(
         'group relative rounded-2xl border bg-gradient-to-br from-white/[0.06] to-white/[0.02] p-5 overflow-hidden backdrop-blur-sm',
         comp.mustDo ? 'border-amber-400/30' : 'border-white/10'
@@ -165,7 +166,7 @@ export function CaseCompExperience() {
     show: { transition: { staggerChildren: reduce ? 0 : 0.08, delayChildren: 0.05 } },
   }
   const heroItem = {
-    hidden: { opacity: 0, y: 22 },
+    hidden: { opacity: 0, y: reduce ? 0 : 22 },
     show: { opacity: 1, y: 0, transition: { duration: 0.6, ease: EASE } },
   }
 
@@ -242,7 +243,7 @@ export function CaseCompExperience() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: '-60px' }}
               transition={{ duration: 0.5, ease: EASE, delay: i * 0.1 }}
-              whileHover={{ y: -4 }}
+              whileHover={reduce ? undefined : { y: -4 }}
             >
               <GlassCard className={cn(
                 'relative h-full p-6 border overflow-hidden transition-shadow',
@@ -294,11 +295,11 @@ export function CaseCompExperience() {
                 return (
                   <motion.div
                     key={h.month}
-                    initial={{ opacity: 0, scale: 0.6 }}
+                    initial={{ opacity: 0, scale: 0.95 }}
                     whileInView={{ opacity: 1, scale: 1 }}
                     viewport={{ once: true }}
                     transition={{ duration: 0.35, ease: EASE, delay: i * 0.035 }}
-                    whileHover={{ y: -2 }}
+                    whileHover={reduce ? undefined : { y: -2 }}
                     className={cn('rounded-lg border py-3 text-center', s.cell)}
                   >
                     <div className={cn('text-xs font-bold', s.text)}>{h.month}</div>
@@ -466,7 +467,7 @@ export function CaseCompExperience() {
               whileInView={{ opacity: 1, scale: 1 }}
               viewport={{ once: true }}
               transition={{ duration: 0.35, ease: EASE, delay: i * 0.035 }}
-              whileHover={{ y: -3 }}
+              whileHover={reduce ? undefined : { y: -3 }}
               className="rounded-xl border border-white/10 bg-white/[0.03] p-3.5 flex items-start gap-3"
             >
               <span className="flex-shrink-0 w-6 h-6 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-500 text-white text-xs font-bold flex items-center justify-center">{i + 1}</span>

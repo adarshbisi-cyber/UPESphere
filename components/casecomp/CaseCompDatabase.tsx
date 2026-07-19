@@ -4,13 +4,13 @@ import { useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Search, Building2, CalendarDays, GraduationCap, Trophy, Infinity as InfinityIcon } from 'lucide-react'
 import { GlassCard } from '@/components/ui/card'
-import { cn } from '@/lib/utils'
+import { cn, EASE_OUT } from '@/lib/utils'
 import {
   CASE_COMP_DATABASE, DB_CATEGORY_META, DB_CATEGORY_ORDER, ELIGIBILITIES, SECTORS,
   type DbCategory, type Eligibility, type Sector,
 } from '@/lib/data/caseCompDatabase'
 
-const EASE = [0.22, 1, 0.36, 1] as const
+const EASE = EASE_OUT
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 const PAGE_SIZE = 30
 
@@ -32,11 +32,17 @@ function Chip({ active, onClick, children }: { active: boolean; onClick: () => v
   )
 }
 
-function CompCard({ comp }: { comp: (typeof CASE_COMP_DATABASE)[number] }) {
+function CompCard({ comp, index }: { comp: (typeof CASE_COMP_DATABASE)[number]; index: number }) {
   const primary = comp.categories[0]
   const meta = DB_CATEGORY_META[primary]
   return (
-    <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.05] to-white/[0.02] p-4 flex flex-col gap-2">
+    <motion.div
+      initial={{ opacity: 0, y: 16, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ duration: 0.35, delay: Math.min(index, 12) * 0.04, ease: EASE }}
+      whileHover={{ y: -4 }}
+      className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.05] to-white/[0.02] p-4 flex flex-col gap-2"
+    >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <h3 className="text-sm font-semibold font-display leading-tight">{comp.name}</h3>
@@ -81,7 +87,7 @@ function CompCard({ comp }: { comp: (typeof CASE_COMP_DATABASE)[number] }) {
       )}
       {/* keep meta referenced so a single-category card still tints */}
       <span className={cn('sr-only', meta.dot)} />
-    </div>
+    </motion.div>
   )
 }
 
@@ -194,7 +200,7 @@ export function CaseCompDatabase() {
       ) : (
         <>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {shown.map(c => <CompCard key={c.id} comp={c} />)}
+            {shown.map((c, i) => <CompCard key={c.id} comp={c} index={i} />)}
           </div>
           {visible < filtered.length && (
             <div className="text-center mt-8">

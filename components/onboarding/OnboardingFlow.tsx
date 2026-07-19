@@ -108,7 +108,9 @@ export function OnboardingFlow({ userId }: { userId: string }) {
             <CurriculumStep
               onSkip={() => setStep('timetable')}
               onContinue={runStep(async subjects => {
-                await saveCurriculumSubjects(userId, subjects)
+                // basicInfo.semester was captured one step earlier — the
+                // curriculum being uploaded here is for that declared semester.
+                await saveCurriculumSubjects(userId, basicInfo.semester ?? 1, subjects)
                 setStep('timetable')
               })}
             />

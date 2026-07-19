@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { motion } from 'framer-motion'
+import { EASE_OUT } from '@/lib/utils'
 import { ArrowRight } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -31,7 +32,7 @@ export function BasicInfoStep({
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+      transition={{ duration: 0.4, ease: EASE_OUT }}
       className="max-w-md mx-auto w-full"
     >
       <h2 className="text-2xl font-bold font-display tracking-tight mb-1.5 text-center">Tell us about yourself</h2>

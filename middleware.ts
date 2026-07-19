@@ -21,7 +21,18 @@ export async function middleware(req: NextRequest) {
   } = await supabase.auth.getUser()
 
   const path = req.nextUrl.pathname
-  const isProtected = path.startsWith('/dashboard') || path.startsWith('/workspace')
+  // Career and Community are authenticated-only features (same as the
+  // dashboard/workspace/gradebook). They stay visible in the nav for logged-out
+  // users so the features are discoverable, but the routes themselves — whether
+  // reached by clicking the nav link or by typing the URL directly — bounce to
+  // sign-in here, before the server component renders (so no protected content
+  // flashes). Keep this list in sync with `config.matcher` below.
+  const isProtected =
+    path.startsWith('/dashboard') ||
+    path.startsWith('/workspace') ||
+    path.startsWith('/gradebook') ||
+    path.startsWith('/career') ||
+    path.startsWith('/community')
   const emailVerified = !!(user && (user.email_confirmed_at || user.confirmed_at))
 
   // Not signed in → bounce protected routes to login (preserving intended dest).
@@ -66,5 +77,12 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/workspace/:path*', '/login'],
+  matcher: [
+    '/dashboard/:path*',
+    '/workspace/:path*',
+    '/gradebook/:path*',
+    '/career/:path*',
+    '/community/:path*',
+    '/login',
+  ],
 }

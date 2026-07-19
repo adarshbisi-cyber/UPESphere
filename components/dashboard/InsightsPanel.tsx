@@ -45,15 +45,17 @@ const DEMO_INSIGHTS = [
 
 interface InsightsPanelProps {
   insights?: typeof DEMO_INSIGHTS
+  title?: string
+  badge?: string
 }
 
-export function InsightsPanel({ insights = DEMO_INSIGHTS }: InsightsPanelProps) {
+export function InsightsPanel({ insights = DEMO_INSIGHTS, title = 'Smart Insights', badge = 'Updated now' }: InsightsPanelProps) {
   return (
     <GlassCard className="p-6">
       <div className="flex items-center gap-2 mb-6">
         <Brain className="w-5 h-5 text-violet-400" />
-        <h3 className="text-base font-semibold font-display">Smart Insights</h3>
-        <span className="ml-auto text-xs text-muted-foreground">Updated now</span>
+        <h3 className="text-base font-semibold font-display">{title}</h3>
+        {badge && <span className="ml-auto text-xs text-muted-foreground">{badge}</span>}
       </div>
       <div className="space-y-3">
         {insights.map((insight, i) => {

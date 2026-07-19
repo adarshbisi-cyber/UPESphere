@@ -57,21 +57,136 @@ export async function updateTotalSemesters(userId: string, total: number) {
   if (error) throw error
 }
 
-// Re-saving replaces the previous curriculum outright (delete-then-insert)
-// rather than appending — both because a re-upload from onboarding retries
-// shouldn't leave duplicate rows behind, and because "Update curriculum"
-// from the Dashboard means replace, not append.
+export async function updateCurrentSemester(userId: string, semester: number) {
+  const supabase = createClient()
+  const { error } = await supabase
+    .from('profiles')
+    .update({ current_semester: semester })
+    .eq('id', userId)
+  if (error) throw error
+}
+
+// Re-saving replaces that semester's previous curriculum outright
+// (delete-then-insert scoped to semesterNumber) rather than appending — both
+// because a re-upload from onboarding retries shouldn't leave duplicate rows
+// behind, and because "Update curriculum" from the Dashboard means replace,
+// not append. Scoped by semester (not the whole table) so uploading one
+// semester's courses never wipes out another semester's already-saved list.
 export async function saveCurriculumSubjects(
   userId: string,
+  semesterNumber: number,
   subjects: { name: string; credits: number }[]
 ) {
   const supabase = createClient()
-  const { error: deleteErr } = await supabase.from('curriculum_subjects').delete().eq('user_id', userId)
+  const { error: deleteErr } = await supabase
+    .from('curriculum_subjects')
+    .delete()
+    .eq('user_id', userId)
+    .eq('semester_number', semesterNumber)
   if (deleteErr) throw deleteErr
   if (subjects.length === 0) return
   const { error } = await supabase.from('curriculum_subjects').insert(
-    subjects.map(s => ({ user_id: userId, name: s.name, credits: s.credits }))
+    subjects.map(s => ({ user_id: userId, semester_number: semesterNumber, name: s.name, credits: s.credits }))
   )
+  if (error) throw error
+}
+
+export interface CurriculumSubject {
+  id: string
+  name: string
+  credits: number
+}
+
+export interface CurrentSemesterCurriculum {
+  semesterNumber: number
+  subjects: CurriculumSubject[]
+  // Distinguishes "never uploaded any curriculum" from "uploaded, but not
+  // for this semester" — the Dashboard needs different empty-state copy for
+  // each (see components/dashboard/MyCourses.tsx).
+  hasAnyCurriculumUploaded: boolean
+}
+
+// The current semester's course list for the Dashboard's "My Courses" widget.
+// `profiles.current_semester` is the single source of truth for "which
+// semester" (set during onboarding, defaults to 1 — never null in practice),
+// so this never falls back to counting grade sheets or curriculum rows.
+export async function getCurrentSemesterCurriculum(userId: string): Promise<CurrentSemesterCurriculum> {
+  const supabase = createClient()
+
+  const { data: profile, error: profileErr } = await supabase
+    .from('profiles')
+    .select('current_semester')
+    .eq('id', userId)
+    .single()
+  if (profileErr) throw profileErr
+  const semesterNumber = (profile?.current_semester as number | null) ?? 1
+
+  const [subjectsRes, countRes] = await Promise.all([
+    supabase
+      .from('curriculum_subjects')
+      .select('id, name, credits')
+      .eq('user_id', userId)
+      .eq('semester_number', semesterNumber)
+      .order('created_at', { ascending: true }),
+    supabase
+      .from('curriculum_subjects')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId),
+  ])
+  if (subjectsRes.error) throw subjectsRes.error
+  if (countRes.error) throw countRes.error
+
+  return {
+    semesterNumber,
+    subjects: (subjectsRes.data ?? []).map(r => ({
+      id: r.id as string,
+      name: r.name as string,
+      credits: r.credits as number,
+    })),
+    hasAnyCurriculumUploaded: (countRes.count ?? 0) > 0,
+  }
+}
+
+export interface CurriculumSemesterGroup {
+  semesterNumber: number
+  subjects: CurriculumSubject[]
+}
+
+// Every saved semester's curriculum, for the "Full Curriculum" browse view —
+// distinct from getCurrentSemesterCurriculum, which only returns the one
+// semester the Dashboard widget cares about.
+export async function getAllCurriculumSubjects(userId: string): Promise<CurriculumSemesterGroup[]> {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from('curriculum_subjects')
+    .select('id, name, credits, semester_number')
+    .eq('user_id', userId)
+    .order('semester_number', { ascending: true })
+    .order('created_at', { ascending: true })
+  if (error) throw error
+
+  const groups = new Map<number, CurriculumSubject[]>()
+  for (const r of data ?? []) {
+    const sem = (r.semester_number as number | null) ?? 1
+    const list = groups.get(sem) ?? []
+    list.push({ id: r.id as string, name: r.name as string, credits: r.credits as number })
+    groups.set(sem, list)
+  }
+  return Array.from(groups.entries())
+    .sort(([a], [b]) => a - b)
+    .map(([semesterNumber, subjects]) => ({ semesterNumber, subjects }))
+}
+
+// Removes one semester's saved curriculum outright — for cleaning up a
+// semester that was never real (e.g. stale data from before curriculum was
+// semester-scoped) rather than replacing it with different courses.
+export async function deleteCurriculumSemester(userId: string, semesterNumber: number) {
+  const supabase = createClient()
+  const { error } = await supabase
+    .from('curriculum_subjects')
+    .delete()
+    .eq('user_id', userId)
+    .eq('semester_number', semesterNumber)
   if (error) throw error
 }
 
@@ -409,23 +524,32 @@ export interface GradeSheet {
   name: string
   sgpa: number | null
   totalCredits: number | null
+  createdAt: string
 }
 
+// The single accessor for a user's saved semesters — the Dashboard and the
+// Gradebook both call this, so "Latest SGPA"/"CGPA"/"Credits Earned" can
+// never drift between the two screens. Dedupes defensively by
+// semester_number (matches the idempotent delete-then-insert save in
+// saveGradeCardSemesters, which prevents new duplicates but doesn't retroactively
+// clean up any that predate that fix).
 export async function getGradeSheets(userId: string): Promise<GradeSheet[]> {
   const supabase = createClient()
   const { data, error } = await supabase
     .from('semesters')
-    .select('id, semester_number, name, sgpa, total_credits')
+    .select('id, semester_number, name, sgpa, total_credits, created_at')
     .eq('user_id', userId)
     .order('semester_number', { ascending: true })
   if (error) throw error
-  return (data ?? []).map(r => ({
+  const rows = (data ?? []).map(r => ({
     id: r.id as string,
     semesterNumber: r.semester_number as number,
     name: r.name as string,
     sgpa: r.sgpa as number | null,
     totalCredits: r.total_credits as number | null,
+    createdAt: r.created_at as string,
   }))
+  return Array.from(new Map(rows.map(r => [r.semesterNumber, r])).values())
 }
 
 // Deletes one semester's grade sheet. gpa_records and subjects rows cascade

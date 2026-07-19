@@ -3,25 +3,18 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Navbar } from '@/components/shared/Navbar'
-import { CGPATrend } from '@/components/dashboard/CGPATrend'
 import { AcademicWorkspace } from '@/components/dashboard/AcademicWorkspace'
 import { SummaryCards } from '@/components/dashboard/SummaryCards'
+import { MyCourses } from '@/components/dashboard/MyCourses'
 import { TodaysClasses } from '@/components/dashboard/TodaysClasses'
 import { WeeklyTimetable } from '@/components/dashboard/WeeklyTimetable'
+import { AnimatePresence, motion } from 'framer-motion'
 import { useAuth } from '@/components/auth/AuthProvider'
-import { createClient } from '@/lib/supabase/client'
-import { BarChart3, Activity, Plus } from 'lucide-react'
-
-interface Semester {
-  id: string
-  semester_number: number
-  name: string
-  sgpa: number
-  total_credits: number
-}
+import { getGradeSheets, type GradeSheet } from '@/lib/onboarding/api'
+import { Activity } from 'lucide-react'
 
 interface DashboardData {
-  semesters: Semester[]
+  semesters: GradeSheet[]
 }
 
 const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
@@ -30,19 +23,16 @@ const MONTHS = [
   'July', 'August', 'September', 'October', 'November', 'December',
 ]
 
+// Subtitle stays neutral and data-agnostic across every time slot — it
+// describes what the page shows, not a guess at how the student's day is
+// going (unearned reassurance reads as filler, not the sharp/fintech tone
+// PRODUCT.md asks for).
 function getGreeting(hour: number): { label: string; subtitle: string } {
-  if (hour >= 5 && hour < 12) return { label: 'Good Morning', subtitle: "Let's make today productive." }
-  if (hour >= 12 && hour < 17) return { label: 'Good Afternoon', subtitle: 'Hope your classes are going well.' }
-  if (hour >= 17 && hour < 21) return { label: 'Good Evening', subtitle: "You're making great progress today." }
-  return { label: 'Welcome Back', subtitle: "Don't forget to rest and recharge." }
-}
-
-function computeCgpa(semesters: Semester[]) {
-  if (!semesters.length) return null
-  const totalCredits = semesters.reduce((s, r) => s + (r.total_credits || 0), 0)
-  if (!totalCredits) return null
-  const weighted = semesters.reduce((s, r) => s + r.sgpa * (r.total_credits || 0), 0)
-  return weighted / totalCredits
+  const subtitle = "Here's your academic snapshot."
+  if (hour >= 5 && hour < 12) return { label: 'Good Morning', subtitle }
+  if (hour >= 12 && hour < 17) return { label: 'Good Afternoon', subtitle }
+  if (hour >= 17 && hour < 21) return { label: 'Good Evening', subtitle }
+  return { label: 'Welcome Back', subtitle }
 }
 
 export default function DashboardPage() {
@@ -51,8 +41,6 @@ export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null)
   const [fetching, setFetching] = useState(true)
   const [now, setNow] = useState<Date | null>(null)
-
-  const supabase = createClient()
 
   useEffect(() => {
     setNow(new Date())
@@ -70,19 +58,8 @@ export default function DashboardPage() {
     if (!user) return
 
     const fetchData = async () => {
-      const { data: semesters } = await supabase
-        .from('semesters')
-        .select('id, semester_number, name, sgpa, total_credits')
-        .eq('user_id', user.id)
-        .order('semester_number', { ascending: true })
-      // The save layer now replaces rather than duplicates on re-upload, but
-      // dedupe defensively here too — old rows from before that fix (or any
-      // future write path that doesn't go through it) shouldn't repeat a
-      // semester's label on the trend graph or get double-counted in CGPA.
-      const dedupedSemesters = Array.from(
-        new Map((semesters ?? []).map(s => [s.semester_number, s])).values()
-      )
-      setData({ semesters: dedupedSemesters })
+      const semesters = await getGradeSheets(user.id)
+      setData({ semesters })
       setFetching(false)
     }
 
@@ -102,36 +79,32 @@ export default function DashboardPage() {
   const dayName = now ? WEEKDAYS[now.getDay()] : ''
   const dateLabel = now ? `${now.getDate()} ${MONTHS[now.getMonth()]} ${now.getFullYear()}` : ''
 
-  const hasSemesters = (data?.semesters?.length ?? 0) > 0
-
-  const trendData = (data?.semesters ?? []).map((s, i, arr) => {
-    const cgpaUpTo = computeCgpa(arr.slice(0, i + 1))
-    return {
-      semester: `Sem ${s.semester_number}`,
-      sgpa: s.sgpa,
-      cgpa: cgpaUpTo != null ? Math.round(cgpaUpTo * 100) / 100 : s.sgpa,
-    }
-  })
-
-  if (authLoading || fetching || now === null) {
-    return (
-      <main className="min-h-screen bg-background text-foreground">
-        <Navbar />
-        <div className="pt-24 pb-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-          <div className="animate-pulse space-y-4">
-            <div className="h-8 w-64 rounded-xl bg-white/5" />
-            <div className="h-6 w-96 rounded-xl bg-white/5" />
-            <div className="h-40 rounded-2xl bg-white/5 mt-8" />
-          </div>
-        </div>
-      </main>
-    )
-  }
+  const isLoading = authLoading || fetching || now === null
 
   return (
     <main className="min-h-screen bg-background text-foreground">
       <Navbar />
-      <div className="pt-24 pb-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+      <AnimatePresence mode="wait">
+        {isLoading ? (
+          <motion.div
+            key="skeleton"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="pt-24 pb-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto"
+          >
+            <div className="animate-pulse space-y-4">
+              <div className="h-8 w-64 rounded-xl bg-white/5" />
+              <div className="h-6 w-96 rounded-xl bg-white/5" />
+              <div className="h-40 rounded-2xl bg-white/5 mt-8" />
+            </div>
+          </motion.div>
+        ) : (
+          <motion.div
+            key="content"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="pt-24 pb-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto"
+          >
         {/* Header */}
         <div className="mb-10 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6">
           <div>
@@ -162,11 +135,12 @@ export default function DashboardPage() {
           </div>
         </div>
 
+        {/* Summary cards — the numbers a returning student opens the dashboard to check,
+            so they render above the workspace checklist rather than below it. */}
+        {user && data && <SummaryCards userId={user.id} semesters={data.semesters} />}
+
         {/* Academic Workspace */}
         {user && <AcademicWorkspace userId={user.id} />}
-
-        {/* Summary cards */}
-        {user && data && <SummaryCards userId={user.id} semesters={data.semesters} />}
 
         {/* Today + Weekly Timetable */}
         {user && (
@@ -180,27 +154,8 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Main content area */}
-        {hasSemesters ? (
-          <CGPATrend data={trendData} />
-        ) : (
-          <div className="rounded-2xl border border-indigo-500/20 bg-indigo-500/5 p-10 text-center mb-6">
-            <div className="w-14 h-14 rounded-2xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center mx-auto mb-4">
-              <BarChart3 className="w-7 h-7 text-indigo-400" />
-            </div>
-            <h3 className="text-lg font-semibold font-display mb-2">No academic data yet</h3>
-            <p className="text-sm text-muted-foreground mb-6 max-w-sm mx-auto">
-              Calculate your GPA or CGPA to start seeing trends, insights, and predictions here.
-            </p>
-            <a
-              href="/gpa"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-500 text-white text-sm font-medium hover:bg-indigo-600 transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              Calculate GPA
-            </a>
-          </div>
-        )}
+        {/* My Courses — current semester curriculum */}
+        {user && <MyCourses userId={user.id} />}
 
         {/* Quick actions */}
         <div className="mt-6 grid sm:grid-cols-3 gap-4">
@@ -219,7 +174,9 @@ export default function DashboardPage() {
             </a>
           ))}
         </div>
-      </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </main>
   )
 }

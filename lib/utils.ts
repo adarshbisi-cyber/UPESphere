@@ -42,3 +42,12 @@ export function getAttendanceGradient(percentage: number, required = 75): string
 export function clampNumber(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value))
 }
+
+// Shared strong ease-out curve for entering/exiting UI motion (Framer Motion
+// transition.ease). Import this instead of hand-typing the array — see
+// .claude/skills/improve-animations/AUDIT.md §2 for why a custom curve is
+// used instead of a built-in CSS easing.
+// A mutable 4-tuple (not `as const`) so it satisfies both Framer Motion's
+// `transition.ease` prop and the imperative `animate(from, to, { ease })`
+// signature, which reject a readonly tuple.
+export const EASE_OUT: [number, number, number, number] = [0.22, 1, 0.36, 1]

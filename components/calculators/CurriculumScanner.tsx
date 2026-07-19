@@ -7,7 +7,7 @@ import {
   ImagePlus, CheckCircle2, Loader2, Circle, ClipboardPaste,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { generateId } from '@/lib/utils'
+import { generateId, EASE_OUT } from '@/lib/utils'
 import { GA } from '@/lib/analytics'
 import { parseSubjectsFromOCR, type ParsedSubject } from '@/lib/curriculum-parser'
 import type { Subject } from '@/types'
@@ -284,7 +284,7 @@ export function CurriculumScanner({ onImport, onClose }: CurriculumScannerProps)
         initial={{ opacity: 0, scale: 0.96, y: 18 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.96, y: 18 }}
-        transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+        transition={{ duration: 0.25, ease: EASE_OUT }}
         className="relative w-full max-w-[480px]"
         onClick={e => e.stopPropagation()}
       >
@@ -455,7 +455,7 @@ export function CurriculumScanner({ onImport, onClose }: CurriculumScannerProps)
                     {files.map((f, i) => (
                       <motion.div
                         key={f.id}
-                        initial={{ opacity: 0, scale: 0.85 }}
+                        initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
                         whileHover={{ scale: 1.05, boxShadow: '0 4px 18px rgba(99,102,241,0.32)', borderColor: 'rgba(99,102,241,0.5)' }}
                         transition={{ delay: i * 0.05, type: 'spring', stiffness: 400, damping: 28 }}
@@ -592,7 +592,7 @@ export function CurriculumScanner({ onImport, onClose }: CurriculumScannerProps)
                       <motion.div
                         key={cls}
                         className={`absolute w-4 h-4 ${cls} border-indigo-400/80 rounded-sm`}
-                        initial={{ opacity: 0, scale: 0.3 }}
+                        initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ type: 'spring', stiffness: 380, damping: 18, delay: idx * 0.07 }}
                       />

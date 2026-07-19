@@ -4,10 +4,10 @@ import { useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Search, Building2, CalendarDays } from 'lucide-react'
 import { GlassCard } from '@/components/ui/card'
-import { cn } from '@/lib/utils'
+import { cn, EASE_OUT } from '@/lib/utils'
 import { CORPORATE_CASES } from '@/lib/data/corporateCases'
 
-const EASE = [0.22, 1, 0.36, 1] as const
+const EASE = EASE_OUT
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 const MONTHS_FULL = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
 
@@ -30,14 +30,14 @@ function Chip({ active, onClick, children }: { active: boolean; onClick: () => v
   )
 }
 
-function CaseCard({ c }: { c: (typeof CORPORATE_CASES)[number] }) {
+function CaseCard({ c, index }: { c: (typeof CORPORATE_CASES)[number]; index: number }) {
   return (
     <motion.div
       layout
       initial={{ opacity: 0, y: 16, scale: 0.98 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, scale: 0.96, transition: { duration: 0.15 } }}
-      transition={{ duration: 0.35, ease: EASE }}
+      transition={{ duration: 0.35, delay: Math.min(index, 12) * 0.04, ease: EASE }}
       whileHover={{ y: -4 }}
       className="group relative rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.06] to-white/[0.02] p-5 overflow-hidden"
     >
@@ -120,7 +120,7 @@ export function CorporateCases() {
       ) : (
         <motion.div layout className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <AnimatePresence mode="popLayout">
-            {filtered.map(c => <CaseCard key={c.id} c={c} />)}
+            {filtered.map((c, i) => <CaseCard key={c.id} c={c} index={i} />)}
           </AnimatePresence>
         </motion.div>
       )}

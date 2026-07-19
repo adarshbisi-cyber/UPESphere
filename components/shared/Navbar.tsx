@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Menu, X, GraduationCap, LogOut, LayoutDashboard,
+  Menu, X, GraduationCap, LogOut, LayoutDashboard, BookOpenCheck,
   ChevronDown, Calculator, TrendingUp, CalendarCheck, Target, Crosshair,
   Zap, MessageSquare, ExternalLink, CalendarRange, CalendarDays, Briefcase, Users, Code2,
 } from 'lucide-react'
@@ -13,7 +13,7 @@ import type { LucideIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { useAuth } from '@/components/auth/AuthProvider'
-import { cn } from '@/lib/utils'
+import { cn, EASE_OUT } from '@/lib/utils'
 
 // ── Nav dropdown data ────────────────────────────────────────────────────────
 type NavItem = {
@@ -109,7 +109,7 @@ const itemVariants = {
   visible: (i: number) => ({
     opacity: 1,
     y: 0,
-    transition: { duration: 0.22, delay: i * 0.045, ease: [0.22, 1, 0.36, 1] as number[] },
+    transition: { duration: 0.22, delay: i * 0.045, ease: EASE_OUT as number[] },
   }),
 }
 
@@ -159,7 +159,7 @@ function NavDropdown({ label, triggerIcon: TriggerIcon, headerLabel, items, foot
         {label}
         <motion.span
           animate={{ rotate: open ? 180 : 0 }}
-          transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: 0.22, ease: EASE_OUT }}
           className="flex items-center"
         >
           <ChevronDown className="w-3.5 h-3.5" />
@@ -172,13 +172,14 @@ function NavDropdown({ label, triggerIcon: TriggerIcon, headerLabel, items, foot
             initial={{ opacity: 0, scale: 0.96, y: -8 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96, y: -8 }}
-            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+            transition={{ duration: 0.2, ease: EASE_OUT }}
             role="menu"
             className="absolute left-0 top-[calc(100%+10px)] w-[460px] rounded-2xl z-50 overflow-hidden backdrop-blur-2xl"
             style={{
               background: 'var(--dropdown-bg)',
               border: '1px solid var(--dropdown-border)',
               boxShadow: 'var(--dropdown-shadow)',
+              transformOrigin: 'top left',
             }}
           >
             {/* Header */}
@@ -205,16 +206,6 @@ function NavDropdown({ label, triggerIcon: TriggerIcon, headerLabel, items, foot
                     initial="hidden"
                     animate="visible"
                     variants={itemVariants}
-                    whileHover={
-                      active
-                        ? undefined
-                        : {
-                            y: -2,
-                            scale: 1.018,
-                            boxShadow: '0 6px 22px rgba(99,102,241,0.18), 0 2px 8px rgba(99,102,241,0.10)',
-                            transition: { type: 'spring', stiffness: 420, damping: 26 },
-                          }
-                    }
                     className={cn(
                       'group relative rounded-xl border transition-colors duration-200 cursor-pointer',
                       i === items.length - 1 && items.length % 2 !== 0 && 'col-span-2',
@@ -232,15 +223,12 @@ function NavDropdown({ label, triggerIcon: TriggerIcon, headerLabel, items, foot
                       {/* Icon */}
                       <div
                         className={cn(
-                          'w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform duration-200 group-hover:scale-105',
+                          'w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0',
                           item.iconBg
                         )}
                       >
                         <item.icon
-                          className={cn(
-                            'w-[18px] h-[18px] transition-all duration-200 group-hover:scale-110 group-hover:-rotate-6',
-                            item.iconClass
-                          )}
+                          className={cn('w-[18px] h-[18px]', item.iconClass)}
                         />
                       </div>
 
@@ -407,6 +395,7 @@ function UserMenu() {
               background: 'var(--glass-from)',
               border: '1px solid var(--glass-border)',
               boxShadow: 'var(--glass-shadow)',
+              transformOrigin: 'top right',
             }}
           >
             <div className="px-4 py-3 border-b" style={{ borderColor: 'var(--divider)' }}>
@@ -421,6 +410,14 @@ function UserMenu() {
               >
                 <LayoutDashboard className="w-4 h-4 text-muted-foreground" />
                 Dashboard
+              </Link>
+              <Link
+                href="/gradebook"
+                onClick={() => setOpen(false)}
+                className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-foreground hover:bg-white/5 transition-colors"
+              >
+                <BookOpenCheck className="w-4 h-4 text-muted-foreground" />
+                Gradebook
               </Link>
               <button
                 onClick={() => { setOpen(false); signOut() }}
@@ -463,7 +460,7 @@ export function Navbar() {
     <motion.header
       initial={{ y: -80, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+      transition={{ duration: 0.5, ease: EASE_OUT }}
       className={cn(
         'fixed top-0 left-0 right-0 z-50 transition-all duration-300',
         scrolled
@@ -525,18 +522,6 @@ export function Navbar() {
               <Users className="w-3.5 h-3.5" />
               Community
             </Link>
-            <Link
-              href="/dashboard"
-              className={cn(
-                'flex items-center gap-1.5 px-3.5 py-2 text-sm rounded-xl border border-transparent transition-all duration-200',
-                pathname === '/dashboard'
-                  ? 'text-foreground bg-white/5'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
-              )}
-            >
-              <LayoutDashboard className="w-3.5 h-3.5" />
-              Dashboard
-            </Link>
             <a
               href="https://forms.gle/nNT7KWYXobfXBUTM8"
               target="_blank"
@@ -593,7 +578,7 @@ export function Navbar() {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+            transition={{ duration: 0.25, ease: EASE_OUT }}
             className="md:hidden border-t border-border bg-background/98 backdrop-blur-xl overflow-hidden"
           >
             <div className="px-4 py-3 space-y-0.5">
@@ -636,19 +621,19 @@ export function Navbar() {
                 {pathname === '/community' && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-indigo-400" />}
               </Link>
 
-              {/* Dashboard */}
+              {/* Gradebook */}
               <Link
-                href="/dashboard"
+                href="/gradebook"
                 onClick={closeMobile}
                 className={cn(
                   'flex items-center gap-3 px-4 py-3 text-sm rounded-xl transition-colors',
-                  pathname === '/dashboard'
+                  pathname === '/gradebook'
                     ? 'text-foreground bg-white/5 font-medium'
                     : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
                 )}
               >
-                <LayoutDashboard className="w-4 h-4" />
-                Dashboard
+                <BookOpenCheck className="w-4 h-4" />
+                Gradebook
               </Link>
 
               {/* Feedback */}

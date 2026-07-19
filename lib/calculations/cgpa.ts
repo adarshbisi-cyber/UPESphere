@@ -1,5 +1,40 @@
 import type { Semester, CGPAResult } from '@/types'
 
+// Shared weighted-CGPA helper used everywhere a plain "SGPA + total_credits
+// per semester" list needs to collapse to one CGPA number — the Dashboard
+// summary cards, the trend chart, and the Gradebook all call this so the
+// figure can never drift between screens (single source of truth).
+export interface WeightedSemester {
+  sgpa: number
+  totalCredits: number
+}
+
+export function computeCgpaSimple(semesters: WeightedSemester[]): number | null {
+  if (!semesters.length) return null
+  const totalCredits = semesters.reduce((s, r) => s + (r.totalCredits || 0), 0)
+  if (!totalCredits) return null
+  const weighted = semesters.reduce((s, r) => s + r.sgpa * (r.totalCredits || 0), 0)
+  return weighted / totalCredits
+}
+
+// Builds the { semester, sgpa, cgpa } series the trend chart plots, where
+// cgpa at index i is the cumulative CGPA using only semesters[0..i] — not the
+// final CGPA repeated for every point.
+export interface TrendSemester extends WeightedSemester {
+  semesterNumber: number
+}
+
+export function buildTrendData(semesters: TrendSemester[]) {
+  return semesters.map((s, i, arr) => {
+    const cgpaUpTo = computeCgpaSimple(arr.slice(0, i + 1))
+    return {
+      semester: `Sem ${s.semesterNumber}`,
+      sgpa: s.sgpa,
+      cgpa: cgpaUpTo != null ? Math.round(cgpaUpTo * 100) / 100 : s.sgpa,
+    }
+  })
+}
+
 export function calculateCGPA(semesters: Semester[]): CGPAResult {
   const valid = semesters.filter(s => s.sgpa > 0 && s.credits > 0)
 
