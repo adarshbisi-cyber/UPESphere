@@ -76,26 +76,34 @@ export function CGPATrend({ data = DEMO_DATA, title = 'Academic Trend', subtitle
       </div>
 
       {/* Screen-reader-only data table — "insight over time" is the product's whole
-          differentiator over a one-off calculator, so it needs a non-visual equivalent. */}
-      <table className="sr-only">
-        <caption>{title} — {subtitle}</caption>
-        <thead>
-          <tr>
-            <th scope="col">Semester</th>
-            <th scope="col">SGPA</th>
-            <th scope="col">CGPA</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.map(d => (
-            <tr key={d.semester}>
-              <th scope="row">{d.semester}</th>
-              <td>{d.sgpa}</td>
-              <td>{d.cgpa}</td>
+          differentiator over a one-off calculator, so it needs a non-visual equivalent.
+          `sr-only` goes on a wrapping div, not the table itself: a <table> ignores a
+          `width: 1px` override from its own native auto-layout sizing, and since it's
+          then absolutely positioned with no positioned ancestor, it escapes GlassCard
+          and expands the whole page's horizontal scroll width. A div doesn't have that
+          table-layout quirk, and its `overflow: hidden` correctly clips the table
+          inside without leaking into the page's scrollable area. */}
+      <div className="sr-only">
+        <table>
+          <caption>{title} — {subtitle}</caption>
+          <thead>
+            <tr>
+              <th scope="col">Semester</th>
+              <th scope="col">SGPA</th>
+              <th scope="col">CGPA</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {data.map(d => (
+              <tr key={d.semester}>
+                <th scope="row">{d.semester}</th>
+                <td>{d.sgpa}</td>
+                <td>{d.cgpa}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </GlassCard>
   )
 }
