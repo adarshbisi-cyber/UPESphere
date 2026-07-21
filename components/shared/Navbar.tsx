@@ -8,11 +8,13 @@ import {
   Menu, X, GraduationCap, LogOut, LayoutDashboard, BookOpenCheck,
   ChevronDown, Calculator, TrendingUp, CalendarCheck, Target, Crosshair,
   Zap, MessageSquare, ExternalLink, CalendarRange, CalendarDays, Briefcase, Users, Code2,
+  User as UserIcon, LogIn, UserPlus,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { useAuth } from '@/components/auth/AuthProvider'
+import { getInitials, getAvatarUrl, getDisplayName } from '@/lib/auth/avatar'
 import { cn, EASE_OUT } from '@/lib/utils'
 
 // ── Nav dropdown data ────────────────────────────────────────────────────────
@@ -102,6 +104,27 @@ const calendarItems: NavItem[] = [
     iconBg: 'bg-cyan-500/15',
     activeBg: 'bg-cyan-500/10 border-cyan-500/25',
   },
+]
+
+// Shared between the desktop nav row and the mobile primary menu — Career,
+// Community, and Feedback render from this one list on both layouts (each
+// still has its own markup/styling per layout, same pattern as the
+// calculators/calendarItems arrays above feeding NavDropdown vs
+// MobileNavAccordion) so the two surfaces can't drift out of sync.
+type SimpleLink = { label: string; href: string; icon: LucideIcon; external?: boolean }
+
+const primaryLinks: SimpleLink[] = [
+  { label: 'Career', href: '/career', icon: Briefcase },
+  { label: 'Community', href: '/community', icon: Users },
+  { label: 'Feedback', href: 'https://forms.gle/nNT7KWYXobfXBUTM8', icon: MessageSquare, external: true },
+]
+
+// Dashboard and Gradebook are authenticated, personal features — kept out of
+// primaryLinks (and out of primary navigation entirely) and only surfaced
+// inside the account menu/section, on both desktop and mobile.
+const accountLinks: SimpleLink[] = [
+  { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { label: 'Gradebook', href: '/gradebook', icon: BookOpenCheck },
 ]
 
 const itemVariants = {
@@ -345,42 +368,72 @@ function MobileNavAccordion({ label, triggerIcon: TriggerIcon, items, onNavigate
   )
 }
 
-// ── UserMenu ──────────────────────────────────────────────────────────────────
-function UserMenu() {
+// ── Avatar (shared trigger visual for desktop + mobile) ───────────────────────
+function Avatar({ size = 28 }: { size?: number }) {
+  const { user } = useAuth()
+  const avatarUrl = getAvatarUrl(user)
+
+  if (!user) {
+    return (
+      <div
+        className="rounded-full flex items-center justify-center text-muted-foreground"
+        style={{ width: size, height: size, background: 'var(--muted-surface)', border: '1px solid var(--divider)' }}
+      >
+        <UserIcon style={{ width: size * 0.55, height: size * 0.55 }} />
+      </div>
+    )
+  }
+
+  if (avatarUrl) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={avatarUrl} alt="" className="rounded-full object-cover shrink-0" style={{ width: size, height: size }} />
+  }
+
+  return (
+    <div
+      className="rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center text-white font-bold shadow-md shadow-indigo-500/25 shrink-0"
+      style={{ width: size, height: size, fontSize: size * 0.4 }}
+    >
+      {getInitials(user)}
+    </div>
+  )
+}
+
+// ── ProfileMenu (desktop) ──────────────────────────────────────────────────────
+// Always-visible circular trigger regardless of auth state — the dropdown
+// content branches on `user`, but the trigger itself never disappears, so a
+// logged-out visitor can still see Dashboard/Gradebook exist before signing in.
+function ProfileMenu() {
   const { user, signOut } = useAuth()
+  const pathname = usePathname()
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    const handler = (e: MouseEvent) => {
+    const onDown = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
     }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false) }
+    document.addEventListener('mousedown', onDown)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onDown)
+      document.removeEventListener('keydown', onKey)
+    }
   }, [])
 
-  if (!user) return null
-
-  const initials = (
-    user.user_metadata?.full_name
-      ? user.user_metadata.full_name
-          .split(' ')
-          .slice(0, 2)
-          .map((n: string) => n[0])
-          .join('')
-      : user.email?.[0] ?? 'U'
-  ).toUpperCase()
+  useEffect(() => { setOpen(false) }, [pathname])
 
   return (
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen(o => !o)}
-        className="flex items-center gap-2 px-2 py-1.5 rounded-xl hover:bg-white/5 transition-colors"
+        aria-label="Open account menu"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        className="flex items-center gap-1.5 p-1 rounded-full hover:bg-white/5 transition-colors"
       >
-        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center text-white text-xs font-bold shadow-md shadow-indigo-500/25">
-          {initials}
-        </div>
-        <ChevronDown className={cn('w-3.5 h-3.5 text-muted-foreground transition-transform duration-200', open && 'rotate-180')} />
+        <Avatar />
       </button>
 
       <AnimatePresence>
@@ -390,7 +443,8 @@ function UserMenu() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 6, scale: 0.97 }}
             transition={{ duration: 0.15 }}
-            className="absolute right-0 top-full mt-2 w-52 rounded-2xl overflow-hidden z-50"
+            role="menu"
+            className="absolute right-0 top-full mt-2 w-56 rounded-2xl overflow-hidden z-50"
             style={{
               background: 'var(--glass-from)',
               border: '1px solid var(--glass-border)',
@@ -398,34 +452,186 @@ function UserMenu() {
               transformOrigin: 'top right',
             }}
           >
-            <div className="px-4 py-3 border-b" style={{ borderColor: 'var(--divider)' }}>
-              <p className="text-xs font-medium text-foreground truncate">{user.user_metadata?.full_name ?? 'Student'}</p>
-              <p className="text-xs text-muted-foreground truncate">{user.email}</p>
-            </div>
-            <div className="py-1.5">
-              <Link
-                href="/dashboard"
-                onClick={() => setOpen(false)}
-                className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-foreground hover:bg-white/5 transition-colors"
-              >
-                <LayoutDashboard className="w-4 h-4 text-muted-foreground" />
-                Dashboard
-              </Link>
-              <Link
-                href="/gradebook"
-                onClick={() => setOpen(false)}
-                className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-foreground hover:bg-white/5 transition-colors"
-              >
-                <BookOpenCheck className="w-4 h-4 text-muted-foreground" />
-                Gradebook
-              </Link>
-              <button
-                onClick={() => { setOpen(false); signOut() }}
-                className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/10 transition-colors"
-              >
-                <LogOut className="w-4 h-4" />
-                Sign out
-              </button>
+            {user ? (
+              <>
+                <div className="px-4 py-3 border-b flex items-center gap-3" style={{ borderColor: 'var(--divider)' }}>
+                  <Avatar size={32} />
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-foreground truncate">{getDisplayName(user)}</p>
+                    <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                  </div>
+                </div>
+                <div className="py-1.5">
+                  {accountLinks.map(item => (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      role="menuitem"
+                      onClick={() => setOpen(false)}
+                      className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-foreground hover:bg-white/5 transition-colors"
+                    >
+                      <item.icon className="w-4 h-4 text-muted-foreground" />
+                      {item.label}
+                    </Link>
+                  ))}
+                  <button
+                    role="menuitem"
+                    onClick={() => { setOpen(false); signOut() }}
+                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/10 transition-colors"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Sign out
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="px-4 py-3 border-b" style={{ borderColor: 'var(--divider)' }}>
+                  <p className="text-xs font-medium text-foreground">Guest</p>
+                  <p className="text-xs text-muted-foreground">Not signed in</p>
+                </div>
+                <div className="py-1.5 border-b" style={{ borderColor: 'var(--divider)' }}>
+                  {/* Plain links to the real routes — middleware already redirects an
+                      unauthenticated visit to /login?redirect=<path> and the login
+                      page already restores that destination after sign-in, so no
+                      extra redirect wiring is needed here. */}
+                  {accountLinks.map(item => (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      role="menuitem"
+                      onClick={() => setOpen(false)}
+                      className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-foreground hover:bg-white/5 transition-colors"
+                    >
+                      <item.icon className="w-4 h-4 text-muted-foreground" />
+                      {item.label}
+                    </Link>
+                  ))}
+                </div>
+                <div className="py-1.5">
+                  <Link
+                    href="/login"
+                    role="menuitem"
+                    onClick={() => setOpen(false)}
+                    className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-foreground hover:bg-white/5 transition-colors"
+                  >
+                    <LogIn className="w-4 h-4 text-muted-foreground" />
+                    Sign In
+                  </Link>
+                  <Link
+                    href="/login?mode=signup"
+                    role="menuitem"
+                    onClick={() => setOpen(false)}
+                    className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-indigo-400 hover:bg-indigo-500/10 transition-colors"
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    Create Account
+                  </Link>
+                </div>
+              </>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
+
+// ── MobileAccountSection ───────────────────────────────────────────────────────
+function MobileAccountSection({ onNavigate }: { onNavigate: () => void }) {
+  const { user, signOut } = useAuth()
+  const [open, setOpen] = useState(false)
+
+  return (
+    <div>
+      <button
+        onClick={() => setOpen(o => !o)}
+        aria-label="Open account menu"
+        aria-expanded={open}
+        className="w-full flex items-center justify-between px-4 py-3 text-sm rounded-xl text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors"
+      >
+        <span className="font-medium inline-flex items-center gap-3">
+          <Avatar size={22} />
+          Account
+        </span>
+        <motion.span animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.22 }} className="flex items-center">
+          <ChevronDown className="w-4 h-4" />
+        </motion.span>
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            <div className="pl-3 pb-1 pt-0.5 space-y-0.5">
+              {user ? (
+                <>
+                  <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl mb-1" style={{ background: 'var(--muted-surface)' }}>
+                    <Avatar size={32} />
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium text-foreground truncate">{getDisplayName(user)}</p>
+                      <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                    </div>
+                  </div>
+                  {accountLinks.map(item => (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={onNavigate}
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm rounded-xl text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors"
+                    >
+                      <item.icon className="w-4 h-4" />
+                      {item.label}
+                    </Link>
+                  ))}
+                  <button
+                    onClick={() => { onNavigate(); signOut() }}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/10 rounded-xl transition-colors"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Sign out
+                  </button>
+                </>
+              ) : (
+                <>
+                  <div className="px-4 py-2 mb-0.5">
+                    <p className="text-xs font-medium text-foreground">Guest</p>
+                    <p className="text-xs text-muted-foreground">Not signed in</p>
+                  </div>
+                  {accountLinks.map(item => (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={onNavigate}
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm rounded-xl text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors"
+                    >
+                      <item.icon className="w-4 h-4" />
+                      {item.label}
+                    </Link>
+                  ))}
+                  <Link
+                    href="/login"
+                    onClick={onNavigate}
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm rounded-xl text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors"
+                  >
+                    <LogIn className="w-4 h-4" />
+                    Sign In
+                  </Link>
+                  <Link
+                    href="/login?mode=signup"
+                    onClick={onNavigate}
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm rounded-xl text-indigo-400 hover:bg-indigo-500/10 transition-colors"
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    Create Account
+                  </Link>
+                </>
+              )}
             </div>
           </motion.div>
         )}
@@ -436,7 +642,6 @@ function UserMenu() {
 
 // ── Navbar ────────────────────────────────────────────────────────────────────
 export function Navbar() {
-  const { user, loading, signOut } = useAuth()
   const pathname = usePathname()
   const [scrolled, setScrolled] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -451,6 +656,18 @@ export function Navbar() {
   useEffect(() => {
     setMobileOpen(false)
   }, [pathname])
+
+  // Lock background scroll while the mobile drawer is open, and always
+  // restore it — both on close and on unmount, so a navigation away from the
+  // page never leaves scroll stuck off.
+  useEffect(() => {
+    if (mobileOpen) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => { document.body.style.overflow = '' }
+  }, [mobileOpen])
 
   const closeMobile = () => {
     setMobileOpen(false)
@@ -498,63 +715,52 @@ export function Navbar() {
               items={calendarItems}
               footerText="More calendars coming soon"
             />
-            <Link
-              href="/career"
-              className={cn(
-                'flex items-center gap-1.5 px-3.5 py-2 text-sm rounded-xl border border-transparent transition-all duration-200',
-                pathname === '/career'
-                  ? 'text-foreground bg-white/5'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
-              )}
-            >
-              <Briefcase className="w-3.5 h-3.5" />
-              Career
-            </Link>
-            <Link
-              href="/community"
-              className={cn(
-                'flex items-center gap-1.5 px-3.5 py-2 text-sm rounded-xl border border-transparent transition-all duration-200',
-                pathname === '/community'
-                  ? 'text-foreground bg-white/5'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
-              )}
-            >
-              <Users className="w-3.5 h-3.5" />
-              Community
-            </Link>
-            <a
-              href="https://forms.gle/nNT7KWYXobfXBUTM8"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 px-3.5 py-2 text-sm text-muted-foreground hover:text-foreground rounded-xl hover:bg-white/5 border border-transparent transition-all duration-200"
-            >
-              <MessageSquare className="w-3.5 h-3.5" />
-              Feedback
-              <ExternalLink className="w-3 h-3 opacity-50" />
-            </a>
+            {primaryLinks.map(item => {
+              const active = !item.external && pathname === item.href
+              if (item.external) {
+                return (
+                  <a
+                    key={item.href}
+                    href={item.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 px-3.5 py-2 text-sm text-muted-foreground hover:text-foreground rounded-xl hover:bg-white/5 border border-transparent transition-all duration-200"
+                  >
+                    <item.icon className="w-3.5 h-3.5" />
+                    {item.label}
+                    <ExternalLink className="w-3 h-3 opacity-50" />
+                  </a>
+                )
+              }
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={cn(
+                    'flex items-center gap-1.5 px-3.5 py-2 text-sm rounded-xl border border-transparent transition-all duration-200',
+                    active
+                      ? 'text-foreground bg-white/5'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
+                  )}
+                >
+                  <item.icon className="w-3.5 h-3.5" />
+                  {item.label}
+                </Link>
+              )
+            })}
           </nav>
 
           {/* Right side */}
           <div className="hidden md:flex items-center gap-2.5">
             <ThemeToggle />
-            {!loading && (
-              user ? (
-                <UserMenu />
-              ) : (
-                <Link href="/login">
-                  <Button variant="ghost" size="sm" className="text-muted-foreground">
-                    Sign In
-                  </Button>
-                </Link>
-              )
-            )}
+            <ProfileMenu />
           </div>
 
           {/* Mobile toggle */}
           <button
             onClick={() => setMobileOpen(o => !o)}
             className="md:hidden p-2 rounded-lg hover:bg-white/10 text-muted-foreground hover:text-foreground transition-colors"
-            aria-label="Toggle menu"
+            aria-label={mobileOpen ? 'Close navigation menu' : 'Open navigation menu'}
           >
             <AnimatePresence mode="wait" initial={false}>
               <motion.div
@@ -571,15 +777,18 @@ export function Navbar() {
         </div>
       </div>
 
-      {/* Mobile Menu */}
+      {/* Mobile Menu — a dedicated full-viewport drawer (not an inline expanding
+          panel), so homepage content never shows through or competes visually,
+          and it correctly accounts for iOS safe areas via env(safe-area-inset-*). */}
       <AnimatePresence>
         {mobileOpen && (
           <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.25, ease: EASE_OUT }}
-            className="md:hidden border-t border-border bg-background/98 backdrop-blur-xl overflow-hidden"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2, ease: EASE_OUT }}
+            className="md:hidden fixed inset-x-0 top-16 bottom-0 z-40 bg-background overflow-y-auto"
+            style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
           >
             <div className="px-4 py-3 space-y-0.5">
 
@@ -589,101 +798,55 @@ export function Navbar() {
               {/* Calendar accordion */}
               <MobileNavAccordion label="Calendar" triggerIcon={CalendarRange} items={calendarItems} onNavigate={closeMobile} />
 
-              {/* Career */}
-              <Link
-                href="/career"
-                onClick={closeMobile}
-                className={cn(
-                  'flex items-center gap-3 px-4 py-3 text-sm rounded-xl transition-colors',
-                  pathname === '/career'
-                    ? 'text-foreground bg-white/5 font-medium'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
-                )}
-              >
-                <Briefcase className="w-4 h-4" />
-                Career
-                {pathname === '/career' && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-indigo-400" />}
-              </Link>
+              {/* Career / Community / Feedback */}
+              {primaryLinks.map(item => {
+                const active = !item.external && pathname === item.href
+                if (item.external) {
+                  return (
+                    <a
+                      key={item.href}
+                      href={item.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={closeMobile}
+                      className="flex items-center gap-3 px-4 py-3 text-sm text-muted-foreground hover:text-foreground rounded-xl hover:bg-white/5 transition-colors"
+                    >
+                      <item.icon className="w-4 h-4" />
+                      {item.label}
+                      <ExternalLink className="w-3.5 h-3.5 ml-auto opacity-50" />
+                    </a>
+                  )
+                }
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={closeMobile}
+                    className={cn(
+                      'flex items-center gap-3 px-4 py-3 text-sm rounded-xl transition-colors',
+                      active
+                        ? 'text-foreground bg-white/5 font-medium'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
+                    )}
+                  >
+                    <item.icon className="w-4 h-4" />
+                    {item.label}
+                    {active && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-indigo-400" />}
+                  </Link>
+                )
+              })}
 
-              {/* Community */}
-              <Link
-                href="/community"
-                onClick={closeMobile}
-                className={cn(
-                  'flex items-center gap-3 px-4 py-3 text-sm rounded-xl transition-colors',
-                  pathname === '/community'
-                    ? 'text-foreground bg-white/5 font-medium'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
-                )}
-              >
-                <Users className="w-4 h-4" />
-                Community
-                {pathname === '/community' && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-indigo-400" />}
-              </Link>
-
-              {/* Gradebook */}
-              <Link
-                href="/gradebook"
-                onClick={closeMobile}
-                className={cn(
-                  'flex items-center gap-3 px-4 py-3 text-sm rounded-xl transition-colors',
-                  pathname === '/gradebook'
-                    ? 'text-foreground bg-white/5 font-medium'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
-                )}
-              >
-                <BookOpenCheck className="w-4 h-4" />
-                Gradebook
-              </Link>
-
-              {/* Feedback */}
-              <a
-                href="https://forms.gle/nNT7KWYXobfXBUTM8"
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={closeMobile}
-                className="flex items-center gap-3 px-4 py-3 text-sm text-muted-foreground hover:text-foreground rounded-xl hover:bg-white/5 transition-colors"
-              >
-                <MessageSquare className="w-4 h-4" />
-                Feedback
-                <ExternalLink className="w-3.5 h-3.5 ml-auto opacity-50" />
-              </a>
-
-              {/* Auth + Theme */}
-              <div className="pt-3 mt-1 border-t border-border space-y-2">
-                <div className="flex items-center justify-between px-2 py-1.5">
+              {/* Appearance */}
+              <div className="pt-3 mt-2 border-t" style={{ borderColor: 'var(--divider)' }}>
+                <div className="flex items-center justify-between px-4 py-3">
                   <span className="text-sm text-muted-foreground">Appearance</span>
                   <ThemeToggle />
                 </div>
+              </div>
 
-                {!loading && user ? (
-                  <>
-                    <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-white/[0.03]">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                        {(
-                          user.user_metadata?.full_name
-                            ? user.user_metadata.full_name.split(' ').slice(0, 2).map((n: string) => n[0]).join('')
-                            : user.email?.[0] ?? 'U'
-                        ).toUpperCase()}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-xs font-medium text-foreground truncate">{user.user_metadata?.full_name ?? 'Student'}</p>
-                        <p className="text-xs text-muted-foreground truncate">{user.email}</p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => { closeMobile(); signOut() }}
-                      className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-400 hover:bg-red-500/10 rounded-xl transition-colors"
-                    >
-                      <LogOut className="w-4 h-4" />
-                      Sign out
-                    </button>
-                  </>
-                ) : (
-                  <Link href="/login" onClick={closeMobile}>
-                    <Button variant="outline" className="w-full">Sign In</Button>
-                  </Link>
-                )}
+              {/* Account */}
+              <div className="pt-1 mt-1 border-t" style={{ borderColor: 'var(--divider)' }}>
+                <MobileAccountSection onNavigate={closeMobile} />
               </div>
             </div>
           </motion.div>

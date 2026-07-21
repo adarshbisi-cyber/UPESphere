@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label'
 import { createClient } from '@/lib/supabase/client'
 import { isValidName, isValidEmail, isValidPassword, checkPassword } from '@/lib/auth/validation'
 import { friendlyAuthError } from '@/lib/auth/errors'
+import { safeRedirectPath } from '@/lib/auth/redirect'
 
 type Mode = 'signin' | 'signup' | 'forgot'
 
@@ -29,9 +30,11 @@ export default function LoginPage() {
   )
   const [resetSent, setResetSent] = useState(false)
   const [noAccount, setNoAccount] = useState(false)
-  const [mode, setMode] = useState<Mode>('signin')
+  // "Create Account" in the nav's profile menu links here with ?mode=signup
+  // so it actually opens the signup view instead of landing on sign-in twice.
+  const [mode, setMode] = useState<Mode>(searchParams.get('mode') === 'signup' ? 'signup' : 'signin')
   const router = useRouter()
-  const redirect = searchParams.get('redirect') ?? '/dashboard'
+  const redirect = safeRedirectPath(searchParams.get('redirect'))
 
   const supabase = createClient()
 

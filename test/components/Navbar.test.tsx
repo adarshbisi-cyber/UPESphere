@@ -36,7 +36,7 @@ describe('Navbar', () => {
   it('shows Community in the mobile menu after opening it', () => {
     render(<Navbar />)
 
-    fireEvent.click(screen.getByRole('button', { name: /toggle menu/i }))
+    fireEvent.click(screen.getByRole('button', { name: /open navigation menu/i }))
 
     const mobileMenu = screen.getByText('Appearance').closest('div')?.parentElement?.parentElement
     expect(mobileMenu).toBeTruthy()
