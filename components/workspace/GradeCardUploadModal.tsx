@@ -10,6 +10,7 @@ import { extractPdfTextItems, hasExtractableText } from '@/lib/parsers/pdfText'
 import { parseGradeCardItems, type ParsedSemesterBlock } from '@/lib/parsers/gradeCardParser'
 import { saveGradeCardSemesters, getUsedSemesterNumbers } from '@/lib/onboarding/api'
 import { describeSaveError } from '@/lib/onboarding/errors'
+import { notifyGradeSheetProcessed } from '@/lib/notifications/api'
 import { generateId } from '@/lib/utils'
 
 type Status = 'idle' | 'parsing' | 'reviewing' | 'error'
@@ -138,6 +139,10 @@ export function GradeCardUploadModal({
     setSaveError('')
     try {
       await saveGradeCardSemesters(userId, toParsedSemesterBlocks(semesters))
+      // Fire-and-forget: the grade sheet is already safely persisted at this
+      // point, so a transient notification failure must never surface as a
+      // save error to a user who just watched their upload succeed.
+      notifyGradeSheetProcessed().catch(() => {})
       onSaved()
     } catch (err) {
       setSaveError(describeSaveError(err))
