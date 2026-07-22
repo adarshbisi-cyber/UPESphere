@@ -8,11 +8,12 @@ import {
   Menu, X, GraduationCap, LogOut, LayoutDashboard, BookOpenCheck,
   ChevronDown, Calculator, TrendingUp, CalendarCheck, Target, Crosshair,
   Zap, MessageSquare, ExternalLink, CalendarRange, CalendarDays, Briefcase, Users, Code2,
-  User as UserIcon, LogIn, UserPlus,
+  User as UserIcon, LogIn, UserPlus, Users2, LayoutGrid,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
+import { NotificationBell } from '@/components/notifications/NotificationBell'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { getInitials, getAvatarUrl, getDisplayName } from '@/lib/auth/avatar'
 import { cn, EASE_OUT } from '@/lib/utils'
@@ -106,25 +107,59 @@ const calendarItems: NavItem[] = [
   },
 ]
 
-// Shared between the desktop nav row and the mobile primary menu — Career,
-// Community, and Feedback render from this one list on both layouts (each
-// still has its own markup/styling per layout, same pattern as the
+// Shared between the desktop nav row and the mobile primary menu — each
+// still has its own markup/styling per layout (same pattern as the
 // calculators/calendarItems arrays above feeding NavDropdown vs
-// MobileNavAccordion) so the two surfaces can't drift out of sync.
+// MobileNavAccordion) so the two surfaces can't drift out of sync. Split
+// into two arrays (rather than one) because Community sits between them as
+// its own dropdown/accordion, not a plain link.
 type SimpleLink = { label: string; href: string; icon: LucideIcon; external?: boolean }
 
-const primaryLinks: SimpleLink[] = [
+const primaryLinksBeforeCommunity: SimpleLink[] = [
   { label: 'Career', href: '/career', icon: Briefcase },
-  { label: 'Community', href: '/community', icon: Users },
+]
+
+const primaryLinksAfterCommunity: SimpleLink[] = [
   { label: 'Feedback', href: 'https://forms.gle/nNT7KWYXobfXBUTM8', icon: MessageSquare, external: true },
 ]
 
-// Dashboard and Gradebook are authenticated, personal features — kept out of
-// primaryLinks (and out of primary navigation entirely) and only surfaced
-// inside the account menu/section, on both desktop and mobile.
+// TeamUp lives inside the Community dropdown/accordion instead of its own
+// top-level nav item. Structured as a NavItem list (like calculators/
+// calendarItems above) so future community features — Find Students, Clubs &
+// Societies, Events — can be added here later without restructuring the
+// dropdown. "Community Feed" keeps the pre-existing /community teaser page
+// reachable now that Community itself no longer links there directly.
+const communityItems: NavItem[] = [
+  {
+    label: 'TeamUp',
+    description: 'Find teammates for competitions',
+    href: '/teamup',
+    icon: Users2,
+    iconClass: 'text-indigo-400',
+    iconBg: 'bg-indigo-500/15',
+    activeBg: 'bg-indigo-500/10 border-indigo-500/25',
+  },
+  {
+    label: 'Community Feed',
+    description: 'Study squads, peer Q&A, and campus chatter',
+    href: '/community',
+    icon: Users,
+    iconClass: 'text-violet-400',
+    iconBg: 'bg-violet-500/15',
+    activeBg: 'bg-violet-500/10 border-violet-500/25',
+  },
+]
+
+// Dashboard, Gradebook, and My TeamUp are authenticated, personal features —
+// kept out of primaryLinks (and out of primary navigation entirely) and only
+// surfaced inside the account menu/section, on both desktop and mobile. My
+// TeamUp is where every TeamUp status update lives (applications, invitations,
+// join requests) — without an entry here it was only reachable via a
+// notification deep link or by guessing the URL.
 const accountLinks: SimpleLink[] = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { label: 'Gradebook', href: '/gradebook', icon: BookOpenCheck },
+  { label: 'My TeamUp', href: '/teamup/mine', icon: LayoutGrid },
 ]
 
 const itemVariants = {
@@ -372,6 +407,12 @@ function MobileNavAccordion({ label, triggerIcon: TriggerIcon, items, onNavigate
 function Avatar({ size = 28 }: { size?: number }) {
   const { user } = useAuth()
   const avatarUrl = getAvatarUrl(user)
+  // OAuth avatar URLs (Google's lh3.googleusercontent.com, etc.) aren't
+  // guaranteed to stay reachable — they can expire, rotate, or 404. Without
+  // this, a failed load leaves the browser's broken-image icon on screen
+  // permanently instead of falling back to the initials circle below.
+  const [imgFailed, setImgFailed] = useState(false)
+  useEffect(() => { setImgFailed(false) }, [avatarUrl])
 
   if (!user) {
     return (
@@ -384,9 +425,17 @@ function Avatar({ size = 28 }: { size?: number }) {
     )
   }
 
-  if (avatarUrl) {
-    // eslint-disable-next-line @next/next/no-img-element
-    return <img src={avatarUrl} alt="" className="rounded-full object-cover shrink-0" style={{ width: size, height: size }} />
+  if (avatarUrl && !imgFailed) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={avatarUrl}
+        alt=""
+        onError={() => setImgFailed(true)}
+        className="rounded-full object-cover shrink-0"
+        style={{ width: size, height: size }}
+      />
+    )
   }
 
   return (
@@ -715,8 +764,48 @@ export function Navbar() {
               items={calendarItems}
               footerText="More calendars coming soon"
             />
-            {primaryLinks.map(item => {
-              const active = !item.external && pathname === item.href
+            {primaryLinksBeforeCommunity.map(item => {
+              const active = !item.external && pathname.startsWith(item.href)
+              if (item.external) {
+                return (
+                  <a
+                    key={item.href}
+                    href={item.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 px-3.5 py-2 text-sm text-muted-foreground hover:text-foreground rounded-xl hover:bg-white/5 border border-transparent transition-all duration-200"
+                  >
+                    <item.icon className="w-3.5 h-3.5" />
+                    {item.label}
+                    <ExternalLink className="w-3 h-3 opacity-50" />
+                  </a>
+                )
+              }
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={cn(
+                    'flex items-center gap-1.5 px-3.5 py-2 text-sm rounded-xl border border-transparent transition-all duration-200',
+                    active
+                      ? 'text-foreground bg-white/5'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
+                  )}
+                >
+                  <item.icon className="w-3.5 h-3.5" />
+                  {item.label}
+                </Link>
+              )
+            })}
+            <NavDropdown
+              label="Community"
+              triggerIcon={Users}
+              headerLabel="Community"
+              items={communityItems}
+              footerText="More community features coming soon"
+            />
+            {primaryLinksAfterCommunity.map(item => {
+              const active = !item.external && pathname.startsWith(item.href)
               if (item.external) {
                 return (
                   <a
@@ -753,27 +842,32 @@ export function Navbar() {
           {/* Right side */}
           <div className="hidden md:flex items-center gap-2.5">
             <ThemeToggle />
+            <NotificationBell />
             <ProfileMenu />
           </div>
 
-          {/* Mobile toggle */}
-          <button
-            onClick={() => setMobileOpen(o => !o)}
-            className="md:hidden p-2 rounded-lg hover:bg-white/10 text-muted-foreground hover:text-foreground transition-colors"
-            aria-label={mobileOpen ? 'Close navigation menu' : 'Open navigation menu'}
-          >
-            <AnimatePresence mode="wait" initial={false}>
-              <motion.div
-                key={mobileOpen ? 'close' : 'open'}
-                initial={{ rotate: -90, opacity: 0 }}
-                animate={{ rotate: 0, opacity: 1 }}
-                exit={{ rotate: 90, opacity: 0 }}
-                transition={{ duration: 0.15 }}
-              >
-                {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-              </motion.div>
-            </AnimatePresence>
-          </button>
+          {/* Mobile: bell stays directly visible (not buried in the drawer)
+              alongside the hamburger toggle, same "always reachable" bar. */}
+          <div className="md:hidden flex items-center gap-1">
+            <NotificationBell />
+            <button
+              onClick={() => setMobileOpen(o => !o)}
+              className="p-2 rounded-lg hover:bg-white/10 text-muted-foreground hover:text-foreground transition-colors"
+              aria-label={mobileOpen ? 'Close navigation menu' : 'Open navigation menu'}
+            >
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.div
+                  key={mobileOpen ? 'close' : 'open'}
+                  initial={{ rotate: -90, opacity: 0 }}
+                  animate={{ rotate: 0, opacity: 1 }}
+                  exit={{ rotate: 90, opacity: 0 }}
+                  transition={{ duration: 0.15 }}
+                >
+                  {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+                </motion.div>
+              </AnimatePresence>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -798,9 +892,50 @@ export function Navbar() {
               {/* Calendar accordion */}
               <MobileNavAccordion label="Calendar" triggerIcon={CalendarRange} items={calendarItems} onNavigate={closeMobile} />
 
-              {/* Career / Community / Feedback */}
-              {primaryLinks.map(item => {
-                const active = !item.external && pathname === item.href
+              {/* Career */}
+              {primaryLinksBeforeCommunity.map(item => {
+                const active = !item.external && pathname.startsWith(item.href)
+                if (item.external) {
+                  return (
+                    <a
+                      key={item.href}
+                      href={item.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={closeMobile}
+                      className="flex items-center gap-3 px-4 py-3 text-sm text-muted-foreground hover:text-foreground rounded-xl hover:bg-white/5 transition-colors"
+                    >
+                      <item.icon className="w-4 h-4" />
+                      {item.label}
+                      <ExternalLink className="w-3.5 h-3.5 ml-auto opacity-50" />
+                    </a>
+                  )
+                }
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={closeMobile}
+                    className={cn(
+                      'flex items-center gap-3 px-4 py-3 text-sm rounded-xl transition-colors',
+                      active
+                        ? 'text-foreground bg-white/5 font-medium'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
+                    )}
+                  >
+                    <item.icon className="w-4 h-4" />
+                    {item.label}
+                    {active && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-indigo-400" />}
+                  </Link>
+                )
+              })}
+
+              {/* Community accordion (contains TeamUp) */}
+              <MobileNavAccordion label="Community" triggerIcon={Users} items={communityItems} onNavigate={closeMobile} />
+
+              {/* Feedback */}
+              {primaryLinksAfterCommunity.map(item => {
+                const active = !item.external && pathname.startsWith(item.href)
                 if (item.external) {
                   return (
                     <a

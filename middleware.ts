@@ -27,12 +27,17 @@ export async function middleware(req: NextRequest) {
   // reached by clicking the nav link or by typing the URL directly — bounce to
   // sign-in here, before the server component renders (so no protected content
   // flashes). Keep this list in sync with `config.matcher` below.
+  // TeamUp itself is publicly browsable (feed, student discovery, team detail
+  // pages) — only the personal "My TeamUp" dashboard requires auth, so it's
+  // scoped to /teamup/mine rather than the whole /teamup tree.
   const isProtected =
     path.startsWith('/dashboard') ||
     path.startsWith('/workspace') ||
     path.startsWith('/gradebook') ||
     path.startsWith('/career') ||
-    path.startsWith('/community')
+    path.startsWith('/community') ||
+    path.startsWith('/teamup/mine') ||
+    path.startsWith('/notifications')
   const emailVerified = !!(user && (user.email_confirmed_at || user.confirmed_at))
 
   // Not signed in → bounce protected routes to login (preserving intended dest).
@@ -83,6 +88,8 @@ export const config = {
     '/gradebook/:path*',
     '/career/:path*',
     '/community/:path*',
+    '/teamup/mine/:path*',
+    '/notifications/:path*',
     '/login',
   ],
 }
