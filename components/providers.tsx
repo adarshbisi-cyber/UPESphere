@@ -4,6 +4,7 @@ import { ThemeProvider } from 'next-themes'
 import { Toaster } from '@/components/ui/toaster'
 import { AnalyticsProvider } from '@/components/analytics/AnalyticsProvider'
 import { AuthProvider } from '@/components/auth/AuthProvider'
+import { NotificationsProvider } from '@/components/notifications/NotificationsProvider'
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -13,9 +14,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
       enableSystem
     >
       <AuthProvider>
-        <AnalyticsProvider />
-        {children}
-        <Toaster />
+        <NotificationsProvider>
+          <AnalyticsProvider />
+          {children}
+          <Toaster />
+        </NotificationsProvider>
       </AuthProvider>
     </ThemeProvider>
   )

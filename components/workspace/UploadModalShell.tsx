@@ -1,9 +1,12 @@
 'use client'
 
+import { useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { EASE_OUT } from '@/lib/utils'
 import { X } from 'lucide-react'
+
+const FOCUSABLE_SELECTOR = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
 
 // Rendered via a portal straight to document.body. Without this, a `fixed
 // inset-0` overlay only actually covers the viewport if EVERY ancestor is
@@ -23,6 +26,45 @@ export function UploadModalShell({
   children: React.ReactNode
   maxWidth?: string
 }) {
+  const panelRef = useRef<HTMLDivElement>(null)
+
+  // Escape-to-close, a Tab focus trap scoped to the modal panel, and
+  // restoring focus to whatever triggered the modal on close — every modal
+  // in the app shares this shell, so fixing it here fixes all of them at once.
+  useEffect(() => {
+    const previouslyFocused = document.activeElement as HTMLElement | null
+    const firstFocusable = panelRef.current?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR)
+    ;(firstFocusable ?? panelRef.current)?.focus()
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose()
+        return
+      }
+      if (e.key !== 'Tab' || !panelRef.current) return
+
+      const focusables = Array.from(panelRef.current.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR))
+      if (focusables.length === 0) return
+      const first = focusables[0]
+      const last = focusables[focusables.length - 1]
+
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault()
+        last.focus()
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault()
+        first.focus()
+      }
+    }
+
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('keydown', onKeyDown)
+      previouslyFocused?.focus()
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   if (typeof document === 'undefined') return null
 
   return createPortal(
@@ -34,11 +76,15 @@ export function UploadModalShell({
           onClick={onClose}
         />
         <motion.div
+          ref={panelRef}
+          role="dialog"
+          aria-modal="true"
+          tabIndex={-1}
           initial={{ opacity: 0, scale: 0.96, y: 18 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.96, y: 18 }}
           transition={{ duration: 0.25, ease: EASE_OUT }}
-          className={`relative w-full ${maxWidth} max-h-[90vh] overflow-y-auto`}
+          className={`relative w-full ${maxWidth} max-h-[90vh] overflow-y-auto outline-none`}
           onClick={e => e.stopPropagation()}
         >
           <div
@@ -52,6 +98,7 @@ export function UploadModalShell({
           >
             <button
               onClick={onClose}
+              aria-label="Close"
               className="absolute top-4 right-4 text-muted-foreground hover:text-foreground transition-colors z-10"
             >
               <X className="w-4 h-4" />
