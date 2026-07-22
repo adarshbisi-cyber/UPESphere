@@ -53,7 +53,17 @@ function actionLabel(key: ItemKey, done: boolean): string {
   }
 }
 
-export function AcademicWorkspace({ userId }: { userId: string }) {
+export function AcademicWorkspace({
+  userId,
+  onGradeSheetsChanged,
+}: {
+  userId: string
+  // Grade sheets are the only one of this card's five documents that feed
+  // the Dashboard's own SummaryCards (SGPA/CGPA/credits/degree progress) —
+  // this lets the parent refetch just that data, without this component
+  // needing to know anything about the Dashboard's state.
+  onGradeSheetsChanged?: () => void
+}) {
   const [details, setDetails] = useState<WorkspaceDetails | null>(null)
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [openModal, setOpenModal] = useState<ItemKey | null>(null)
@@ -87,7 +97,15 @@ export function AcademicWorkspace({ userId }: { userId: string }) {
   const pct = Math.round((flags.filter(Boolean).length / flags.length) * 100)
   const complete = pct === 100
   const closeModal = () => setOpenModal(null)
-  const handleSaved = () => { closeModal(); refresh() }
+  const handleSaved = () => {
+    // Read before closeModal() resets it — only a Grade Sheets save should
+    // trigger the Dashboard's own refetch; the other four documents
+    // (profile/curriculum/timetable/resume) don't feed SummaryCards.
+    const savedKey = openModal
+    closeModal()
+    refresh()
+    if (savedKey === 'gradeCard') onGradeSheetsChanged?.()
+  }
 
   // Once every document is on file, the checklist has done its job — collapse it to a
   // single-line status chip so it stops outranking the SGPA/CGPA numbers above it on
