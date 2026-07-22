@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Navbar } from '@/components/shared/Navbar'
 import { AcademicWorkspace } from '@/components/dashboard/AcademicWorkspace'
@@ -53,6 +53,22 @@ export default function DashboardPage() {
       router.push('/login?redirect=/dashboard')
     }
   }, [authLoading, user, router])
+
+  // Refetches grade-sheet-derived data (SummaryCards' SGPA/CGPA/credits/degree
+  // progress) without touching `fetching` — a background refresh after a
+  // grade-sheet save should swap the numbers in place, not flash the whole
+  // dashboard back to its skeleton. A failed refetch silently keeps the
+  // previous valid data rather than clearing it.
+  const refreshGradeSheets = useCallback(async () => {
+    if (!user) return
+    try {
+      const semesters = await getGradeSheets(user.id)
+      setData({ semesters })
+    } catch {
+      // Keep showing the last known-good values; the user can still see the
+      // save succeeded via the Academic Workspace card's own status.
+    }
+  }, [user])
 
   useEffect(() => {
     if (!user) return
@@ -140,7 +156,7 @@ export default function DashboardPage() {
         {user && data && <SummaryCards userId={user.id} semesters={data.semesters} />}
 
         {/* Academic Workspace */}
-        {user && <AcademicWorkspace userId={user.id} />}
+        {user && <AcademicWorkspace userId={user.id} onGradeSheetsChanged={refreshGradeSheets} />}
 
         {/* Today + Weekly Timetable */}
         {user && (
