@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -448,19 +449,123 @@ function Avatar({ size = 28 }: { size?: number }) {
   )
 }
 
-// ── ProfileMenu (desktop) ──────────────────────────────────────────────────────
+// ── ProfileMenu (desktop + mobile utility) ────────────────────────────────────
+// Shared between the desktop dropdown and the mobile menu below so the two
+// surfaces can't drift out of sync — same split as NavDropdown vs
+// MobileNavAccordion, and NotificationPanelBody in NotificationBell.tsx.
+function ProfileMenuBody({ onNavigate, onSignOut }: { onNavigate: () => void; onSignOut: () => void }) {
+  const { user } = useAuth()
+  return user ? (
+    <>
+      <div className="px-4 py-3 border-b flex items-center gap-3" style={{ borderColor: 'var(--divider)' }}>
+        <Avatar size={32} />
+        <div className="min-w-0">
+          <p className="text-xs font-medium text-foreground truncate">{getDisplayName(user)}</p>
+          <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+        </div>
+      </div>
+      <div className="py-1.5">
+        {accountLinks.map(item => (
+          <Link
+            key={item.href}
+            href={item.href}
+            role="menuitem"
+            onClick={onNavigate}
+            className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-foreground hover:bg-white/5 transition-colors"
+          >
+            <item.icon className="w-4 h-4 text-muted-foreground" />
+            {item.label}
+          </Link>
+        ))}
+        <button
+          role="menuitem"
+          onClick={onSignOut}
+          className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/10 transition-colors"
+        >
+          <LogOut className="w-4 h-4" />
+          Sign out
+        </button>
+      </div>
+    </>
+  ) : (
+    <>
+      <div className="px-4 py-3 border-b" style={{ borderColor: 'var(--divider)' }}>
+        <p className="text-xs font-medium text-foreground">Guest</p>
+        <p className="text-xs text-muted-foreground">Not signed in</p>
+      </div>
+      <div className="py-1.5 border-b" style={{ borderColor: 'var(--divider)' }}>
+        {/* Plain links to the real routes — middleware already redirects an
+            unauthenticated visit to /login?redirect=<path> and the login
+            page already restores that destination after sign-in, so no
+            extra redirect wiring is needed here. */}
+        {accountLinks.map(item => (
+          <Link
+            key={item.href}
+            href={item.href}
+            role="menuitem"
+            onClick={onNavigate}
+            className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-foreground hover:bg-white/5 transition-colors"
+          >
+            <item.icon className="w-4 h-4 text-muted-foreground" />
+            {item.label}
+          </Link>
+        ))}
+      </div>
+      <div className="py-1.5">
+        <Link
+          href="/login"
+          role="menuitem"
+          onClick={onNavigate}
+          className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-foreground hover:bg-white/5 transition-colors"
+        >
+          <LogIn className="w-4 h-4 text-muted-foreground" />
+          Sign In
+        </Link>
+        <Link
+          href="/login?mode=signup"
+          role="menuitem"
+          onClick={onNavigate}
+          className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-indigo-400 hover:bg-indigo-500/10 transition-colors"
+        >
+          <UserPlus className="w-4 h-4" />
+          Create Account
+        </Link>
+      </div>
+    </>
+  )
+}
+
+const profileSurfaceStyle = {
+  // --dropdown-* (94-97% opaque), not --glass-* — the latter is deliberately
+  // translucent (~7% in dark mode) for surfaces meant to sit under a
+  // backdrop-blur, which this panel never applied, so page content showed
+  // straight through it (the same bug already fixed for NavDropdown and
+  // NotificationBell).
+  background: 'var(--dropdown-bg)',
+  border: '1px solid var(--dropdown-border)',
+  boxShadow: 'var(--dropdown-shadow)',
+} as const
+
 // Always-visible circular trigger regardless of auth state — the dropdown
 // content branches on `user`, but the trigger itself never disappears, so a
 // logged-out visitor can still see Dashboard/Gradebook exist before signing in.
-function ProfileMenu() {
-  const { user, signOut } = useAuth()
+function ProfileMenu({ onOpen }: { onOpen?: () => void } = {}) {
+  const { signOut } = useAuth()
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
+  const mobilePanelRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const onDown = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+      const target = e.target as Node
+      // The mobile panel is portaled to document.body (see below), so it's
+      // no longer a DOM descendant of `ref` — without also checking it here,
+      // every click inside the mobile panel would look like a click
+      // "outside" and the panel would slam shut on its own content.
+      if (ref.current?.contains(target)) return
+      if (mobilePanelRef.current?.contains(target)) return
+      setOpen(false)
     }
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false) }
     document.addEventListener('mousedown', onDown)
@@ -473,6 +578,19 @@ function ProfileMenu() {
 
   useEffect(() => { setOpen(false) }, [pathname])
 
+  // Lets the mobile hamburger close this menu the instant it opens (see
+  // Navbar.tsx) — mutual exclusion so only one mobile overlay is ever active.
+  // Profile closing the hamburger/bell, and the hamburger/bell closing
+  // Profile, both fall out of each control's own click-outside listener for
+  // free (the other control's button is always "outside" whichever ref).
+  useEffect(() => {
+    if (open) onOpen?.()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
+
+  const handleNavigate = () => setOpen(false)
+  const handleSignOut = () => { setOpen(false); signOut() }
+
   return (
     <div ref={ref} className="relative">
       <button
@@ -480,11 +598,18 @@ function ProfileMenu() {
         aria-label="Open account menu"
         aria-haspopup="menu"
         aria-expanded={open}
-        className="flex items-center gap-1.5 p-1 rounded-full hover:bg-white/5 transition-colors"
+        className={cn(
+          'min-w-[40px] min-h-[40px] flex items-center justify-center gap-1.5 rounded-full transition-colors',
+          open ? 'bg-white/10' : 'hover:bg-white/5'
+        )}
       >
         <Avatar />
       </button>
 
+      {/* Desktop: small anchored dropdown. Its nearest positioned ancestor is
+          the `relative` div right above (not the <header>), so it was never
+          affected by the header's containing-block bug — left exactly as it
+          was (only the --glass-*→--dropdown-* opacity fix applies here too). */}
       <AnimatePresence>
         {open && (
           <motion.div
@@ -493,198 +618,40 @@ function ProfileMenu() {
             exit={{ opacity: 0, y: 6, scale: 0.97 }}
             transition={{ duration: 0.15 }}
             role="menu"
-            className="absolute right-0 top-full mt-2 w-56 rounded-2xl overflow-hidden z-50"
-            style={{
-              background: 'var(--glass-from)',
-              border: '1px solid var(--glass-border)',
-              boxShadow: 'var(--glass-shadow)',
-              transformOrigin: 'top right',
-            }}
+            className="hidden md:block absolute right-0 top-full mt-2 w-56 rounded-2xl overflow-hidden z-50"
+            style={{ ...profileSurfaceStyle, transformOrigin: 'top right' }}
           >
-            {user ? (
-              <>
-                <div className="px-4 py-3 border-b flex items-center gap-3" style={{ borderColor: 'var(--divider)' }}>
-                  <Avatar size={32} />
-                  <div className="min-w-0">
-                    <p className="text-xs font-medium text-foreground truncate">{getDisplayName(user)}</p>
-                    <p className="text-xs text-muted-foreground truncate">{user.email}</p>
-                  </div>
-                </div>
-                <div className="py-1.5">
-                  {accountLinks.map(item => (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      role="menuitem"
-                      onClick={() => setOpen(false)}
-                      className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-foreground hover:bg-white/5 transition-colors"
-                    >
-                      <item.icon className="w-4 h-4 text-muted-foreground" />
-                      {item.label}
-                    </Link>
-                  ))}
-                  <button
-                    role="menuitem"
-                    onClick={() => { setOpen(false); signOut() }}
-                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/10 transition-colors"
-                  >
-                    <LogOut className="w-4 h-4" />
-                    Sign out
-                  </button>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="px-4 py-3 border-b" style={{ borderColor: 'var(--divider)' }}>
-                  <p className="text-xs font-medium text-foreground">Guest</p>
-                  <p className="text-xs text-muted-foreground">Not signed in</p>
-                </div>
-                <div className="py-1.5 border-b" style={{ borderColor: 'var(--divider)' }}>
-                  {/* Plain links to the real routes — middleware already redirects an
-                      unauthenticated visit to /login?redirect=<path> and the login
-                      page already restores that destination after sign-in, so no
-                      extra redirect wiring is needed here. */}
-                  {accountLinks.map(item => (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      role="menuitem"
-                      onClick={() => setOpen(false)}
-                      className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-foreground hover:bg-white/5 transition-colors"
-                    >
-                      <item.icon className="w-4 h-4 text-muted-foreground" />
-                      {item.label}
-                    </Link>
-                  ))}
-                </div>
-                <div className="py-1.5">
-                  <Link
-                    href="/login"
-                    role="menuitem"
-                    onClick={() => setOpen(false)}
-                    className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-foreground hover:bg-white/5 transition-colors"
-                  >
-                    <LogIn className="w-4 h-4 text-muted-foreground" />
-                    Sign In
-                  </Link>
-                  <Link
-                    href="/login?mode=signup"
-                    role="menuitem"
-                    onClick={() => setOpen(false)}
-                    className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-indigo-400 hover:bg-indigo-500/10 transition-colors"
-                  >
-                    <UserPlus className="w-4 h-4" />
-                    Create Account
-                  </Link>
-                </div>
-              </>
-            )}
+            <ProfileMenuBody onNavigate={handleNavigate} onSignOut={handleSignOut} />
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
-  )
-}
 
-// ── MobileAccountSection ───────────────────────────────────────────────────────
-function MobileAccountSection({ onNavigate }: { onNavigate: () => void }) {
-  const { user, signOut } = useAuth()
-  const [open, setOpen] = useState(false)
-
-  return (
-    <div>
-      <button
-        onClick={() => setOpen(o => !o)}
-        aria-label="Open account menu"
-        aria-expanded={open}
-        className="w-full flex items-center justify-between px-4 py-3 text-sm rounded-xl text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors"
-      >
-        <span className="font-medium inline-flex items-center gap-3">
-          <Avatar size={22} />
-          Account
-        </span>
-        <motion.span animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.22 }} className="flex items-center">
-          <ChevronDown className="w-4 h-4" />
-        </motion.span>
-      </button>
-
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="overflow-hidden"
-          >
-            <div className="pl-3 pb-1 pt-0.5 space-y-0.5">
-              {user ? (
-                <>
-                  <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl mb-1" style={{ background: 'var(--muted-surface)' }}>
-                    <Avatar size={32} />
-                    <div className="min-w-0">
-                      <p className="text-xs font-medium text-foreground truncate">{getDisplayName(user)}</p>
-                      <p className="text-xs text-muted-foreground truncate">{user.email}</p>
-                    </div>
-                  </div>
-                  {accountLinks.map(item => (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      onClick={onNavigate}
-                      className="flex items-center gap-3 px-4 py-2.5 text-sm rounded-xl text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors"
-                    >
-                      <item.icon className="w-4 h-4" />
-                      {item.label}
-                    </Link>
-                  ))}
-                  <button
-                    onClick={() => { onNavigate(); signOut() }}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/10 rounded-xl transition-colors"
-                  >
-                    <LogOut className="w-4 h-4" />
-                    Sign out
-                  </button>
-                </>
-              ) : (
-                <>
-                  <div className="px-4 py-2 mb-0.5">
-                    <p className="text-xs font-medium text-foreground">Guest</p>
-                    <p className="text-xs text-muted-foreground">Not signed in</p>
-                  </div>
-                  {accountLinks.map(item => (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      onClick={onNavigate}
-                      className="flex items-center gap-3 px-4 py-2.5 text-sm rounded-xl text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors"
-                    >
-                      <item.icon className="w-4 h-4" />
-                      {item.label}
-                    </Link>
-                  ))}
-                  <Link
-                    href="/login"
-                    onClick={onNavigate}
-                    className="flex items-center gap-3 px-4 py-2.5 text-sm rounded-xl text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors"
-                  >
-                    <LogIn className="w-4 h-4" />
-                    Sign In
-                  </Link>
-                  <Link
-                    href="/login?mode=signup"
-                    onClick={onNavigate}
-                    className="flex items-center gap-3 px-4 py-2.5 text-sm rounded-xl text-indigo-400 hover:bg-indigo-500/10 transition-colors"
-                  >
-                    <UserPlus className="w-4 h-4" />
-                    Create Account
-                  </Link>
-                </>
-              )}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Mobile/tablet: portaled straight to document.body so it escapes the
+          same header containing-block hijack already fixed for the
+          hamburger drawer and NotificationBell's mobile panel (the <header>
+          animates its own `y` via framer-motion and gains backdrop-blur-xl
+          once scrolled — both make it a containing block for `position:
+          fixed` descendants). Right-aligned and viewport-clamped so it can
+          never overflow, even at 320px wide. */}
+      {typeof document !== 'undefined' && createPortal(
+        <AnimatePresence>
+          {open && (
+            <motion.div
+              ref={mobilePanelRef}
+              initial={{ opacity: 0, y: 6, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 6, scale: 0.97 }}
+              transition={{ duration: 0.15 }}
+              role="menu"
+              className="md:hidden fixed right-4 top-[68px] w-56 max-w-[calc(100vw-2rem)] max-h-[80vh] overflow-y-auto z-50 rounded-2xl overflow-hidden"
+              style={{ ...profileSurfaceStyle, transformOrigin: 'top right' }}
+            >
+              <ProfileMenuBody onNavigate={handleNavigate} onSignOut={handleSignOut} />
+            </motion.div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
     </div>
   )
 }
@@ -846,14 +813,28 @@ export function Navbar() {
             <ProfileMenu />
           </div>
 
-          {/* Mobile: bell stays directly visible (not buried in the drawer)
-              alongside the hamburger toggle, same "always reachable" bar. */}
+          {/* Mobile/tablet: Bell and Profile stay directly visible (not
+              buried in the drawer) alongside the hamburger toggle — they're
+              persistent utilities, not navigation, so users can reach their
+              account or notifications from any page without opening nav
+              first. Order matches the spec: Bell → Profile → Hamburger. */}
           <div className="md:hidden flex items-center gap-1">
-            <NotificationBell />
+            {/* Each of Bell/Profile's `onOpen` closes the drawer — the one
+                direction none of the three controls' own click-outside
+                listeners can cover for free (that only reacts to taps
+                *outside* a control, not to being the thing that just
+                opened). Every other direction (Bell↔Profile,
+                Hamburger→Bell/Profile) already falls out of each control's
+                existing click-outside listener, since the other control's
+                button is always "outside" whichever ref is being checked. */}
+            <NotificationBell onOpen={() => setMobileOpen(false)} />
+            <ProfileMenu onOpen={() => setMobileOpen(false)} />
             <button
               onClick={() => setMobileOpen(o => !o)}
-              className="p-2 rounded-lg hover:bg-white/10 text-muted-foreground hover:text-foreground transition-colors"
+              className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-white/10 text-muted-foreground hover:text-foreground transition-colors"
               aria-label={mobileOpen ? 'Close navigation menu' : 'Open navigation menu'}
+              aria-expanded={mobileOpen}
+              aria-controls="mobile-nav-drawer"
             >
               <AnimatePresence mode="wait" initial={false}>
                 <motion.div
@@ -873,17 +854,28 @@ export function Navbar() {
 
       {/* Mobile Menu — a dedicated full-viewport drawer (not an inline expanding
           panel), so homepage content never shows through or competes visually,
-          and it correctly accounts for iOS safe areas via env(safe-area-inset-*). */}
-      <AnimatePresence>
-        {mobileOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2, ease: EASE_OUT }}
-            className="md:hidden fixed inset-x-0 top-16 bottom-0 z-40 bg-background overflow-y-auto"
-            style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
-          >
+          and it correctly accounts for iOS safe areas via env(safe-area-inset-*).
+          Portaled straight to document.body: this <header> animates its own
+          `y` via framer-motion (a persistent transform) and gains
+          `backdrop-blur-xl` once scrolled (a filter) — both independently
+          make the header a containing block for any `position: fixed`
+          descendant, which hijacks this drawer's `top-16`/`bottom-0` insets
+          to resolve against the header's own 64px box instead of the
+          viewport, collapsing it to zero height (X icon shows, nothing
+          appears — the exact "frozen" symptom). Same fix UploadModalShell
+          already uses for every modal in this app. */}
+      {typeof document !== 'undefined' && createPortal(
+        <AnimatePresence>
+          {mobileOpen && (
+            <motion.div
+              id="mobile-nav-drawer"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2, ease: EASE_OUT }}
+              className="md:hidden fixed inset-x-0 top-16 bottom-0 z-40 bg-background overflow-y-auto"
+              style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+            >
             <div className="px-4 py-3 space-y-0.5">
 
               {/* Calculators accordion */}
@@ -971,22 +963,22 @@ export function Navbar() {
                 )
               })}
 
-              {/* Appearance */}
+              {/* Appearance — Profile/Account now lives in the persistent
+                  navbar utility row (Bell → Profile → Hamburger) above,
+                  not here, so there's a single obvious place for account
+                  actions instead of two. */}
               <div className="pt-3 mt-2 border-t" style={{ borderColor: 'var(--divider)' }}>
                 <div className="flex items-center justify-between px-4 py-3">
                   <span className="text-sm text-muted-foreground">Appearance</span>
                   <ThemeToggle />
                 </div>
               </div>
-
-              {/* Account */}
-              <div className="pt-1 mt-1 border-t" style={{ borderColor: 'var(--divider)' }}>
-                <MobileAccountSection onNavigate={closeMobile} />
-              </div>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            </motion.div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
     </motion.header>
   )
 }
