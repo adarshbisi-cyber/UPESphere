@@ -116,10 +116,13 @@ describe('Navbar', () => {
 
     const { container } = render(<Navbar />)
 
-    const img = container.querySelector('img')
-    expect(img).toBeTruthy()
-
-    fireEvent.error(img as HTMLImageElement)
+    // ProfileMenu (and its Avatar) is now mounted twice — once for the
+    // desktop utility group, once for the mobile one — each with its own
+    // independent imgFailed state, same as NotificationBell's dual mobile/
+    // desktop instances. Both must fail before every avatar falls back.
+    const imgs = container.querySelectorAll('img')
+    expect(imgs.length).toBeGreaterThan(0)
+    imgs.forEach(img => fireEvent.error(img))
 
     expect(container.querySelector('img')).toBeNull()
     expect(screen.getAllByText('AB').length).toBeGreaterThan(0)

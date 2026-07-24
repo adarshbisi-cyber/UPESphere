@@ -102,13 +102,18 @@ export default function NotificationsPage() {
         </div>
 
         <Tabs value={tab} onValueChange={v => setTab(v as TabValue)}>
-          <TabsList className="flex-wrap h-auto sm:h-11">
-            <TabsTrigger value="all">All</TabsTrigger>
-            <TabsTrigger value="unread">Unread</TabsTrigger>
-            <TabsTrigger value="teamup">TeamUp</TabsTrigger>
-            <TabsTrigger value="academic">Academics</TabsTrigger>
-            <TabsTrigger value="system">System</TabsTrigger>
-          </TabsList>
+          {/* Single scrollable row on mobile instead of wrapping onto a second
+              line (which made "System" strand itself alone and bloated the
+              container's height) — desktop is untouched via sm:overflow-visible. */}
+          <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 sm:overflow-visible">
+            <TabsList className="flex-nowrap w-max sm:w-auto h-11">
+              <TabsTrigger value="all" className="shrink-0">All</TabsTrigger>
+              <TabsTrigger value="unread" className="shrink-0">Unread</TabsTrigger>
+              <TabsTrigger value="teamup" className="shrink-0">TeamUp</TabsTrigger>
+              <TabsTrigger value="academic" className="shrink-0">Academics</TabsTrigger>
+              <TabsTrigger value="system" className="shrink-0">System</TabsTrigger>
+            </TabsList>
+          </div>
 
           <TabsContent value={tab}>
             {error ? (
