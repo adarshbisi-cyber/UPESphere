@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -37,6 +37,17 @@ export default function LoginPage() {
   const redirect = safeRedirectPath(searchParams.get('redirect'))
 
   const supabase = createClient()
+
+  // Respect the OS-level "reduce motion" preference — fall back to the
+  // static gradient blobs instead of autoplaying the background video.
+  const [reduceMotion, setReduceMotion] = useState(false)
+  useEffect(() => {
+    const query = window.matchMedia('(prefers-reduced-motion: reduce)')
+    setReduceMotion(query.matches)
+    const onChange = (e: MediaQueryListEvent) => setReduceMotion(e.matches)
+    query.addEventListener('change', onChange)
+    return () => query.removeEventListener('change', onChange)
+  }, [])
 
   const pwChecks = useMemo(() => checkPassword(password), [password])
 
@@ -165,10 +176,30 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden">
-      <div className="absolute inset-0">
-        <div className="absolute top-1/4 left-1/3 w-72 h-72 bg-indigo-500/8 rounded-full blur-[100px]" />
-        <div className="absolute bottom-1/3 right-1/3 w-60 h-60 bg-violet-500/8 rounded-full blur-[80px]" />
-      </div>
+      {reduceMotion ? (
+        // prefers-reduced-motion: reduce — the original static gradient
+        // blobs instead of an autoplaying video.
+        <div className="absolute inset-0">
+          <div className="absolute top-1/4 left-1/3 w-72 h-72 bg-indigo-500/8 rounded-full blur-[100px]" />
+          <div className="absolute bottom-1/3 right-1/3 w-60 h-60 bg-violet-500/8 rounded-full blur-[80px]" />
+        </div>
+      ) : (
+        <div className="absolute inset-0">
+          <video
+            autoPlay
+            loop
+            muted
+            playsInline
+            preload="auto"
+            className="absolute inset-0 w-full h-full object-cover"
+          >
+            <source src="/videos/purple-desert.mp4" type="video/mp4" />
+          </video>
+          {/* Scrim so the form card and text keep enough contrast against
+              the video regardless of which frame is showing. */}
+          <div className="absolute inset-0 bg-black/50" />
+        </div>
+      )}
 
       <motion.div
         initial={{ opacity: 0, y: 20, scale: 0.98 }}
@@ -181,7 +212,7 @@ export default function LoginPage() {
           <div className="w-9 h-9 bg-gradient-to-br from-indigo-500 to-violet-500 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/30">
             <GraduationCap className="w-5 h-5 text-white" />
           </div>
-          <span className="text-xl font-bold font-display bg-gradient-to-r dark:from-white dark:to-white/70 from-slate-900 to-slate-700 bg-clip-text text-transparent">
+          <span className="text-xl font-bold font-display text-white">
             UPESphere
           </span>
         </div>
@@ -283,7 +314,7 @@ export default function LoginPage() {
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
                     <Input
                       type="email"
-                      placeholder="you@university.edu"
+                      placeholder="you@gmail.com"
                       value={email}
                       onChange={e => { setEmail(e.target.value); if (noAccount) { setNoAccount(false); setError(null) } }}
                       className="pl-9"
@@ -340,8 +371,8 @@ export default function LoginPage() {
                           const ok = pwChecks[key]
                           return (
                             <div key={key} className="flex items-center gap-1.5">
-                              {ok ? <Check className="w-3 h-3 text-emerald-400 shrink-0" /> : <X className="w-3 h-3 text-muted-foreground/40 shrink-0" />}
-                              <span className={`text-[11px] ${ok ? 'text-emerald-400' : 'text-muted-foreground/60'}`}>{label}</span>
+                              {ok ? <Check className="w-3 h-3 text-emerald-600 dark:text-emerald-400 shrink-0" /> : <X className="w-3 h-3 text-muted-foreground/40 shrink-0" />}
+                              <span className={`text-[11px] ${ok ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground/60'}`}>{label}</span>
                             </div>
                           )
                         })}
@@ -394,8 +425,8 @@ export default function LoginPage() {
           )}
         </div>
 
-        <p className="text-center text-xs text-muted-foreground/50 mt-6">
-          <Link href="/" className="hover:text-muted-foreground transition-colors">
+        <p className="text-center text-xs text-white/60 mt-6">
+          <Link href="/" className="hover:text-white transition-colors">
             ← Back to UPESphere
           </Link>
         </p>
