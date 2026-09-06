@@ -9,7 +9,7 @@ import {
   Menu, X, GraduationCap, LogOut, LayoutDashboard, BookOpenCheck,
   ChevronDown, Calculator, TrendingUp, CalendarCheck, Target, Crosshair,
   Zap, MessageSquare, ExternalLink, CalendarRange, CalendarDays, Briefcase, Users, Code2,
-  User as UserIcon, LogIn, UserPlus, Users2, LayoutGrid,
+  User as UserIcon, LogIn, UserPlus, Users2, LayoutGrid, Library,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -137,6 +137,15 @@ const careerItems: NavItem[] = [
     iconClass: 'text-indigo-400',
     iconBg: 'bg-indigo-500/15',
     activeBg: 'bg-indigo-500/10 border-indigo-500/25',
+  },
+  {
+    label: 'Resources',
+    description: 'Guides, templates, and tools for your career',
+    href: '/career/resources',
+    icon: Library,
+    iconClass: 'text-violet-400',
+    iconBg: 'bg-violet-500/15',
+    activeBg: 'bg-violet-500/10 border-violet-500/25',
   },
 ]
 
