@@ -102,6 +102,20 @@ on conflict (name) do nothing;
 -- is grantable independently. Standard Postgres/Supabase pattern: a plain
 -- view (no security_invoker) runs as the view owner for table access, so it
 -- can expose a safe slice of an otherwise-locked-down table.
+--
+-- Supabase's linter flags this as a "Security Definer View" (critical) —
+-- that's expected and correct for what this view does, DO NOT "fix" it by
+-- adding `with (security_invoker = on)`. Invoker mode would re-apply
+-- profiles' own `auth.uid() = id` policy through the view, so every caller
+-- would only ever see their own row and TeamUp's cross-user name/avatar
+-- lookups would silently return nothing. Dismiss the linter finding instead.
+--
+-- ALLOWED COLUMNS (safe to select — no PII, no private links):
+--   id, full_name, avatar_url, university_id
+-- NEVER ADD (would leak through this view to every authenticated/anon user):
+--   email, resume_file_url, or any other column added to profiles later
+--   that isn't already public-safe. See test/supabase/teamup-views-security.test.ts,
+--   which fails the build if either forbidden column shows up in this select list.
 create or replace view public.public_profiles as
 select id, full_name, avatar_url, university_id
 from public.profiles;
@@ -152,6 +166,20 @@ create trigger competition_profiles_updated_at before update on public.competiti
 -- Public-safe subset for "Looking for Team" discovery — excludes the raw
 -- whatsapp_number (and the table itself isn't publicly selectable), so a
 -- discovery browse can never leak contact details, consented or not.
+--
+-- Same linter note as public_profiles above: this also trips the "Security
+-- Definer View" (critical) finding, and for the same reason it must NOT be
+-- "fixed" with `security_invoker = on` — competition_profiles' own RLS is
+-- `auth.uid() = user_id` (own row only), and lib/teamup/api.ts's
+-- getStudentsLookingForTeam() (backs /teamup/students) depends on this view
+-- showing OTHER users' rows. Invoker mode would make discovery show nothing.
+-- Dismiss the linter finding instead.
+--
+-- ALLOWED COLUMNS: user_id, looking_for_team, availability, experience_level,
+--   competitions_completed, bio, share_whatsapp_with_teammates, share_email_with_teammates
+--   (the share_* columns are just consent booleans, not the contact info itself)
+-- NEVER ADD: whatsapp_number, or any other raw contact field added later.
+--   See test/supabase/teamup-views-security.test.ts.
 create or replace view public.public_competition_profiles as
 select user_id, looking_for_team, availability, experience_level,
        competitions_completed, bio, share_whatsapp_with_teammates, share_email_with_teammates
