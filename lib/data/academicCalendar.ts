@@ -52,7 +52,21 @@ export const CATEGORY_STYLE: Record<
 // Navigable range of the calendar (first event is 30 Jun 2026, last is 16 Aug 2027).
 export const CALENDAR_MIN = { year: 2026, month: 5 } // June 2026 (0-indexed month)
 export const CALENDAR_MAX = { year: 2027, month: 7 } // August 2027
-export const CALENDAR_DEFAULT = { year: 2026, month: 6 } // July 2026
+
+// Where the calendar opens: today's month, in the visitor's own local time —
+// never a fixed month. Clamped into [CALENDAR_MIN, CALENDAR_MAX] since this
+// dataset only covers that session; outside it (before the calendar starts,
+// or after this year's tracked window ends), the nearest boundary month is
+// the only one that actually has anything to show. `now` is a parameter
+// (defaulting to the real clock) purely so this stays testable without
+// mocking global Date.
+export function currentCalendarMonth(now: Date = new Date()): { year: number; month: number } {
+  const idx = now.getFullYear() * 12 + now.getMonth()
+  const minIdx = CALENDAR_MIN.year * 12 + CALENDAR_MIN.month
+  const maxIdx = CALENDAR_MAX.year * 12 + CALENDAR_MAX.month
+  const clamped = Math.min(Math.max(idx, minIdx), maxIdx)
+  return { year: Math.floor(clamped / 12), month: clamped % 12 }
+}
 
 export const ACADEMIC_EVENTS: AcademicEvent[] = [
   { id: 'commencement-pg-sob', title: 'Commencement of Classes / Induction — 1st Year PG (SOB)', start: '2026-06-30', end: '2026-07-01', category: 'academic' },
