@@ -2,11 +2,14 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { AnimatePresence } from 'framer-motion'
 import { GlassCard } from '@/components/ui/card'
-import { CalendarClock } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { CalendarClock, Upload } from 'lucide-react'
 import { getActiveTimetable, type TimetableVersion } from '@/lib/onboarding/api'
 import type { TimetableSlot } from '@/lib/parsers/timetableParser'
 import { colorForSubject, formatTimeRange12h, formatDuration, formatRoom, toMinutes } from '@/lib/timetable/display'
+import { TimetableUploadModal } from '@/components/workspace/TimetableUploadModal'
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 const DAY_SHORT: Record<string, string> = {
@@ -45,10 +48,26 @@ function popoverStyle(rect: DOMRect | null): React.CSSProperties {
   }
 }
 
-export function WeeklyTimetable({ userId }: { userId: string }) {
+export function WeeklyTimetable({
+  userId,
+  refreshKey,
+  onTimetableChanged,
+}: {
+  userId: string
+  // Bumped by a sibling (the Academic Workspace's Timetable card) after it
+  // saves a new version, so this widget picks up the change too even though
+  // it fetches independently — see `onTimetableChanged` below for the
+  // reverse direction.
+  refreshKey?: number
+  // Fired after this component's own "Upload Timetable" button saves a new
+  // version, so siblings (Today's Classes, the Academic Workspace card) that
+  // don't share this component's state can refetch too.
+  onTimetableChanged?: () => void
+}) {
   const [data, setData] = useState<{ version: TimetableVersion; slots: TimetableSlot[] } | null | undefined>(undefined)
   const [now, setNow] = useState(() => new Date())
   const [active, setActive] = useState<ActiveState | null>(null)
+  const [showUploadModal, setShowUploadModal] = useState(false)
 
   const openSlot = (key: string, slot: TimetableSlot, rect: DOMRect) => setActive({ key, slot, rect })
   const closeSlot = (key: string) => setActive(prev => (prev?.key === key ? null : prev))
@@ -57,7 +76,13 @@ export function WeeklyTimetable({ userId }: { userId: string }) {
 
   useEffect(() => {
     getActiveTimetable(userId).then(setData).catch(() => setData(null))
-  }, [userId])
+  }, [userId, refreshKey])
+
+  const handleUploadSaved = () => {
+    setShowUploadModal(false)
+    getActiveTimetable(userId).then(setData).catch(() => setData(null))
+    onTimetableChanged?.()
+  }
 
   // Drives the current-time indicator line — doesn't need to be more
   // frequent than the line itself is visually precise to.
@@ -108,14 +133,19 @@ export function WeeklyTimetable({ userId }: { userId: string }) {
   const showNowLine = nowMinutes >= gridStart && nowMinutes <= gridEnd
 
   return (
+    <>
     <GlassCard className="p-6">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between flex-wrap gap-y-2 mb-4">
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-lg bg-indigo-500/15 flex items-center justify-center">
             <CalendarClock className="w-4 h-4 text-indigo-400" />
           </div>
           <h3 className="text-base font-semibold font-display">Weekly Timetable</h3>
         </div>
+        <Button variant="outline" size="sm" className="gap-1.5 shrink-0" onClick={() => setShowUploadModal(true)}>
+          <Upload className="w-3.5 h-3.5" />
+          Upload Timetable
+        </Button>
       </div>
 
       {!data || data.slots.length === 0 ? (
@@ -250,5 +280,17 @@ export function WeeklyTimetable({ userId }: { userId: string }) {
         document.body
       )}
     </GlassCard>
+
+    <AnimatePresence>
+      {showUploadModal && (
+        <TimetableUploadModal
+          userId={userId}
+          hasExisting={data !== null}
+          onClose={() => setShowUploadModal(false)}
+          onSaved={handleUploadSaved}
+        />
+      )}
+    </AnimatePresence>
+    </>
   )
 }
