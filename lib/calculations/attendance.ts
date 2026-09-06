@@ -30,7 +30,7 @@ export function calculateAttendance(
   }
 
   const status = deriveStatus(currentPercentage, required)
-  const message = buildMessage(currentPercentage, required, safeBunks, classesNeeded)
+  const message = buildMessage(currentPercentage, required, safeBunks, classesNeeded, total)
   const insights = buildInsights(currentPercentage, required, safeBunks, classesNeeded)
 
   return {
@@ -54,10 +54,17 @@ function buildMessage(
   current: number,
   required: number,
   safeBunks: number,
-  classesNeeded: number
+  classesNeeded: number,
+  total: number
 ): string {
   if (current < required) {
-    return `Attend the next ${classesNeeded} class${classesNeeded !== 1 ? 'es' : ''} continuously to reach ${required}%.`
+    // `classesNeeded` is future classes on top of the total held so far —
+    // spelling out the resulting total here is what stops someone reading
+    // "Attended: 2, Must Attend: 4" against "Total: 4" from concluding
+    // 2 + 4 > 4 is a bug: those 4 haven't happened yet, so they're not part
+    // of the 4 already held.
+    const projectedTotal = total + classesNeeded
+    return `Attend the next ${classesNeeded} class${classesNeeded !== 1 ? 'es' : ''} in a row — that brings your total to ${projectedTotal} and puts you at ${required}%.`
   }
   if (safeBunks === 0) {
     return "You're right at the limit. Don't miss any more classes!"

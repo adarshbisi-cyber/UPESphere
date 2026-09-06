@@ -283,7 +283,7 @@ export function AttendanceCalculator() {
                   {result.status === 'danger' ? result.classesNeeded : result.safeBunks}
                 </div>
                 <div className="text-xs text-muted-foreground mt-1">
-                  {result.status === 'danger' ? 'Must Attend' : 'Still Can Skip'}
+                  {result.status === 'danger' ? 'Must Attend Next' : 'Still Can Skip'}
                 </div>
               </div>
               <div className="text-center rounded-xl p-4" style={{ background: 'var(--muted-surface)', border: '1px solid var(--divider)' }}>
