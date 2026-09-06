@@ -41,6 +41,12 @@ export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null)
   const [fetching, setFetching] = useState(true)
   const [now, setNow] = useState<Date | null>(null)
+  // Bumped whenever the timetable changes, from either entry point (the
+  // Academic Workspace's Timetable card, or Weekly Timetable's own upload
+  // button) — both Weekly Timetable and Today's Classes fetch independently,
+  // so this is what tells them to refetch regardless of which one triggered it.
+  const [timetableVersion, setTimetableVersion] = useState(0)
+  const refreshTimetable = useCallback(() => setTimetableVersion(v => v + 1), [])
 
   useEffect(() => {
     setNow(new Date())
@@ -156,16 +162,23 @@ export default function DashboardPage() {
         {user && data && <SummaryCards userId={user.id} semesters={data.semesters} />}
 
         {/* Academic Workspace */}
-        {user && <AcademicWorkspace userId={user.id} onGradeSheetsChanged={refreshGradeSheets} />}
+        {user && (
+          <AcademicWorkspace
+            userId={user.id}
+            onGradeSheetsChanged={refreshGradeSheets}
+            onTimetableChanged={refreshTimetable}
+            refreshSignal={timetableVersion}
+          />
+        )}
 
         {/* Today + Weekly Timetable */}
         {user && (
           <div className="grid lg:grid-cols-5 gap-6 mb-8">
             <div className="lg:col-span-2">
-              <TodaysClasses userId={user.id} />
+              <TodaysClasses userId={user.id} refreshKey={timetableVersion} />
             </div>
             <div className="lg:col-span-3">
-              <WeeklyTimetable userId={user.id} />
+              <WeeklyTimetable userId={user.id} refreshKey={timetableVersion} onTimetableChanged={refreshTimetable} />
             </div>
           </div>
         )}

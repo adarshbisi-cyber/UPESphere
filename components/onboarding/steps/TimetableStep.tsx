@@ -5,8 +5,8 @@ import { motion } from 'framer-motion'
 import { CalendarClock, ArrowRight, Loader2, Check, AlertTriangle, Trash2, RotateCcw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { FileDropzone } from '@/components/onboarding/FileDropzone'
-import { extractPdfTextItems, hasExtractableText } from '@/lib/parsers/pdfText'
-import { parseTimetableItems, type TimetableSlot } from '@/lib/parsers/timetableParser'
+import { createTimetableRenderSampler, extractPdfTextItems, hasExtractableText } from '@/lib/parsers/pdfText'
+import { looksLikeTimetableMissingClassNames, parseTimetableItems, type TimetableSlot } from '@/lib/parsers/timetableParser'
 import { generateId, EASE_OUT } from '@/lib/utils'
 
 type Status = 'idle' | 'parsing' | 'reviewing' | 'error'
@@ -38,9 +38,13 @@ export function TimetableStep({
         setStatus('error')
         return
       }
-      const parsed = parseTimetableItems(pages)
+      const parsed = await parseTimetableItems(pages, { sampler: createTimetableRenderSampler(f) })
       if (parsed.length === 0) {
-        setErrorMsg('No class slots detected. Try a different export, or skip and add it later.')
+        setErrorMsg(
+          looksLikeTimetableMissingClassNames(pages)
+            ? "This export has your days and times, but no class names or rooms anywhere in the file — there's nothing to import. Try a different export from your timetable portal, or skip for now."
+            : 'No class slots detected. Try a different export, or skip and add it later.'
+        )
         setStatus('error')
         return
       }

@@ -56,6 +56,8 @@ function actionLabel(key: ItemKey, done: boolean): string {
 export function AcademicWorkspace({
   userId,
   onGradeSheetsChanged,
+  onTimetableChanged,
+  refreshSignal,
 }: {
   userId: string
   // Grade sheets are the only one of this card's five documents that feed
@@ -63,6 +65,13 @@ export function AcademicWorkspace({
   // this lets the parent refetch just that data, without this component
   // needing to know anything about the Dashboard's state.
   onGradeSheetsChanged?: () => void
+  // Fired after this card's own Timetable "Replace" flow saves, so siblings
+  // (Weekly Timetable, Today's Classes) that fetch independently can refetch too.
+  onTimetableChanged?: () => void
+  // Bumped by a sibling (Weekly Timetable's own "Upload Timetable" button)
+  // after it saves, so this card's Timetable status ("Updated Today") stays
+  // in sync even though that upload didn't go through this component.
+  refreshSignal?: number
 }) {
   const [details, setDetails] = useState<WorkspaceDetails | null>(null)
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
@@ -76,7 +85,7 @@ export function AcademicWorkspace({
       .catch(() => setStatus('error'))
   }, [userId])
 
-  useEffect(() => { refresh() }, [refresh])
+  useEffect(() => { refresh() }, [refresh, refreshSignal])
 
   // A network failure and "nothing uploaded yet" must not look identical — a
   // student mid-panic before an exam needs to know which one they're seeing.
@@ -105,6 +114,7 @@ export function AcademicWorkspace({
     closeModal()
     refresh()
     if (savedKey === 'gradeCard') onGradeSheetsChanged?.()
+    if (savedKey === 'timetable') onTimetableChanged?.()
   }
 
   // Once every document is on file, the checklist has done its job — collapse it to a

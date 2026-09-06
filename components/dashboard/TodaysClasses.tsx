@@ -11,13 +11,22 @@ const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Frid
 
 type Status = 'completed' | 'ongoing' | 'upcoming'
 
-export function TodaysClasses({ userId }: { userId: string }) {
+export function TodaysClasses({
+  userId,
+  refreshKey,
+}: {
+  userId: string
+  // Bumped whenever the timetable changes anywhere (the Academic Workspace
+  // card, or Weekly Timetable's own "Upload Timetable" button) — this widget
+  // fetches independently, so it needs its own nudge to pick up the change.
+  refreshKey?: number
+}) {
   const [slots, setSlots] = useState<TimetableSlot[] | null>(null)
   const [now, setNow] = useState(() => new Date())
 
   useEffect(() => {
     getActiveTimetable(userId).then(data => setSlots(data?.slots ?? [])).catch(() => setSlots([]))
-  }, [userId])
+  }, [userId, refreshKey])
 
   // Countdowns ("Ends in", "Starts in") need to stay live while the widget
   // is open.

@@ -5,8 +5,8 @@ import { CalendarClock, ArrowRight, Loader2, Check, AlertTriangle, Trash2 } from
 import { Button } from '@/components/ui/button'
 import { FileDropzone } from '@/components/onboarding/FileDropzone'
 import { UploadModalShell } from '@/components/workspace/UploadModalShell'
-import { extractPdfTextItems, hasExtractableText } from '@/lib/parsers/pdfText'
-import { parseTimetableItems, type TimetableSlot } from '@/lib/parsers/timetableParser'
+import { createTimetableRenderSampler, extractPdfTextItems, hasExtractableText } from '@/lib/parsers/pdfText'
+import { looksLikeTimetableMissingClassNames, parseTimetableItems, type TimetableSlot } from '@/lib/parsers/timetableParser'
 import { saveTimetableVersion } from '@/lib/onboarding/api'
 import { describeSaveError } from '@/lib/onboarding/errors'
 import { generateId } from '@/lib/utils'
@@ -63,9 +63,13 @@ export function TimetableUploadModal({
         setStatus('error')
         return
       }
-      const parsed = parseTimetableItems(pages)
+      const parsed = await parseTimetableItems(pages, { sampler: createTimetableRenderSampler(f) })
       if (parsed.length === 0) {
-        setErrorMsg('No class slots detected. Try a different export.')
+        setErrorMsg(
+          looksLikeTimetableMissingClassNames(pages)
+            ? "This export has your days and times, but no class names or rooms anywhere in the file — there's nothing to import. Try a different export from your timetable portal."
+            : 'No class slots detected. Try a different export.'
+        )
         setStatus('error')
         return
       }
