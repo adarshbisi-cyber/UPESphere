@@ -6,7 +6,7 @@ import { ChevronLeft, ChevronRight, CalendarDays, Dot, Sparkles } from 'lucide-r
 import { GlassCard } from '@/components/ui/card'
 import { cn, EASE_OUT } from '@/lib/utils'
 import {
-  ACADEMIC_EVENTS, CATEGORY_STYLE, CALENDAR_MIN, CALENDAR_MAX, CALENDAR_DEFAULT,
+  ACADEMIC_EVENTS, CATEGORY_STYLE, CALENDAR_MIN, CALENDAR_MAX, currentCalendarMonth,
   toISO, eventsOnDay, eventsInMonth, type AcademicEvent, type EventCategory,
 } from '@/lib/data/academicCalendar'
 
@@ -28,10 +28,19 @@ const prettyRange = (e: AcademicEvent) => {
 }
 
 export function AcademicCalendar() {
-  const [year, setYear] = useState(CALENDAR_DEFAULT.year)
-  const [month, setMonth] = useState(CALENDAR_DEFAULT.month) // 0-indexed
+  // Opens on the visitor's actual current month (see currentCalendarMonth's
+  // own comment for why it's clamped) — computed once at mount via the
+  // lazy-initializer form so it's a single consistent snapshot rather than
+  // two separate `new Date()` reads for year vs. month.
+  const [initialMonth] = useState(() => currentCalendarMonth())
+  const [year, setYear] = useState(initialMonth.year)
+  const [month, setMonth] = useState(initialMonth.month) // 0-indexed
   const [selected, setSelected] = useState<string | null>(null)
   const [activeCats, setActiveCats] = useState<Set<EventCategory>>(new Set(CATEGORIES))
+  const todayIso = useMemo(() => {
+    const now = new Date()
+    return toISO(now.getFullYear(), now.getMonth(), now.getDate())
+  }, [])
 
   const idx = monthIndex(year, month)
   const canPrev = idx > MIN_IDX
@@ -136,10 +145,18 @@ export function AcademicCalendar() {
               </button>
             </div>
             <button
-              onClick={() => { setYear(CALENDAR_DEFAULT.year); setMonth(CALENDAR_DEFAULT.month); setSelected(null) }}
+              onClick={() => {
+                // Recomputed fresh at click time, not the value from mount —
+                // if this tab's been open across a date change, "Today"
+                // should reflect the actual current date, not a stale one.
+                const current = currentCalendarMonth()
+                setYear(current.year)
+                setMonth(current.month)
+                setSelected(null)
+              }}
               className="text-xs px-3 py-1.5 rounded-lg border border-white/10 text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors"
             >
-              Jump to start
+              Today
             </button>
           </div>
 
@@ -186,21 +203,25 @@ export function AcademicCalendar() {
                 const evs = eventsOnDay(cell.iso).filter(e => activeCats.has(e.category))
                 const isSelected = selected === cell.iso
                 const isWeekend = new Date(cell.iso).getDay() % 6 === 0
+                const isToday = cell.inMonth && cell.iso === todayIso
                 return (
                   <button
                     key={cell.iso}
                     onClick={() => setSelected(isSelected ? null : cell.iso)}
+                    aria-current={isToday ? 'date' : undefined}
                     className={cn(
                       'min-h-[74px] sm:min-h-[92px] rounded-lg border p-1.5 text-left flex flex-col gap-1 transition-colors',
                       cell.inMonth ? 'bg-white/[0.02] border-white/8 hover:border-indigo-500/40 hover:bg-indigo-500/[0.05]' : 'bg-transparent border-transparent',
+                      isToday && !isSelected && 'border-indigo-500/50 bg-indigo-500/[0.06]',
                       isSelected && 'ring-2 ring-indigo-500/60 border-indigo-500/40'
                     )}
                   >
                     <span className={cn(
-                      'text-xs font-medium',
-                      cell.inMonth ? (isWeekend ? 'text-muted-foreground' : 'text-foreground/80') : 'text-muted-foreground/30'
+                      'text-xs font-medium inline-flex items-center gap-1',
+                      isToday ? 'text-indigo-400 font-bold' : cell.inMonth ? (isWeekend ? 'text-muted-foreground' : 'text-foreground/80') : 'text-muted-foreground/30'
                     )}>
                       {cell.day}
+                      {isToday && <span className="w-1 h-1 rounded-full bg-indigo-400" aria-hidden="true" />}
                     </span>
                     <div className="flex flex-col gap-0.5 overflow-hidden">
                       {evs.slice(0, 3).map(e => {
