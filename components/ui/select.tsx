@@ -118,9 +118,28 @@ const SelectItem = React.forwardRef<
     ref={ref}
     className={cn(
       'relative flex w-full cursor-default select-none items-center rounded-lg py-1.5 pl-8 pr-2 text-sm outline-none',
-      'focus:bg-white/10 focus:text-foreground',
+      'transition-colors duration-200',
+      // Hovered/keyboard-highlighted option — a light purple tint with the
+      // text nudged toward the brand indigo. `data-[highlighted]` is Radix's
+      // own attribute for "this is the active option" (set on both pointer
+      // hover and arrow-key navigation, so one rule covers mouse and
+      // keyboard); `focus:` is kept alongside it since Radix also moves real
+      // DOM focus onto the item. This replaces the old `focus:bg-white/10`,
+      // which was invisible against this popover's near-white light-mode
+      // background — that was the actual bug, not a missing hover style.
+      'data-[highlighted]:bg-indigo-500/10 data-[highlighted]:text-indigo-600 dark:data-[highlighted]:text-indigo-300',
+      'focus:bg-indigo-500/10 focus:text-indigo-600 dark:focus:text-indigo-300',
+      'focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-indigo-500/50',
+      // Selected option keeps the checkmark as its primary signal, plus a
+      // faint resting tint so it still reads as "selected" at a glance;
+      // hovering *that* option gets a visibly richer tint than a plain
+      // hover, so the two states never look identical.
+      'data-[state=checked]:bg-indigo-500/5 data-[state=checked]:font-medium',
+      'data-[state=checked]:data-[highlighted]:bg-indigo-500/20',
+      // Touch devices don't hover — a brief tap tint gives the same
+      // "this registered" feedback without depending on :hover.
+      'active:bg-indigo-500/15',
       'data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
-      'transition-colors duration-100',
       className
     )}
     {...props}

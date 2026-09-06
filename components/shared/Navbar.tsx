@@ -113,15 +113,31 @@ const calendarItems: NavItem[] = [
 // calculators/calendarItems arrays above feeding NavDropdown vs
 // MobileNavAccordion) so the two surfaces can't drift out of sync. Split
 // into two arrays (rather than one) because Community sits between them as
-// its own dropdown/accordion, not a plain link.
+// its own dropdown/accordion, not a plain link. Career used to be a plain
+// link here too, but became a dropdown (see careerItems below) once
+// Placement Tracker gave it a real first sub-feature — left empty rather
+// than removed so a future simple link before Community has somewhere to go.
 type SimpleLink = { label: string; href: string; icon: LucideIcon; external?: boolean }
 
-const primaryLinksBeforeCommunity: SimpleLink[] = [
-  { label: 'Career', href: '/career', icon: Briefcase },
-]
+const primaryLinksBeforeCommunity: SimpleLink[] = []
 
 const primaryLinksAfterCommunity: SimpleLink[] = [
   { label: 'Feedback', href: 'https://forms.gle/nNT7KWYXobfXBUTM8', icon: MessageSquare, external: true },
+]
+
+// Career's first real sub-feature. Structured as a NavItem list (like
+// calculators/calendarItems/communityItems above) so future Career features
+// can be added here without restructuring the dropdown.
+const careerItems: NavItem[] = [
+  {
+    label: 'Placement Tracker',
+    description: 'Track applications and recruitment progress',
+    href: '/career/placement-tracker',
+    icon: Target,
+    iconClass: 'text-indigo-400',
+    iconBg: 'bg-indigo-500/15',
+    activeBg: 'bg-indigo-500/10 border-indigo-500/25',
+  },
 ]
 
 // TeamUp lives inside the Community dropdown/accordion instead of its own
@@ -731,6 +747,13 @@ export function Navbar() {
               items={calendarItems}
               footerText="More calendars coming soon"
             />
+            <NavDropdown
+              label="Career"
+              triggerIcon={Briefcase}
+              headerLabel="Career"
+              items={careerItems}
+              footerText="More career tools coming soon"
+            />
             {primaryLinksBeforeCommunity.map(item => {
               const active = !item.external && pathname.startsWith(item.href)
               if (item.external) {
@@ -884,7 +907,9 @@ export function Navbar() {
               {/* Calendar accordion */}
               <MobileNavAccordion label="Calendar" triggerIcon={CalendarRange} items={calendarItems} onNavigate={closeMobile} />
 
-              {/* Career */}
+              {/* Career accordion (contains Placement Tracker) */}
+              <MobileNavAccordion label="Career" triggerIcon={Briefcase} items={careerItems} onNavigate={closeMobile} />
+
               {primaryLinksBeforeCommunity.map(item => {
                 const active = !item.external && pathname.startsWith(item.href)
                 if (item.external) {
