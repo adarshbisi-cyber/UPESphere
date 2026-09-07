@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
-  computeActiveApplicationSummaries, computeBiggestBottleneck, computeConversionFunnel,
-  computeFunnel, computeGroupPatterns, computeOverview, computeRoundPerformance,
-  computeStrongestStage, computeTrends, confidenceFor, hasEnoughDataForInsights,
+  computeActiveApplicationSummaries, computeApplicationFunnel, computeBiggestBottleneck,
+  computeConversionSteps, computeGroupPatterns, computeObservations, computeOverview,
+  computePlacementPattern, computeRoundPerformance, computeStrongestStage, computeTrends,
+  computeStageInsights, computeUpcomingActions, confidenceFor, hasEnoughDataForInsights,
 } from '@/lib/placementTracker/analytics'
 import type { AnalyticsCategory, PlacementApplication, PlacementRound, RoundOutcome } from '@/lib/placementTracker/types'
 
@@ -28,12 +29,17 @@ function application(overrides: Partial<PlacementApplication> = {}): PlacementAp
 
 describe('confidenceFor', () => {
   it('classifies observation counts into the three documented tiers', () => {
-    expect(confidenceFor(1).label).toBe('Early Pattern')
-    expect(confidenceFor(2).label).toBe('Early Pattern')
+    expect(confidenceFor(1).label).toBe('Limited Data')
+    expect(confidenceFor(2).label).toBe('Limited Data')
     expect(confidenceFor(3).label).toBe('Emerging Pattern')
     expect(confidenceFor(4).label).toBe('Emerging Pattern')
-    expect(confidenceFor(5).label).toBe('Consistent Pattern')
-    expect(confidenceFor(20).label).toBe('Consistent Pattern')
+    expect(confidenceFor(5).label).toBe('Established Pattern')
+    expect(confidenceFor(20).label).toBe('Established Pattern')
+  })
+
+  it('only qualifies a stage for classification at 3+ observations', () => {
+    expect(confidenceFor(2).qualifies).toBe(false)
+    expect(confidenceFor(3).qualifies).toBe(true)
   })
 })
 
@@ -80,18 +86,43 @@ describe('computeActiveApplicationSummaries', () => {
   })
 })
 
-describe('computeFunnel', () => {
-  it('counts rounds reached per category and excludes categories with zero reached', () => {
-    const apps = [application({ rounds: [
-      round('resume_screening', 'cleared'),
-      round('assessment', 'eliminated'),
-      round('interview', 'upcoming'), // not reached yet — excluded from its own count
-    ] })]
-    const funnel = computeFunnel(apps)
-    const byCategory = Object.fromEntries(funnel.map(f => [f.category, f.count]))
-    expect(byCategory.resume_screening).toBe(1)
-    expect(byCategory.assessment).toBe(1)
-    expect(byCategory.interview).toBeUndefined()
+describe('computeApplicationFunnel', () => {
+  it('counts applications through each stage, starting from Applied', () => {
+    const apps = [
+      application({ rounds: [round('resume_screening', 'cleared'), round('assessment', 'cleared')] }),
+      application({ rounds: [round('resume_screening', 'cleared'), round('assessment', 'eliminated')] }),
+      application({ rounds: [round('resume_screening', 'eliminated')] }),
+    ]
+    const funnel = computeApplicationFunnel(apps)
+    expect(funnel[0]).toMatchObject({ key: 'applied', count: 3 })
+    expect(funnel.find(f => f.key === 'resume_screening')).toMatchObject({ count: 2, reached: 3 })
+    expect(funnel.find(f => f.key === 'assessment')).toMatchObject({ count: 1, reached: 2 })
+  })
+
+  it('omits stages no application has reached', () => {
+    const apps = [application({ rounds: [round('resume_screening', 'cleared'), round('interview', 'upcoming')] })]
+    const funnel = computeApplicationFunnel(apps)
+    expect(funnel.find(f => f.key === 'interview')).toBeUndefined()
+  })
+
+  it("keeps the student's own round name when a stage is named consistently", () => {
+    const apps = [
+      application({ rounds: [round('assessment', 'cleared', { displayName: 'Aptitude Test' })] }),
+      application({ rounds: [round('assessment', 'eliminated', { displayName: 'Aptitude Test' })] }),
+    ]
+    expect(computeApplicationFunnel(apps).find(f => f.key === 'assessment')?.label).toBe('Aptitude Test')
+  })
+
+  it('falls back to the generic category label when companies name a stage differently', () => {
+    const apps = [
+      application({ rounds: [round('assessment', 'cleared', { displayName: 'Aptitude Test' })] }),
+      application({ rounds: [round('assessment', 'cleared', { displayName: 'Online Assessment' })] }),
+    ]
+    expect(computeApplicationFunnel(apps).find(f => f.key === 'assessment')?.label).toBe('Assessment')
+  })
+
+  it('returns nothing at all with no applications', () => {
+    expect(computeApplicationFunnel([])).toEqual([])
   })
 })
 
@@ -103,47 +134,66 @@ describe('computeBiggestBottleneck', () => {
       ...Array.from({ length: 2 }, () => round('assessment', 'cleared')),
       ...Array.from({ length: 2 }, () => round('interview', 'cleared')),
     ]
-    const bottleneck = computeBiggestBottleneck([application({ rounds })])
-    expect(bottleneck?.category).toBe('assessment')
-    expect(bottleneck?.eliminated).toBe(5)
-    expect(bottleneck?.reached).toBe(7)
-    expect(bottleneck?.supportingData).toBe('You were eliminated in 5 of the 7 assessment rounds you reached.')
-    expect(bottleneck?.confidence.label).toBe('Consistent Pattern')
+    const result = computeBiggestBottleneck([application({ rounds })])
+    expect(result.status).toBe('ok')
+    if (result.status !== 'ok') return
+    expect(result.insight.category).toBe('assessment')
+    expect(result.insight.eliminated).toBe(5)
+    expect(result.insight.reached).toBe(7)
+    expect(result.insight.confidence.label).toBe('Established Pattern')
+    expect(result.insight.suggestedFocus.length).toBeGreaterThan(0)
   })
 
-  it('returns null when nobody has been eliminated anywhere', () => {
-    const rounds = [round('assessment', 'cleared'), round('interview', 'cleared')]
-    expect(computeBiggestBottleneck([application({ rounds })])).toBeNull()
+  it('reports no drop-off (not missing data) when a well-evidenced stage has zero eliminations', () => {
+    const rounds = [
+      ...Array.from({ length: 3 }, () => round('assessment', 'cleared')),
+      ...Array.from({ length: 3 }, () => round('interview', 'cleared')),
+    ]
+    expect(computeBiggestBottleneck([application({ rounds })]).status).toBe('no_dropoff')
   })
 
-  it('uses low confidence language for a single data point', () => {
-    const rounds = [round('assessment', 'eliminated')]
-    const bottleneck = computeBiggestBottleneck([application({ rounds })])
-    expect(bottleneck?.confidence.label).toBe('Early Pattern')
+  // The spec is explicit: below 3 relevant applications, say "More data
+  // needed" rather than claiming a pattern exists.
+  it('refuses to name a drop-off from fewer than three observations', () => {
+    const rounds = [round('assessment', 'eliminated'), round('assessment', 'cleared')]
+    expect(computeBiggestBottleneck([application({ rounds })]).status).toBe('insufficient_data')
+  })
+
+  it('names a drop-off once the third observation arrives', () => {
+    const rounds = [round('assessment', 'eliminated'), round('assessment', 'eliminated'), round('assessment', 'cleared')]
+    expect(computeBiggestBottleneck([application({ rounds })]).status).toBe('ok')
   })
 
   it('never treats upcoming or pending rounds as eliminations', () => {
     const rounds = [round('assessment', 'upcoming'), round('assessment', 'pending')]
-    expect(computeBiggestBottleneck([application({ rounds })])).toBeNull()
+    expect(computeBiggestBottleneck([application({ rounds })]).status).not.toBe('ok')
   })
 })
 
 describe('computeStrongestStage', () => {
-  it('identifies the category with the highest progression rate, matching the spec example', () => {
+  it('identifies the category with the highest progression rate and reports it as a rate', () => {
     const rounds = [
       ...Array.from({ length: 4 }, () => round('interview', 'cleared')),
       round('interview', 'eliminated'),
     ]
-    const strength = computeStrongestStage([application({ rounds })])
-    expect(strength?.category).toBe('interview')
-    expect(strength?.progressed).toBe(4)
-    expect(strength?.reached).toBe(5)
-    expect(strength?.supportingData).toBe('You progressed through 4 of your last 5 interview rounds.')
+    const result = computeStrongestStage([application({ rounds })])
+    expect(result.status).toBe('ok')
+    if (result.status !== 'ok') return
+    expect(result.insight.category).toBe('interview')
+    expect(result.insight.progressed).toBe(4)
+    expect(result.insight.reached).toBe(5)
+    expect(result.insight.progressionRate).toBeCloseTo(0.8)
+    expect(result.insight.supportingData).toBe('You progressed beyond this stage in 4 of 5 applications (80%).')
   })
 
-  it('returns null when there is no progression anywhere', () => {
-    const rounds = [round('assessment', 'eliminated')]
-    expect(computeStrongestStage([application({ rounds })])).toBeNull()
+  it('reports no strength when a well-evidenced stage never progresses', () => {
+    const rounds = Array.from({ length: 3 }, () => round('assessment', 'eliminated'))
+    expect(computeStrongestStage([application({ rounds })]).status).toBe('no_strength')
+  })
+
+  it('refuses to name a strongest stage from fewer than three observations', () => {
+    const rounds = [round('interview', 'cleared'), round('interview', 'cleared')]
+    expect(computeStrongestStage([application({ rounds })]).status).toBe('insufficient_data')
   })
 })
 
@@ -175,8 +225,8 @@ describe('computeTrends', () => {
   })
 })
 
-describe('computeRoundPerformance / computeConversionFunnel', () => {
-  it('matches the spec\'s example shape (reached/eliminated per category)', () => {
+describe('computeRoundPerformance', () => {
+  it("reports reached, progressed, eliminated and the progression rate per stage", () => {
     const rounds = [
       ...Array.from({ length: 4 }, () => round('resume_screening', 'cleared')),
       ...Array.from({ length: 4 }, () => round('resume_screening', 'eliminated')),
@@ -185,12 +235,123 @@ describe('computeRoundPerformance / computeConversionFunnel', () => {
       ...Array.from({ length: 2 }, () => round('interview', 'cleared')),
     ]
     const table = computeRoundPerformance([application({ rounds })])
-    expect(table.find(r => r.category === 'resume_screening')).toMatchObject({ reached: 8, eliminated: 4 })
-    expect(table.find(r => r.category === 'assessment')).toMatchObject({ reached: 6, eliminated: 4 })
-    expect(table.find(r => r.category === 'interview')).toMatchObject({ reached: 2, eliminated: 0 })
+    expect(table.find(r => r.category === 'resume_screening')).toMatchObject({ reached: 8, progressed: 4, eliminated: 4, progressionRate: 0.5 })
+    expect(table.find(r => r.category === 'assessment')).toMatchObject({ reached: 6, progressed: 2, eliminated: 4 })
+    expect(table.find(r => r.category === 'interview')).toMatchObject({ reached: 2, progressed: 2, eliminated: 0, progressionRate: 1 })
+  })
+})
 
-    const funnel = computeConversionFunnel([application({ rounds })])
-    expect(funnel.map(f => f.category)).toEqual(['resume_screening', 'assessment', 'interview'])
+describe('computeConversionSteps', () => {
+  it('computes the step-to-step conversion between consecutive funnel stages', () => {
+    // 3 applications, 2 clear resume screening, 1 of those clears assessment.
+    const apps = [
+      application({ rounds: [round('resume_screening', 'cleared'), round('assessment', 'cleared')] }),
+      application({ rounds: [round('resume_screening', 'cleared'), round('assessment', 'eliminated')] }),
+      application({ rounds: [round('resume_screening', 'eliminated')] }),
+    ]
+    const steps = computeConversionSteps(apps)
+    expect(steps[0]).toMatchObject({ fromCount: 3, toCount: 2 })
+    expect(steps[0].rate).toBeCloseTo(2 / 3)
+    expect(steps[1]).toMatchObject({ fromCount: 2, toCount: 1 })
+    expect(steps[1].rate).toBeCloseTo(0.5)
+  })
+
+  it('never divides by zero when a stage has nobody in it', () => {
+    expect(() => computeConversionSteps([])).not.toThrow()
+    expect(computeConversionSteps([])).toEqual([])
+  })
+})
+
+describe('computeUpcomingActions', () => {
+  it('lists the next round for active applications, soonest scheduled first', () => {
+    const soon = new Date(Date.now() + 86_400_000).toISOString()
+    const later = new Date(Date.now() + 5 * 86_400_000).toISOString()
+    const apps = [
+      application({ companyName: 'Later Co', status: 'active', rounds: [round('interview', 'upcoming', { scheduledDate: later, displayName: 'Interview' })] }),
+      application({ companyName: 'Soon Co', status: 'active', rounds: [round('assessment', 'upcoming', { scheduledDate: soon, displayName: 'Assessment' })] }),
+    ]
+    const actions = computeUpcomingActions(apps)
+    expect(actions.map(a => a.companyName)).toEqual(['Soon Co', 'Later Co'])
+    expect(actions[0].detail).toBe('Next: Assessment')
+  })
+
+  it('asks for a status update when an active application has no unresolved round left', () => {
+    const apps = [application({ companyName: 'Stalled Co', status: 'active', rounds: [round('interview', 'cleared')] })]
+    const actions = computeUpcomingActions(apps)
+    expect(actions[0]).toMatchObject({ kind: 'needs_update', detail: 'Update your application status' })
+  })
+
+  it('ignores applications that are no longer active', () => {
+    const apps = [
+      application({ status: 'rejected', rounds: [round('interview', 'upcoming')] }),
+      application({ status: 'withdrawn', rounds: [round('interview', 'upcoming')] }),
+      application({ status: 'offer', rounds: [round('interview', 'upcoming')] }),
+    ]
+    expect(computeUpcomingActions(apps)).toEqual([])
+  })
+})
+
+describe('computePlacementPattern', () => {
+  it('summarises the journey and leaves fields null when there is not enough data', () => {
+    const apps = [application({ rounds: [round('assessment', 'eliminated')] })]
+    const pattern = computePlacementPattern(apps)
+    expect(pattern.applicationsTracked).toBe(1)
+    expect(pattern.mostCommonExitPoint).toBeNull()
+    expect(pattern.strongestStage).toBeNull()
+    expect(pattern.interviewConversion).toBeNull()
+  })
+
+  it('withholds the interview conversion rate until enough interviews have been reached', () => {
+    const twoInterviews = [
+      application({ rounds: [round('interview', 'cleared')] }),
+      application({ rounds: [round('interview', 'eliminated')] }),
+    ]
+    expect(computePlacementPattern(twoInterviews).interviewConversion).toBeNull()
+  })
+
+  it('reports the interview conversion rate with its supporting counts once it qualifies', () => {
+    const apps = [
+      application({ rounds: [round('interview', 'cleared')] }),
+      application({ rounds: [round('interview', 'cleared')] }),
+      application({ rounds: [round('interview', 'eliminated')] }),
+      application({ rounds: [round('interview', 'eliminated')] }),
+    ]
+    expect(computePlacementPattern(apps).interviewConversion).toMatchObject({ rate: 0.5, reached: 4, cleared: 2 })
+  })
+})
+
+describe('computeObservations', () => {
+  it('says nothing at all with no applications', () => {
+    expect(computeObservations([])).toEqual([])
+  })
+
+  it('flags a weak resume shortlist rate as a concern', () => {
+    const apps = [
+      application({ rounds: [round('resume_screening', 'eliminated')] }),
+      application({ rounds: [round('resume_screening', 'eliminated')] }),
+      application({ rounds: [round('resume_screening', 'cleared')] }),
+    ]
+    const resume = computeObservations(apps).find(o => o.id === 'resume-rate')
+    expect(resume?.tone).toBe('concern')
+    expect(resume?.text).toContain('33%')
+  })
+
+  it('describes a stage the student reliably clears as a strength', () => {
+    const apps = Array.from({ length: 4 }, () => application({ rounds: [round('group_exercise', 'cleared')] }))
+    const strong = computeObservations(apps).find(o => o.id === 'strong-group_exercise')
+    expect(strong?.tone).toBe('positive')
+  })
+
+  it('only calls out an industry concentration when one genuinely dominates', () => {
+    const even = [
+      application({ industry: 'Consulting' }), application({ industry: 'Consulting' }),
+      application({ industry: 'Technology' }), application({ industry: 'Technology' }),
+      application({ industry: 'Finance' }), application({ industry: 'Retail' }),
+    ]
+    expect(computeObservations(even).find(o => o.id === 'industry-concentration')).toBeUndefined()
+
+    const concentrated = Array.from({ length: 4 }, () => application({ industry: 'Consulting' }))
+    expect(computeObservations(concentrated).find(o => o.id === 'industry-concentration')).toBeDefined()
   })
 })
 
@@ -218,5 +379,153 @@ describe('hasEnoughDataForInsights', () => {
 
   it('is true with 2 or more resolved rounds', () => {
     expect(hasEnoughDataForInsights([application({ rounds: [round('assessment', 'cleared'), round('interview', 'eliminated')] })])).toBe(true)
+  })
+})
+
+describe('evidence threshold is applied before ranking, not after', () => {
+  // Regression: a rarely-reached stage with a perfect rate used to win the
+  // ranking and then fail the >=3 check, hiding the genuinely strongest
+  // (or weakest) well-evidenced stage entirely.
+  it('does not let a one-off perfect stage mask a well-evidenced strength', () => {
+    const apps = [
+      ...Array.from({ length: 4 }, () => application({ rounds: [round('resume_screening', 'cleared')] })),
+      application({ rounds: [round('final_outcome', 'cleared')] }), // 1 observation, 100%
+    ]
+    const result = computeStrongestStage(apps)
+    expect(result.status).toBe('ok')
+    if (result.status !== 'ok') return
+    expect(result.insight.category).toBe('resume_screening')
+  })
+
+  it('does not let a one-off total elimination mask a well-evidenced drop-off', () => {
+    const apps = [
+      ...Array.from({ length: 4 }, () => application({ rounds: [round('assessment', 'eliminated')] })),
+      application({ rounds: [round('group_exercise', 'eliminated')] }), // 1 observation, 100%
+    ]
+    const result = computeBiggestBottleneck(apps)
+    expect(result.status).toBe('ok')
+    if (result.status !== 'ok') return
+    expect(result.insight.category).toBe('assessment')
+  })
+})
+
+describe('computeObservations does not repeat itself', () => {
+  it('states the resume-screening result once, not twice', () => {
+    const apps = Array.from({ length: 4 }, () => application({ rounds: [round('resume_screening', 'cleared')] }))
+    const ids = computeObservations(apps).map(o => o.id)
+    expect(ids).toContain('resume-rate')
+    expect(ids).not.toContain('strong-resume_screening')
+  })
+})
+
+describe('the same stage is never both the biggest drop-off and the strongest stage', () => {
+  // The reported bug: with only one stage above the evidence threshold, it
+  // topped both rankings at once, so the student was told the same stage
+  // was their greatest weakness and their greatest strength.
+  it('reports only a strength when the single qualifying stage is mostly cleared', () => {
+    const apps = [
+      application({ rounds: [round('resume_screening', 'cleared'), round('assessment', 'cleared')] }),
+      application({ rounds: [round('resume_screening', 'cleared'), round('assessment', 'eliminated')] }),
+      application({ rounds: [round('resume_screening', 'eliminated')] }),
+    ]
+    const { bottleneck, strength } = computeStageInsights(apps)
+    expect(strength.status).toBe('ok')
+    if (strength.status !== 'ok') return
+    expect(strength.insight.category).toBe('resume_screening')
+    expect(bottleneck.status).toBe('insufficient_data')
+  })
+
+  it('reports only a drop-off when the single qualifying stage mostly eliminates', () => {
+    const apps = [
+      application({ rounds: [round('assessment', 'eliminated')] }),
+      application({ rounds: [round('assessment', 'eliminated')] }),
+      application({ rounds: [round('assessment', 'cleared')] }),
+    ]
+    const { bottleneck, strength } = computeStageInsights(apps)
+    expect(bottleneck.status).toBe('ok')
+    if (bottleneck.status !== 'ok') return
+    expect(bottleneck.insight.category).toBe('assessment')
+    expect(strength.status).toBe('insufficient_data')
+  })
+
+  it('claims neither when the single qualifying stage is an exact coin flip', () => {
+    const apps = [
+      application({ rounds: [round('assessment', 'cleared')] }),
+      application({ rounds: [round('assessment', 'cleared')] }),
+      application({ rounds: [round('assessment', 'eliminated')] }),
+      application({ rounds: [round('assessment', 'eliminated')] }),
+    ]
+    const { bottleneck, strength } = computeStageInsights(apps)
+    expect(bottleneck.status).toBe('insufficient_data')
+    expect(strength.status).toBe('insufficient_data')
+  })
+
+  it('holds across many shapes of data: the two never name the same stage', () => {
+    const outcomes = ['cleared', 'eliminated'] as const
+    const categories = ['resume_screening', 'assessment', 'interview'] as const
+    // Exhaustively walk a spread of journeys rather than trusting one fixture.
+    for (let mask = 0; mask < 1 << 6; mask++) {
+      const apps = categories.flatMap((cat, ci) =>
+        Array.from({ length: 3 }, (_, i) =>
+          application({ rounds: [round(cat, outcomes[(mask >> (ci * 2 + (i % 2))) & 1])] })),
+      )
+      const { bottleneck, strength } = computeStageInsights(apps)
+      if (bottleneck.status === 'ok' && strength.status === 'ok') {
+        expect(bottleneck.insight.category).not.toBe(strength.insight.category)
+      }
+    }
+  })
+})
+
+describe('current focus never contradicts the strongest stage', () => {
+  it('asks for more data when nothing qualifies', () => {
+    const apps = [application({ rounds: [round('assessment', 'cleared')] })]
+    expect(computePlacementPattern(apps).currentFocus).toBe(
+      'Keep tracking and updating your applications. More data will help identify where you can improve.',
+    )
+  })
+
+  it('hedges an emerging weakness rather than issuing a firm recommendation', () => {
+    const apps = [
+      application({ rounds: [round('assessment', 'eliminated')] }),
+      application({ rounds: [round('assessment', 'eliminated')] }),
+      application({ rounds: [round('assessment', 'cleared')] }),
+    ]
+    expect(computePlacementPattern(apps).currentFocus).toContain('may need attention')
+  })
+
+  it('names an emerging strength when there is no reliable weakness', () => {
+    const apps = Array.from({ length: 3 }, () => application({ rounds: [round('resume_screening', 'cleared')] }))
+    const pattern = computePlacementPattern(apps)
+    expect(pattern.currentFocus).toContain('emerging strength')
+    expect(pattern.mostCommonExitPoint).toBeNull()
+  })
+
+  it('never tells the student to improve the stage it just called their strongest', () => {
+    const apps = [
+      application({ rounds: [round('resume_screening', 'cleared'), round('assessment', 'eliminated')] }),
+      application({ rounds: [round('resume_screening', 'cleared'), round('assessment', 'eliminated')] }),
+      application({ rounds: [round('resume_screening', 'cleared'), round('assessment', 'cleared')] }),
+    ]
+    const pattern = computePlacementPattern(apps)
+    if (pattern.strongestStage) {
+      expect(pattern.currentFocus.toLowerCase()).not.toContain(`${pattern.strongestStage.label.toLowerCase()} may need attention`)
+    }
+  })
+})
+
+describe('round performance carries a confidence indicator', () => {
+  it('marks a stage reached fewer than 3 times as limited data', () => {
+    const apps = [application({ rounds: [round('interview', 'cleared'), round('interview', 'cleared')] })]
+    const row = computeRoundPerformance(apps).find(r => r.category === 'interview')
+    expect(row?.confidence.label).toBe('Limited Data')
+    expect(row?.confidence.qualifies).toBe(false)
+  })
+
+  it('escalates from emerging to established as observations accumulate', () => {
+    const emerging = [application({ rounds: Array.from({ length: 3 }, () => round('interview', 'cleared')) })]
+    expect(computeRoundPerformance(emerging)[0].confidence.label).toBe('Emerging Pattern')
+    const established = [application({ rounds: Array.from({ length: 5 }, () => round('interview', 'cleared')) })]
+    expect(computeRoundPerformance(established)[0].confidence.label).toBe('Established Pattern')
   })
 })

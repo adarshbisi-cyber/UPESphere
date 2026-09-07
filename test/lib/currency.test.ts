@@ -62,3 +62,22 @@ describe('digit-index round trip (the cursor-stability math)', () => {
     expect(indexAfterDigitCount('12,000', 999)).toBe('12,000'.length)
   })
 })
+
+describe('formatIndianNumber with values that did not come from the input', () => {
+  // Regression: the edit flow loads a *stored* value straight into the
+  // field. Number('12,00,000') is NaN, which rendered the literal text
+  // "NaN" in the CTC/Package input.
+  it('formats an already-formatted value instead of producing NaN', () => {
+    expect(formatIndianNumber('12,00,000')).toBe('12,00,000')
+  })
+
+  it('never returns "NaN" for free-text or junk values', () => {
+    for (const input of ['12 LPA', 'abc', '₹40,000', '  ']) {
+      expect(formatIndianNumber(input)).not.toContain('NaN')
+    }
+  })
+
+  it('keeps the digits from a free-text value it can partially read', () => {
+    expect(formatIndianNumber('₹40,000')).toBe('40,000')
+  })
+})

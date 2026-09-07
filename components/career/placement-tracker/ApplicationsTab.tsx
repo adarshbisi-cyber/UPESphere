@@ -1,12 +1,13 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { Search, Plus, Briefcase, MapPin } from 'lucide-react'
+import { Search, Plus, Briefcase, MapPin, MoreVertical, Pencil, Trash2 } from 'lucide-react'
 import { GlassCard } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu'
 import { ApplicationStatusBadge } from './StatusBadge'
 import { currentRound } from '@/lib/placementTracker/status'
 import { OPPORTUNITY_TYPES } from '@/lib/placementTracker/constants'
@@ -38,10 +39,14 @@ export function ApplicationsTab({
   applications,
   onAdd,
   onOpen,
+  onEdit,
+  onDelete,
 }: {
   applications: PlacementApplication[]
   onAdd: () => void
   onOpen: (applicationId: string) => void
+  onEdit: (app: PlacementApplication) => void
+  onDelete: (app: PlacementApplication) => void
 }) {
   const [view, setView] = useState<ViewFilter>('all')
   const [search, setSearch] = useState('')
@@ -94,31 +99,78 @@ export function ApplicationsTab({
         </GlassCard>
       ) : (
         <div className="space-y-2">
-          {filtered.map(app => {
-            return (
-              <button
-                key={app.id}
-                onClick={() => onOpen(app.id)}
-                className="w-full text-left flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 p-4 rounded-xl transition-colors hover:border-indigo-500/30 border border-transparent"
-                style={{ background: 'var(--muted-surface)' }}
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-sm font-semibold text-foreground truncate">{app.companyName}</span>
-                    <ApplicationStatusBadge status={app.status} />
-                  </div>
-                  <div className="flex items-center gap-3 flex-wrap text-xs text-muted-foreground mt-1">
-                    <span className="inline-flex items-center gap-1"><Briefcase className="w-3 h-3" /> {app.role}</span>
-                    {app.location && <span className="inline-flex items-center gap-1"><MapPin className="w-3 h-3" /> {app.location}</span>}
-                    <span>{app.applicationDate}</span>
-                  </div>
-                </div>
-                <div className="text-xs text-muted-foreground sm:text-right shrink-0">{describeStage(app)}</div>
-              </button>
-            )
-          })}
+          {filtered.map(app => (
+            <ApplicationRow
+              key={app.id}
+              app={app}
+              onOpen={() => onOpen(app.id)}
+              onEdit={() => onEdit(app)}
+              onDelete={() => onDelete(app)}
+            />
+          ))}
         </div>
       )}
+    </div>
+  )
+}
+
+// The row is a wrapper div rather than one big button: the actions menu is
+// itself a button, and a button nested inside a button is invalid HTML that
+// browsers resolve unpredictably. The wrapper carries the hover styling so
+// the card still reads as a single surface, while the summary and the menu
+// stay two separate, independently focusable controls.
+function ApplicationRow({
+  app,
+  onOpen,
+  onEdit,
+  onDelete,
+}: {
+  app: PlacementApplication
+  onOpen: () => void
+  onEdit: () => void
+  onDelete: () => void
+}) {
+  return (
+    <div
+      className="flex items-center gap-1 pr-2 rounded-xl border border-transparent transition-colors hover:border-indigo-500/30 focus-within:border-indigo-500/30"
+      style={{ background: 'var(--muted-surface)' }}
+    >
+      <button
+        onClick={onOpen}
+        className="flex-1 min-w-0 text-left flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 p-4 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-500/50"
+      >
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-sm font-semibold text-foreground truncate">{app.companyName}</span>
+            <ApplicationStatusBadge status={app.status} />
+          </div>
+          <div className="flex items-center gap-3 flex-wrap text-xs text-muted-foreground mt-1">
+            <span className="inline-flex items-center gap-1"><Briefcase className="w-3 h-3" /> {app.role}</span>
+            {app.location && <span className="inline-flex items-center gap-1"><MapPin className="w-3 h-3" /> {app.location}</span>}
+            <span>{app.applicationDate}</span>
+          </div>
+        </div>
+        <div className="text-xs text-muted-foreground sm:text-right shrink-0">{describeStage(app)}</div>
+      </button>
+
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          aria-label={`Actions for ${app.companyName}`}
+          className="shrink-0 w-10 h-10 rounded-lg inline-flex items-center justify-center text-muted-foreground outline-none transition-colors hover:text-foreground hover:bg-indigo-500/10 focus-visible:ring-2 focus-visible:ring-indigo-500/50 data-[state=open]:text-foreground data-[state=open]:bg-indigo-500/10"
+        >
+          <MoreVertical className="w-4 h-4" />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent>
+          <DropdownMenuItem onSelect={onEdit}>
+            <Pencil className="w-3.5 h-3.5" />
+            Edit Application
+          </DropdownMenuItem>
+          <DropdownMenuItem destructive onSelect={onDelete}>
+            <Trash2 className="w-3.5 h-3.5" />
+            Delete Application
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   )
 }
