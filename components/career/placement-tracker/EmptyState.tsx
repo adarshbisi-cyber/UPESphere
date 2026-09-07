@@ -5,13 +5,13 @@ import { GlassCard } from '@/components/ui/card'
 export function PlacementTrackerEmptyState({ onAddFirst }: { onAddFirst: () => void }) {
   return (
     <GlassCard className="p-10 text-center">
-      <h2 className="text-lg font-semibold font-display mb-2">Track Your Placement Journey</h2>
+      <h2 className="text-lg font-semibold font-display mb-2">No applications tracked yet.</h2>
       <p className="text-sm text-muted-foreground max-w-md mx-auto mb-6">
-        Keep track of every opportunity, understand your progress, and discover where you can improve.
+        Start tracking your placement journey to understand your progress and identify areas for improvement.
       </p>
       <Button variant="gradient" className="gap-2 mb-8" onClick={onAddFirst}>
         <Plus className="w-4 h-4" />
-        Add Your First Application
+        Add Application
       </Button>
 
       <div className="grid sm:grid-cols-3 gap-3 max-w-lg mx-auto text-left">
