@@ -3,12 +3,22 @@
 // component so the actual number/cursor logic — the part worth getting
 // exactly right — is unit-testable without a DOM.
 
-// Formats a clean digit string using Indian numbering (lakh/crore grouping,
-// via the en-IN locale) rather than the international thousands grouping —
+// Formats a digit string using Indian numbering (lakh/crore grouping, via
+// the en-IN locale) rather than the international thousands grouping —
 // 1200000 -> "12,00,000", not "1,200,000".
+//
+// Strips non-digits before converting rather than trusting the caller: an
+// already-formatted or free-text value ("12,00,000", "12 LPA") would
+// otherwise reach Number() and render the literal string "NaN" in the
+// input. That can't happen while typing (the input only ever hands back
+// sanitized digits) but does happen the moment a stored value is loaded
+// into the field, which is what the edit flow does. Sanitizing here also
+// makes the function idempotent — formatting an already-formatted value
+// returns it unchanged instead of corrupting it.
 export function formatIndianNumber(digits: string): string {
-  if (!digits) return ''
-  return new Intl.NumberFormat('en-IN').format(Number(digits))
+  const clean = digits.replace(/\D/g, '')
+  if (!clean) return ''
+  return new Intl.NumberFormat('en-IN').format(Number(clean))
 }
 
 // Strips everything but digits, and any leading zeros (a currency amount

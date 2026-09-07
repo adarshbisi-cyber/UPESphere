@@ -208,6 +208,22 @@ export async function withdrawApplication(userId: string, applicationId: string)
   if (error) throw error
 }
 
+// Rounds and their reflections go with it — placement_rounds.application_id
+// and placement_round_reflections.round_id are both `on delete cascade` (see
+// supabase/placement-tracker-migration.sql), so Postgres removes the whole
+// journey in one statement rather than this needing to walk the tree itself.
+// The user_id filter is what stops a crafted id from deleting someone else's
+// row, backed by the table's `for all` RLS policy (which covers delete).
+export async function deleteApplication(userId: string, applicationId: string): Promise<void> {
+  const supabase = createClient()
+  const { error } = await supabase
+    .from('placement_applications')
+    .delete()
+    .eq('id', applicationId)
+    .eq('user_id', userId)
+  if (error) throw error
+}
+
 // Recomputes and persists `status` from the application's current rounds.
 // Called after every round mutation so the stored status can never drift
 // out of sync with the recruitment journey it's derived from. Skips

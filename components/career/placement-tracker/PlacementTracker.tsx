@@ -17,8 +17,11 @@ import { DashboardTab } from './DashboardTab'
 import { ApplicationsTab } from './ApplicationsTab'
 import { InsightsTab } from './InsightsTab'
 import { AddApplicationModal } from './AddApplicationModal'
+import { EditApplicationModal } from './EditApplicationModal'
 import { ApplicationDetailModal } from './ApplicationDetailModal'
-import { getApplications } from '@/lib/placementTracker/api'
+import { ConfirmModal } from '@/components/ui/confirm-modal'
+import { useToast } from '@/components/ui/use-toast'
+import { deleteApplication, getApplications } from '@/lib/placementTracker/api'
 import { describeSaveError } from '@/lib/onboarding/errors'
 import type { PlacementApplication } from '@/lib/placementTracker/types'
 
@@ -43,6 +46,12 @@ export function PlacementTracker({ userId }: { userId: string }) {
   const [tab, setTab] = useState<Tab>('dashboard')
   const [showAddModal, setShowAddModal] = useState(false)
   const [openApplicationId, setOpenApplicationId] = useState<string | null>(null)
+  // Edit and delete hold the whole application, not just an id: both need
+  // its details to render (the edit form's initial values, the company name
+  // in the delete confirmation) and holding the object avoids a second fetch.
+  const [editingApplication, setEditingApplication] = useState<PlacementApplication | null>(null)
+  const [deletingApplication, setDeletingApplication] = useState<PlacementApplication | null>(null)
+  const { toast } = useToast()
 
   const refresh = useCallback(() => {
     setStatus('loading')
@@ -58,6 +67,22 @@ export function PlacementTracker({ userId }: { userId: string }) {
   useEffect(() => { refresh() }, [refresh])
 
   const handleAdded = () => { setShowAddModal(false); refresh() }
+  const handleEdited = () => { setEditingApplication(null); refresh() }
+
+  // refresh() re-derives everything downstream from one fetch — the
+  // applications list, the dashboard's stats and the insights analytics are
+  // all computed from this same array, so none of them can be left showing
+  // a deleted application.
+  const handleDelete = async (app: PlacementApplication) => {
+    try {
+      await deleteApplication(userId, app.id)
+      if (openApplicationId === app.id) setOpenApplicationId(null)
+      refresh()
+      toast({ title: 'Application deleted', description: `${app.companyName} was removed from your Placement Tracker.` })
+    } catch (err) {
+      toast({ title: "Couldn't delete application", description: describeSaveError(err), variant: 'destructive' })
+    }
+  }
 
   if (status === 'error') {
     return (
@@ -117,7 +142,13 @@ export function PlacementTracker({ userId }: { userId: string }) {
           />
         </TabsContent>
         <TabsContent value="applications">
-          <ApplicationsTab applications={applications} onAdd={() => setShowAddModal(true)} onOpen={setOpenApplicationId} />
+          <ApplicationsTab
+            applications={applications}
+            onAdd={() => setShowAddModal(true)}
+            onOpen={setOpenApplicationId}
+            onEdit={setEditingApplication}
+            onDelete={setDeletingApplication}
+          />
         </TabsContent>
         <TabsContent value="insights">
           <InsightsTab applications={applications} />
@@ -126,6 +157,23 @@ export function PlacementTracker({ userId }: { userId: string }) {
 
       <AnimatePresence>
         {showAddModal && <AddApplicationModal userId={userId} onClose={() => setShowAddModal(false)} onSaved={handleAdded} />}
+        {editingApplication && (
+          <EditApplicationModal
+            userId={userId}
+            application={editingApplication}
+            onClose={() => setEditingApplication(null)}
+            onSaved={handleEdited}
+          />
+        )}
+        {deletingApplication && (
+          <ConfirmModal
+            title="Delete application?"
+            description={`Are you sure you want to delete ${deletingApplication.companyName} from your Placement Tracker? This action cannot be undone.`}
+            confirmLabel="Delete Application"
+            onConfirm={() => handleDelete(deletingApplication)}
+            onClose={() => setDeletingApplication(null)}
+          />
+        )}
         {openApplicationId && (
           <ApplicationDetailModal
             userId={userId}
