@@ -8,8 +8,11 @@ import { Input } from '@/components/ui/input'
 import { CurrencyInput } from '@/components/ui/currency-input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
+import { Combobox } from '@/components/ui/combobox'
 import { OPPORTUNITY_TYPES } from '@/lib/placementTracker/constants'
 import { ROLE_SELECT_OPTIONS, type RoleChoice } from '@/lib/placementTracker/role'
+import { INDUSTRY_SELECT_OPTIONS, OTHER_INDUSTRY, canAddCustomIndustry } from '@/lib/placementTracker/industry'
+import { LOCATION_SELECT_OPTIONS, OTHER_LOCATION, canAddCustomLocation } from '@/lib/placementTracker/location'
 import type { OpportunityType } from '@/lib/placementTracker/types'
 
 export interface ApplicationFieldValues {
@@ -18,8 +21,10 @@ export interface ApplicationFieldValues {
   customRole: string
   opportunityType: OpportunityType
   applicationDate: string
-  industry: string
-  location: string
+  industryChoice: string
+  customIndustry: string
+  locationChoice: string
+  customLocation: string
   packageValue: string
   stipend: string
   notes: string
@@ -74,11 +79,66 @@ export function ApplicationFields({
         </div>
         <div>
           <Label className="text-xs mb-1.5 block">Industry</Label>
-          <Input value={values.industry} onChange={e => onChange({ industry: e.target.value })} placeholder="e.g. Consulting" />
+          <Combobox
+            value={values.industryChoice}
+            // A custom industry shows its real name on the trigger rather
+            // than the literal "Other" it's filed under.
+            displayValue={values.industryChoice === OTHER_INDUSTRY ? values.customIndustry : undefined}
+            options={INDUSTRY_SELECT_OPTIONS}
+            placeholder="Select an industry"
+            searchPlaceholder="Search industries"
+            emptyLabel="No matching industry found"
+            // Switching away from "Other" drops the custom text, so a stale
+            // value can't be silently saved against a preset industry.
+            onChange={choice => onChange({
+              industryChoice: choice,
+              ...(choice === OTHER_INDUSTRY ? {} : { customIndustry: '' }),
+            })}
+            // Typing an industry that isn't listed adopts it directly, which
+            // is smoother than making the user find "Other" first. It lands
+            // in the same place: choice = Other, custom = what they typed.
+            canCreate={canAddCustomIndustry}
+            createLabel={q => `Add "${q}" as a custom industry`}
+            onCreate={custom => onChange({ industryChoice: OTHER_INDUSTRY, customIndustry: custom })}
+          />
+          {values.industryChoice === OTHER_INDUSTRY && (
+            <>
+              <Label className="text-xs mb-1.5 mt-2 block">Specify Industry *</Label>
+              <Input
+                value={values.customIndustry}
+                onChange={e => onChange({ customIndustry: e.target.value })}
+                placeholder="Enter the industry"
+              />
+            </>
+          )}
         </div>
         <div>
           <Label className="text-xs mb-1.5 block">Location</Label>
-          <Input value={values.location} onChange={e => onChange({ location: e.target.value })} placeholder="e.g. Bengaluru" />
+          <Combobox
+            value={values.locationChoice}
+            displayValue={values.locationChoice === OTHER_LOCATION ? values.customLocation : undefined}
+            options={LOCATION_SELECT_OPTIONS}
+            placeholder="Select a location"
+            searchPlaceholder="Search locations"
+            emptyLabel="No matching location found"
+            onChange={choice => onChange({
+              locationChoice: choice,
+              ...(choice === OTHER_LOCATION ? {} : { customLocation: '' }),
+            })}
+            canCreate={canAddCustomLocation}
+            createLabel={q => `Add "${q}" as a custom location`}
+            onCreate={custom => onChange({ locationChoice: OTHER_LOCATION, customLocation: custom })}
+          />
+          {values.locationChoice === OTHER_LOCATION && (
+            <>
+              <Label className="text-xs mb-1.5 mt-2 block">Specify Location *</Label>
+              <Input
+                value={values.customLocation}
+                onChange={e => onChange({ customLocation: e.target.value })}
+                placeholder="Enter the location"
+              />
+            </>
+          )}
         </div>
         <div>
           <Label className="text-xs mb-1.5 block">CTC / Package</Label>
