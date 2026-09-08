@@ -8,9 +8,10 @@
 
 import { createClient } from '@/lib/supabase/client'
 import { deriveApplicationStatus } from './status'
+import { normaliseLegacyRoundType } from './categoryInference'
 import type {
-  AnalyticsCategory, ApplicationInput, ApplicationStatus, PlacementApplication,
-  PlacementRound, ReflectionType, RoundInput, RoundOutcome, RoundReflection,
+  ApplicationInput, ApplicationStatus, ExitReason, PlacementApplication,
+  PlacementRound, ReflectionType, RoundInput, RoundOutcome, RoundReflection, RoundType,
 } from './types'
 
 // ============================================================
@@ -30,8 +31,9 @@ interface RoundRow {
   application_id: string
   round_order: number
   display_name: string
-  analytics_category: AnalyticsCategory
+  analytics_category: string // may still hold a pre-split value; see toRound
   outcome: RoundOutcome
+  exit_reason: ExitReason | null
   scheduled_date: string | null
   completed_date: string | null
   outcome_notes: string | null
@@ -68,8 +70,12 @@ function toRound(r: RoundRow): PlacementRound {
     applicationId: r.application_id,
     roundOrder: r.round_order,
     displayName: r.display_name,
-    analyticsCategory: r.analytics_category,
+    // Rows written before the taxonomy split are normalised on read, so the
+    // app works whether or not the backfill migration has been run yet. The
+    // student's own wording is never rewritten.
+    analyticsCategory: normaliseLegacyRoundType(r.analytics_category, r.display_name),
     outcome: r.outcome,
+    exitReason: r.exit_reason ?? null,
     scheduledDate: r.scheduled_date,
     completedDate: r.completed_date,
     outcomeNotes: r.outcome_notes,
@@ -199,10 +205,24 @@ export async function updateApplicationDetails(
 // represent (see lib/placementTracker/status.ts) — everything else is
 // recomputed automatically after a round update.
 export async function withdrawApplication(userId: string, applicationId: string): Promise<void> {
+  await setApplicationStatus(userId, applicationId, 'withdrawn')
+}
+
+// An offer is an outcome, not a round — there is no "Final Result" stage to
+// clear, so receiving one is recorded directly on the application.
+export async function markOfferReceived(userId: string, applicationId: string): Promise<void> {
+  await setApplicationStatus(userId, applicationId, 'offer')
+}
+
+export async function reopenApplication(userId: string, applicationId: string): Promise<void> {
+  await setApplicationStatus(userId, applicationId, 'active')
+}
+
+async function setApplicationStatus(userId: string, applicationId: string, status: ApplicationStatus): Promise<void> {
   const supabase = createClient()
   const { error } = await supabase
     .from('placement_applications')
-    .update({ status: 'withdrawn' })
+    .update({ status })
     .eq('id', applicationId)
     .eq('user_id', userId)
   if (error) throw error
@@ -230,7 +250,9 @@ export async function deleteApplication(userId: string, applicationId: string): 
 // applications already manually withdrawn — that override always wins.
 async function syncApplicationStatus(userId: string, applicationId: string): Promise<void> {
   const app = await getApplication(userId, applicationId)
-  if (!app || app.status === 'withdrawn') return
+  // Both are explicit user decisions the rounds can't express, so neither is
+  // ever overwritten by a re-derivation.
+  if (!app || app.status === 'withdrawn' || app.status === 'offer') return
   const derived = deriveApplicationStatus(app.rounds)
   if (derived !== app.status) {
     const supabase = createClient()
@@ -287,8 +309,9 @@ export async function reorderRounds(applicationId: string, orderedRoundIds: stri
 
 export interface RoundUpdate {
   displayName?: string
-  analyticsCategory?: AnalyticsCategory
+  analyticsCategory?: RoundType
   outcome?: RoundOutcome
+  exitReason?: ExitReason | null
   scheduledDate?: string | null
   completedDate?: string | null
   outcomeNotes?: string | null
@@ -305,6 +328,10 @@ export async function updateRound(
   if (patch.displayName !== undefined) row.display_name = patch.displayName
   if (patch.analyticsCategory !== undefined) row.analytics_category = patch.analyticsCategory
   if (patch.outcome !== undefined) row.outcome = patch.outcome
+  if (patch.exitReason !== undefined) row.exit_reason = patch.exitReason
+  // Clearing an elimination must clear its reason too, or the round keeps
+  // claiming a cause for an exit that no longer happened.
+  if (patch.outcome !== undefined && patch.outcome !== 'eliminated') row.exit_reason = null
   if (patch.scheduledDate !== undefined) row.scheduled_date = patch.scheduledDate
   if (patch.completedDate !== undefined) row.completed_date = patch.completedDate
   if (patch.outcomeNotes !== undefined) row.outcome_notes = patch.outcomeNotes

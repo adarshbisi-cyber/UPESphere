@@ -9,24 +9,11 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu'
 import { ApplicationStatusBadge } from './StatusBadge'
-import { currentRound } from '@/lib/placementTracker/status'
+import { getApplicationJourneyState } from '@/lib/placementTracker/journey'
 import { OPPORTUNITY_TYPES } from '@/lib/placementTracker/constants'
 import type { OpportunityType, PlacementApplication } from '@/lib/placementTracker/types'
 
 type ViewFilter = 'all' | 'active' | 'closed' | 'offers'
-
-// A closed application still has rounds — it just has no *current* one — so
-// "No rounds yet" (which implies zero rounds exist) would be actively wrong
-// for it. Falls back to describing how the journey actually ended.
-function describeStage(app: PlacementApplication): string {
-  const current = currentRound(app.rounds)
-  if (current) return `Current: ${current.displayName}`
-  if (app.rounds.length === 0) return 'No rounds yet'
-  const last = [...app.rounds].sort((a, b) => b.roundOrder - a.roundOrder)[0]
-  if (last.outcome === 'eliminated') return `Eliminated at ${last.displayName}`
-  if (last.outcome === 'cleared') return `Cleared ${last.displayName}`
-  return `${last.displayName} — ${last.outcome}`
-}
 
 function matchesView(app: PlacementApplication, view: ViewFilter): boolean {
   if (view === 'all') return true
@@ -130,6 +117,9 @@ function ApplicationRow({
   onEdit: () => void
   onDelete: () => void
 }) {
+  // One shared derivation, so a closed application can never advertise a
+  // "current" round it will never reach.
+  const journey = getApplicationJourneyState(app)
   return (
     <div
       className="flex items-center gap-1 pr-2 rounded-xl border border-transparent transition-colors hover:border-indigo-500/30 focus-within:border-indigo-500/30"
@@ -150,7 +140,9 @@ function ApplicationRow({
             <span>{app.applicationDate}</span>
           </div>
         </div>
-        <div className="text-xs text-muted-foreground sm:text-right shrink-0">{describeStage(app)}</div>
+        <div className={`text-xs sm:text-right shrink-0 ${journey.phase === 'rejected' || journey.phase === 'withdrawn' ? 'text-red-500/80 dark:text-red-400/80' : journey.phase === 'offer' ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}`}>
+          {journey.label}
+        </div>
       </button>
 
       <DropdownMenu>

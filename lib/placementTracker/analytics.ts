@@ -5,9 +5,10 @@
 // failures, and every insight is gated on having enough data to say
 // something real (see `confidenceFor` and each function's own threshold).
 
+import { getApplicationsNeedingUpdate, getUpcomingRounds } from './journey'
 import { currentRound } from './status'
-import { ANALYTICS_CATEGORIES } from './constants'
-import type { AnalyticsCategory, PlacementApplication, PlacementRound } from './types'
+import { FUNNEL_ORDER, ROUND_TYPES, exitReasonLabel, roundTypeLabel } from './constants'
+import type { ExitReason, PlacementApplication, PlacementRound, RoundType } from './types'
 
 // ============================================================
 // Confidence — distinguishes a fluke from a real pattern.
@@ -51,15 +52,14 @@ export interface Overview {
 }
 
 export function computeOverview(applications: PlacementApplication[]): Overview {
-  const now = new Date()
   return {
     totalApplications: applications.length,
     activeApplications: applications.filter(a => a.status === 'active').length,
-    // "Applications with a future round date/time" — counts applications,
-    // not individual rounds, per the feature spec's own definition.
-    upcomingRounds: applications.filter(a =>
-      a.rounds.some(r => (r.outcome === 'upcoming' || r.outcome === 'pending') && r.scheduledDate && new Date(r.scheduledDate) > now)
-    ).length,
+    // Same selector Upcoming Actions renders from, so the metric and the
+    // list can't disagree. It previously required a future scheduled date,
+    // which silently excluded undated rounds the list was already showing
+    // and counted leftover rounds on closed applications.
+    upcomingRounds: getUpcomingRounds(applications).length,
     offersReceived: applications.filter(a => a.status === 'offer').length,
   }
 }
@@ -104,27 +104,43 @@ export const MIN_OBSERVATIONS_FOR_PATTERN = 3
 // a genuine mix falls back to the generic category label. That keeps the
 // funnel recognisable without inventing equivalences the data doesn't
 // support.
-function bestLabelFor(category: AnalyticsCategory, rounds: PlacementRound[]): string {
+function bestLabelFor(category: RoundType, rounds: PlacementRound[]): string {
   const names = new Set(
     rounds.filter(r => r.analyticsCategory === category).map(r => r.displayName.trim()).filter(Boolean),
   )
   if (names.size === 1) return Array.from(names)[0]
-  return ANALYTICS_CATEGORIES.find(c => c.value === category)!.label
+  return roundTypeLabel(category)
 }
 
-function reachedStage(app: PlacementApplication, category: AnalyticsCategory): boolean {
+function reachedStage(app: PlacementApplication, category: RoundType): boolean {
   return app.rounds.some(r => r.analyticsCategory === category && r.outcome !== 'upcoming')
 }
 
-function clearedStage(app: PlacementApplication, category: AnalyticsCategory): boolean {
+function clearedStage(app: PlacementApplication, category: RoundType): boolean {
   return app.rounds.some(r => r.analyticsCategory === category && r.outcome === 'cleared')
 }
 
+// "Reached an interview" spans every interview-shaped stage now that the
+// single coarse 'interview' bucket has been split — a student who got to a
+// case round and a student who got to an HR round have both interviewed.
+const INTERVIEW_TYPES: RoundType[] = ['case_interview', 'hr_fit', 'final_interview']
+
+function reachedInterview(app: PlacementApplication): boolean {
+  return INTERVIEW_TYPES.some(t => reachedStage(app, t))
+}
+
+function clearedInterview(app: PlacementApplication): boolean {
+  return INTERVIEW_TYPES.some(t => clearedStage(app, t))
+}
+
 export interface FunnelStage {
-  key: string // 'applied' | AnalyticsCategory | 'offer'
+  key: string // 'applied' | RoundType | 'offer'
   label: string
-  count: number // applications that got past this stage
+  count: number // applications that got past this stage (== progressed)
   reached: number // applications that got to this stage at all
+  progressed: number
+  eliminated: number
+  conversionRate: number // progressed / reached, 0..1
 }
 
 // Applications, not rounds: "8 of my 12 applications cleared resume
@@ -137,26 +153,40 @@ export function computeApplicationFunnel(applications: PlacementApplication[]): 
   const allRounds = applications.flatMap(a => a.rounds)
 
   const stages: FunnelStage[] = [
-    { key: 'applied', label: 'Applied', count: applications.length, reached: applications.length },
+    {
+      key: 'applied', label: 'Applied',
+      count: applications.length, reached: applications.length, progressed: applications.length,
+      eliminated: 0, conversionRate: 1,
+    },
   ]
 
-  for (const c of ANALYTICS_CATEGORIES) {
-    const reached = applications.filter(a => reachedStage(a, c.value)).length
+  // FUNNEL_ORDER, not ROUND_TYPES: a funnel is a sequence, and 'other' has
+  // no defensible position in one. Those rounds still count in round
+  // performance, they just don't get a slot implying a fixed stage.
+  for (const type of FUNNEL_ORDER) {
+    const reached = applications.filter(a => reachedStage(a, type)).length
     if (reached === 0) continue
+    const progressed = applications.filter(a => clearedStage(a, type)).length
     stages.push({
-      key: c.value,
-      label: bestLabelFor(c.value, allRounds),
-      count: applications.filter(a => clearedStage(a, c.value)).length,
+      key: type,
+      label: bestLabelFor(type, allRounds),
+      count: progressed,
       reached,
+      progressed,
+      eliminated: applications.filter(a => a.rounds.some(r => r.analyticsCategory === type && r.outcome === 'eliminated')).length,
+      conversionRate: reached > 0 ? progressed / reached : 0,
     })
   }
 
-  // A cleared "final outcome" round already means an offer, so appending an
-  // Offers row in that case would just repeat the previous one.
-  const hasFinalOutcome = stages.some(st => st.key === 'final_outcome')
-  if (!hasFinalOutcome) {
-    const offers = applications.filter(a => a.status === 'offer').length
-    if (offers > 0) stages.push({ key: 'offer', label: 'Offers', count: offers, reached: offers })
+  // Offers close the funnel. They come from the application's own status
+  // now that "Final Result" is no longer a round, so there is nothing left
+  // for this row to duplicate.
+  const offers = applications.filter(a => a.status === 'offer').length
+  if (offers > 0) {
+    stages.push({
+      key: 'offer', label: 'Offers',
+      count: offers, reached: offers, progressed: offers, eliminated: 0, conversionRate: 1,
+    })
   }
 
   return stages
@@ -168,7 +198,7 @@ export function computeApplicationFunnel(applications: PlacementApplication[]): 
 // ============================================================
 
 export interface CategoryStats {
-  category: AnalyticsCategory
+  category: RoundType
   label: string
   reached: number
   progressed: number
@@ -179,7 +209,7 @@ export interface CategoryStats {
 
 function categoryStats(applications: PlacementApplication[]): CategoryStats[] {
   const allRounds = applications.flatMap(a => a.rounds)
-  return ANALYTICS_CATEGORIES
+  return ROUND_TYPES
     .map(c => {
       const inCategory = allRounds.filter(r => r.analyticsCategory === c.value)
       const reached = inCategory.filter(r => r.outcome !== 'upcoming').length
@@ -197,24 +227,28 @@ function categoryStats(applications: PlacementApplication[]): CategoryStats[] {
     .filter(s => s.reached > 0)
 }
 
-const RECOMMENDATIONS: Record<AnalyticsCategory, string> = {
-  resume_screening: 'Consider getting your resume reviewed and tailored per role.',
+const RECOMMENDATIONS: Record<RoundType, string> = {
+  resume: 'Consider getting your resume reviewed and tailored per role.',
   assessment: 'Consider prioritising aptitude and timed assessment preparation.',
-  group_exercise: 'Consider practising group discussions and case-based teamwork exercises.',
-  interview: 'Consider mock interviews focused on your weaker interview formats.',
-  final_outcome: 'Consider revisiting your overall interview and negotiation approach.',
+  group_discussion: 'Consider practising group discussions and case-based teamwork exercises.',
+  video: 'Consider rehearsing recorded answers and tightening your delivery to time.',
+  case_interview: 'Consider drilling case structuring and quantitative case practice.',
+  hr_fit: 'Consider preparing your story, motivation and fit answers more concretely.',
+  final_interview: 'Consider mock interviews focused on your weaker interview formats.',
   other: 'Consider reviewing your preparation for this stage.',
 }
 
 // The concrete "what do I actually do about this" list the drop-off card
 // shows under its recommendation. Fixed per stage rather than generated,
 // so nothing here can drift into inventing advice the data doesn't support.
-const SUGGESTED_FOCUS: Record<AnalyticsCategory, string[]> = {
-  resume_screening: ['Resume review and tailoring', 'Highlighting measurable impact', 'Role-specific keywords'],
+const SUGGESTED_FOCUS: Record<RoundType, string[]> = {
+  resume: ['Resume review and tailoring', 'Highlighting measurable impact', 'Role-specific keywords'],
   assessment: ['Aptitude preparation', 'Timed problem solving', 'Mock assessments'],
-  group_exercise: ['Structured group discussion practice', 'Making your point concisely', 'Building on others\' ideas'],
-  interview: ['Mock interviews', 'Answer structuring (STAR / case frameworks)', 'Company and role research'],
-  final_outcome: ['Final-round preparation', 'Culture-fit and motivation questions', 'Negotiation basics'],
+  group_discussion: ['Structured group discussion practice', 'Making your point concisely', "Building on others' ideas"],
+  video: ['Recording and reviewing practice answers', 'Answering within the time limit', 'Camera presence and clarity'],
+  case_interview: ['Case structuring frameworks', 'Case math drills', 'Live case practice with a partner'],
+  hr_fit: ['Your "why this firm" answer', 'Competency stories (STAR)', 'Questions to ask the interviewer'],
+  final_interview: ['Mock interviews', 'Answer structuring', 'Company and role research'],
   other: ['Reviewing your preparation for this stage'],
 }
 
@@ -245,7 +279,7 @@ export const STRENGTH_EMPTY_MESSAGE =
   'Track more application outcomes to identify your strongest stage.'
 
 export interface BottleneckInsight {
-  category: AnalyticsCategory
+  category: RoundType
   label: string
   eliminated: number
   reached: number
@@ -257,7 +291,7 @@ export interface BottleneckInsight {
 }
 
 export interface StrengthInsight {
-  category: AnalyticsCategory
+  category: RoundType
   label: string
   progressed: number
   reached: number
@@ -373,7 +407,7 @@ export function computeStrongestStage(applications: PlacementApplication[]): Str
 // ============================================================
 
 export interface TrendInsight {
-  category: AnalyticsCategory
+  category: RoundType
   label: string
   earlierRate: number
   recentRate: number
@@ -392,7 +426,7 @@ export function computeTrends(applications: PlacementApplication[]): TrendInsigh
   const recentApps = sorted.slice(mid)
 
   const trends: TrendInsight[] = []
-  for (const c of ANALYTICS_CATEGORIES) {
+  for (const c of ROUND_TYPES) {
     const earlierRounds = earlierApps.flatMap(a => a.rounds).filter(r => r.analyticsCategory === c.value && r.outcome !== 'upcoming')
     const recentRounds = recentApps.flatMap(a => a.rounds).filter(r => r.analyticsCategory === c.value && r.outcome !== 'upcoming')
     if (earlierRounds.length < 2 || recentRounds.length < 2) continue
@@ -419,7 +453,7 @@ export function computeTrends(applications: PlacementApplication[]): TrendInsigh
 // ============================================================
 
 export interface RoundPerformanceRow {
-  category: AnalyticsCategory
+  category: RoundType
   label: string
   reached: number
   progressed: number
@@ -508,8 +542,8 @@ function currentFocusFor(bottleneck: BottleneckResult, strength: StrengthResult)
 export function computePlacementPattern(applications: PlacementApplication[]): PlacementPattern {
   const { bottleneck, strength } = computeStageInsights(applications)
 
-  const reachedInterview = applications.filter(a => reachedStage(a, 'interview')).length
-  const clearedInterview = applications.filter(a => clearedStage(a, 'interview')).length
+  const interviewsReached = applications.filter(reachedInterview).length
+  const interviewsCleared = applications.filter(clearedInterview).length
 
   return {
     applicationsTracked: applications.length,
@@ -521,8 +555,8 @@ export function computePlacementPattern(applications: PlacementApplication[]): P
       : null,
     // Gated on the same threshold as everything else: a conversion rate off
     // one or two interviews is noise, not a statistic.
-    interviewConversion: reachedInterview >= MIN_OBSERVATIONS_FOR_PATTERN
-      ? { rate: clearedInterview / reachedInterview, reached: reachedInterview, cleared: clearedInterview }
+    interviewConversion: interviewsReached >= MIN_OBSERVATIONS_FOR_PATTERN
+      ? { rate: interviewsCleared / interviewsReached, reached: interviewsReached, cleared: interviewsCleared }
       : null,
     currentFocus: currentFocusFor(bottleneck, strength),
   }
@@ -557,7 +591,7 @@ export function computeObservations(applications: PlacementApplication[]): Obser
   const total = applications.length
 
   // Resume shortlist rate — the single most commonly asked-about number.
-  const resume = stats.find(st => st.category === 'resume_screening')
+  const resume = stats.find(st => st.category === 'resume')
   if (resume && resume.reached >= 2) {
     const confidence = confidenceFor(resume.reached)
     const rate = Math.round(resume.progressionRate * 100)
@@ -584,7 +618,7 @@ export function computeObservations(applications: PlacementApplication[]): Obser
   // making the same point about the same stage reads as padding.
   const resumeAlreadyCovered = observations.some(o => o.id === 'resume-rate')
   for (const st of stats) {
-    if (st.category === 'resume_screening' && resumeAlreadyCovered) continue
+    if (st.category === 'resume' && resumeAlreadyCovered) continue
     if (st.reached < MIN_OBSERVATIONS_FOR_PATTERN || st.progressionRate < 0.7) continue
     const confidence = confidenceFor(st.reached)
     observations.push({
@@ -596,11 +630,11 @@ export function computeObservations(applications: PlacementApplication[]): Obser
   }
 
   // How far applications are actually getting — a plain count, no verdict.
-  const reachedInterview = applications.filter(a => reachedStage(a, 'interview')).length
-  if (reachedInterview > 0) {
+  const interviewsReached = applications.filter(reachedInterview).length
+  if (interviewsReached > 0) {
     observations.push({
       id: 'interview-reach',
-      text: `You have reached interviews in ${reachedInterview} of ${total} applications.`,
+      text: `You have reached interviews in ${interviewsReached} of ${total} applications.`,
       tone: 'neutral',
       confidence: confidenceFor(total),
     })
@@ -624,64 +658,103 @@ export function computeObservations(applications: PlacementApplication[]): Obser
     }
   }
 
+  // Improvement over time, folded in here rather than given its own card —
+  // it's an observation about the student's data like any other.
+  for (const trend of computeTrends(applications)) {
+    observations.push({
+      id: `trend-${trend.category}`,
+      text: trend.supportingData,
+      tone: 'positive',
+      confidence: trend.confidence,
+    })
+  }
+
+  // Role/industry comparison, folded in here rather than given its own card
+  // (see computeGroupPatterns) — it's another observation, not another chart.
+  for (const pattern of computeGroupPatterns(applications)) {
+    observations.push({
+      id: `group-${pattern.dimension}`,
+      text: pattern.supportingData,
+      tone: 'neutral',
+      confidence: pattern.confidence,
+    })
+  }
+
   return observations
 }
 
 // ============================================================
 // Dashboard — Upcoming Actions
+//
+// Rendered straight from getUpcomingRounds, the same selector the Upcoming
+// Rounds metric counts, so the number and the list can never disagree.
 // ============================================================
 
 export interface UpcomingAction {
   applicationId: string
   companyName: string
   // 'next_round' — there's a known next stage to prepare for.
-  // 'needs_update' — the journey has stalled with nothing scheduled, so
-  // the useful prompt is to update the status rather than to prepare.
+  // 'needs_update' — the journey has run out of rounds, so the useful
+  // prompt is to record what happened rather than to prepare.
   kind: 'next_round' | 'needs_update'
   detail: string
   scheduledDate: string | null
 }
 
 export function computeUpcomingActions(applications: PlacementApplication[]): UpcomingAction[] {
-  const actions: UpcomingAction[] = []
+  const actions: UpcomingAction[] = getUpcomingRounds(applications).map(({ application, round }) => ({
+    applicationId: application.id,
+    companyName: application.companyName,
+    kind: 'next_round' as const,
+    detail: `Next: ${round.displayName}`,
+    scheduledDate: round.scheduledDate,
+  }))
 
-  for (const app of applications) {
-    if (app.status !== 'active') continue
-    const next = currentRound(app.rounds)
-    if (next) {
-      actions.push({
-        applicationId: app.id,
-        companyName: app.companyName,
-        kind: 'next_round',
-        detail: `Next: ${next.displayName}`,
-        scheduledDate: next.scheduledDate,
-      })
-    } else {
-      // Active, but every round is already resolved — the tracker has run
-      // out of journey to show and needs the student to say what happened.
-      actions.push({
-        applicationId: app.id,
-        companyName: app.companyName,
-        kind: 'needs_update',
-        detail: 'Update your application status',
-        scheduledDate: null,
-      })
-    }
+  for (const app of getApplicationsNeedingUpdate(applications)) {
+    actions.push({
+      applicationId: app.id,
+      companyName: app.companyName,
+      kind: 'needs_update',
+      detail: 'Update your application status',
+      scheduledDate: null,
+    })
   }
 
-  // Scheduled rounds first (soonest first), then everything undated, then
-  // the status-update prompts — most actionable at the top.
-  return actions.sort((a, b) => {
-    if (a.kind !== b.kind) return a.kind === 'next_round' ? -1 : 1
-    if (a.scheduledDate && b.scheduledDate) return a.scheduledDate.localeCompare(b.scheduledDate)
-    if (a.scheduledDate) return -1
-    if (b.scheduledDate) return 1
-    return 0
-  })
+  return actions
 }
 
 // ============================================================
-// Insights tab — Section D: Role / Industry patterns
+// Insights tab — Exit Reason Breakdown
+//
+// The payoff for asking "why?" at elimination: this is what turns "you keep
+// getting rejected" into "you keep losing case rounds on structure".
+// ============================================================
+
+export interface ExitReasonCount {
+  reason: ExitReason
+  label: string
+  count: number
+}
+
+export function computeExitReasonBreakdown(applications: PlacementApplication[]): ExitReasonCount[] {
+  const counts = new Map<ExitReason, number>()
+  for (const app of applications) {
+    for (const round of app.rounds) {
+      if (round.outcome !== 'eliminated' || !round.exitReason) continue
+      counts.set(round.exitReason, (counts.get(round.exitReason) ?? 0) + 1)
+    }
+  }
+  return Array.from(counts.entries())
+    .map(([reason, count]) => ({ reason, label: exitReasonLabel(reason), count }))
+    .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label))
+}
+
+// ============================================================
+// Role / industry patterns
+//
+// No longer rendered as its own card: it answers the same "where is this
+// going well" question the observation list already answers, so it feeds
+// into computeObservations instead of adding another chart of its own.
 // ============================================================
 
 export interface GroupPatternInsight {
