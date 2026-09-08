@@ -16,16 +16,16 @@ import { Plus, Trash2, ChevronUp, ChevronDown } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
-import { inferAnalyticsCategory } from '@/lib/placementTracker/categoryInference'
-import { ANALYTICS_CATEGORIES } from '@/lib/placementTracker/constants'
-import type { AnalyticsCategory } from '@/lib/placementTracker/types'
+import { inferRoundType } from '@/lib/placementTracker/categoryInference'
+import { ROUND_TYPES } from '@/lib/placementTracker/constants'
+import type { RoundType } from '@/lib/placementTracker/types'
 
 export interface EditableRound {
   key: string // stable client-side key — a real DB id once persisted, a generated one until then
   displayName: string
   // null = couldn't be inferred from the name yet — the one case the editor
   // asks the user directly, rather than a category they picked themselves.
-  analyticsCategory: AnalyticsCategory | null
+  analyticsCategory: RoundType | null
 }
 
 export function RoundEditor({
@@ -41,7 +41,7 @@ export function RoundEditor({
   const renameRound = (index: number, displayName: string) => {
     // Re-infer on every keystroke so the hidden category stays in sync with
     // whatever the user is actually typing, without them ever seeing it happen.
-    update(index, { displayName, analyticsCategory: inferAnalyticsCategory(displayName) })
+    update(index, { displayName, analyticsCategory: inferRoundType(displayName) })
   }
   const remove = (index: number) => onChange(rounds.filter((_, i) => i !== index))
   const move = (index: number, dir: -1 | 1) => {
@@ -106,10 +106,10 @@ export function RoundEditor({
             {needsCategory && (
               <div className="mt-2 pl-6">
                 <p className="text-[11px] text-muted-foreground mb-1.5">What type of round is this?</p>
-                <Select value="" onValueChange={v => update(i, { analyticsCategory: v as AnalyticsCategory })}>
+                <Select value="" onValueChange={v => update(i, { analyticsCategory: v as RoundType })}>
                   <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Choose a type" /></SelectTrigger>
                   <SelectContent>
-                    {ANALYTICS_CATEGORIES.map(c => (
+                    {ROUND_TYPES.map(c => (
                       <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
                     ))}
                   </SelectContent>

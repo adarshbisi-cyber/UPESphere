@@ -1,63 +1,76 @@
 import { describe, expect, it } from 'vitest'
-import { inferAnalyticsCategory } from '@/lib/placementTracker/categoryInference'
+import { inferRoundType, normaliseLegacyRoundType } from '@/lib/placementTracker/categoryInference'
 
-describe('inferAnalyticsCategory', () => {
-  it('maps every example from the spec to its documented category', () => {
-    const cases: [string, string][] = [
-      ['Resume Screening', 'resume_screening'],
-      ['Resume Shortlisting', 'resume_screening'],
-      ['CV Screening', 'resume_screening'],
-      ['Aptitude Test', 'assessment'],
-      ['Online Assessment', 'assessment'],
-      ['Assessment', 'assessment'],
-      ['Psychometric Test', 'assessment'],
-      ['Coding Assessment', 'assessment'],
-      ['Group Discussion', 'group_exercise'],
-      ['Group Exercise', 'group_exercise'],
-      ['Group Activity', 'group_exercise'],
-      ['Technical Interview', 'interview'],
-      ['HR Interview', 'interview'],
-      ['Case Interview', 'interview'],
-      ['Final Interview', 'interview'],
-      ['Personal Interview', 'interview'],
-      ['Offer', 'final_outcome'],
-      ['Final Result', 'final_outcome'],
-    ]
-    for (const [name, category] of cases) {
-      expect(inferAnalyticsCategory(name), `"${name}"`).toBe(category)
+describe('inferRoundType', () => {
+  it('maps each canonical stage name to its own type', () => {
+    expect(inferRoundType('Resume Shortlisting')).toBe('resume')
+    expect(inferRoundType('Aptitude Test')).toBe('assessment')
+    expect(inferRoundType('Group Discussion')).toBe('group_discussion')
+    expect(inferRoundType('Video Upload')).toBe('video')
+    expect(inferRoundType('Case Interview')).toBe('case_interview')
+    expect(inferRoundType('HR Interview')).toBe('hr_fit')
+    expect(inferRoundType('Final Interview')).toBe('final_interview')
+  })
+
+  // Scenario 3 from the spec: three companies, three names, one bucket.
+  it('aggregates differently-named assessment rounds under one type', () => {
+    for (const name of ['Online Assessment', 'Aptitude Test', 'Cognitive Test', 'Online Test']) {
+      expect(inferRoundType(name)).toBe('assessment')
     }
   })
 
-  it('is case-insensitive and trims whitespace', () => {
-    expect(inferAnalyticsCategory('  aptitude test  ')).toBe('assessment')
-    expect(inferAnalyticsCategory('TECHNICAL INTERVIEW')).toBe('interview')
+  it('separates interview kinds that used to collapse into one bucket', () => {
+    expect(inferRoundType('Case Interview')).not.toBe(inferRoundType('HR Interview'))
+    expect(inferRoundType('Case Round')).toBe('case_interview')
+    expect(inferRoundType('Fit Interview')).toBe('hr_fit')
   })
 
-  it('does not let "Final Interview" and "Final Result" collide on the word "final"', () => {
-    expect(inferAnalyticsCategory('Final Interview')).toBe('interview')
-    expect(inferAnalyticsCategory('Final Result')).toBe('final_outcome')
+  it('is case- and whitespace-insensitive', () => {
+    expect(inferRoundType('  GROUP DISCUSSION  ')).toBe('group_discussion')
   })
 
   it('infers a custom name via keyword when there is no exact match', () => {
-    expect(inferAnalyticsCategory('Panel Interview Round 2')).toBe('interview')
-    expect(inferAnalyticsCategory('Case Study Group Round')).toBe('group_exercise')
-    expect(inferAnalyticsCategory('Written Test')).toBe('assessment')
-    expect(inferAnalyticsCategory('Resume Review')).toBe('resume_screening')
+    expect(inferRoundType('Second Case Round')).toBe('case_interview')
+    expect(inferRoundType('Written Test')).toBe('assessment')
+    expect(inferRoundType('CV Screening Stage')).toBe('resume')
+    expect(inferRoundType('Asynchronous Video Task')).toBe('video')
   })
 
-  it('returns null for a genuinely ambiguous custom name — the only case the UI should ask about', () => {
-    expect(inferAnalyticsCategory('Founder Chat')).toBeNull()
-    expect(inferAnalyticsCategory('Round X')).toBeNull()
-    expect(inferAnalyticsCategory('')).toBeNull()
-    expect(inferAnalyticsCategory('   ')).toBeNull()
+  it('does not let a specific interview kind be swallowed by the generic rule', () => {
+    // /interview/ would match all three; the more specific rules run first.
+    expect(inferRoundType('Case Interview Round 2')).toBe('case_interview')
+    expect(inferRoundType('HR Interview Round')).toBe('hr_fit')
   })
 
-  // Regression: "Application" used to map to its own analytics category.
-  // Applying isn't a selection round — nobody gets eliminated at it — so
-  // there's no category left to silently assign it to; a round a user
-  // insists on calling "Application" now falls into the ambiguous case
-  // instead of being mis-categorised.
-  it('no longer has an "application" category — a round named that is ambiguous, not auto-classified', () => {
-    expect(inferAnalyticsCategory('Application')).toBeNull()
+  it('returns null for stages that are not evaluation rounds at all', () => {
+    // Neither applying nor the final outcome is a round someone is
+    // eliminated at, so there is no type to map them to.
+    expect(inferRoundType('Application')).toBeNull()
+    expect(inferRoundType('Final Result')).toBeNull()
+    expect(inferRoundType('')).toBeNull()
+  })
+})
+
+describe('normaliseLegacyRoundType', () => {
+  it('renames the pre-split types that map one-to-one', () => {
+    expect(normaliseLegacyRoundType('resume_screening', 'Resume Shortlisting')).toBe('resume')
+    expect(normaliseLegacyRoundType('group_exercise', 'Group Discussion')).toBe('group_discussion')
+    expect(normaliseLegacyRoundType('assessment', 'Aptitude Test')).toBe('assessment')
+  })
+
+  it("resolves the old coarse 'interview' bucket from the round's own label", () => {
+    expect(normaliseLegacyRoundType('interview', 'Case Interview')).toBe('case_interview')
+    expect(normaliseLegacyRoundType('interview', 'HR Interview')).toBe('hr_fit')
+    expect(normaliseLegacyRoundType('interview', 'Final Interview')).toBe('final_interview')
+  })
+
+  it('falls back to other rather than dropping a round it cannot classify', () => {
+    expect(normaliseLegacyRoundType('interview', 'Mystery Stage')).toBe('other')
+    expect(normaliseLegacyRoundType('final_outcome', 'Final Result')).toBe('other')
+  })
+
+  it('passes through a value already on the new taxonomy', () => {
+    expect(normaliseLegacyRoundType('assessment', 'Aptitude Test')).toBe('assessment')
+    expect(normaliseLegacyRoundType('other', 'Something Custom')).toBe('other')
   })
 })

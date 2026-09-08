@@ -17,13 +17,14 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
 import { ApplicationStatusBadge, RoundOutcomeBadge } from './StatusBadge'
 import {
-  getApplication, updateRound, addRound, addReflection, withdrawApplication,
+  getApplication, updateRound, addRound, withdrawApplication, markOfferReceived,
 } from '@/lib/placementTracker/api'
 import { isApplicationClosed } from '@/lib/placementTracker/status'
-import { inferAnalyticsCategory } from '@/lib/placementTracker/categoryInference'
-import { ANALYTICS_CATEGORIES, REFLECTION_TYPES } from '@/lib/placementTracker/constants'
+import { getApplicationJourneyState } from '@/lib/placementTracker/journey'
+import { inferRoundType } from '@/lib/placementTracker/categoryInference'
+import { ROUND_TYPES, EXIT_REASONS, exitReasonLabel } from '@/lib/placementTracker/constants'
 import { describeSaveError } from '@/lib/onboarding/errors'
-import type { AnalyticsCategory, PlacementApplication, ReflectionType, RoundOutcome } from '@/lib/placementTracker/types'
+import type { RoundType, ExitReason, PlacementApplication, RoundOutcome } from '@/lib/placementTracker/types'
 
 const OUTCOME_OPTIONS: { value: RoundOutcome; label: string }[] = [
   { value: 'upcoming', label: 'Upcoming' },
@@ -48,7 +49,7 @@ export function ApplicationDetailModal({
   const [error, setError] = useState('')
   const [reflectingRoundId, setReflectingRoundId] = useState<string | null>(null)
   const [newRoundName, setNewRoundName] = useState('')
-  const [newRoundCategory, setNewRoundCategory] = useState<AnalyticsCategory | null>(null)
+  const [newRoundCategory, setNewRoundCategory] = useState<RoundType | null>(null)
 
   const refresh = () => {
     getApplication(userId, applicationId)
@@ -60,8 +61,35 @@ export function ApplicationDetailModal({
 
   const handleOutcomeChange = async (roundId: string, outcome: RoundOutcome) => {
     try {
-      await updateRound(userId, applicationId, roundId, { outcome, completedDate: outcome === 'cleared' || outcome === 'eliminated' ? new Date().toISOString().slice(0, 10) : undefined })
+      await updateRound(userId, applicationId, roundId, {
+        outcome,
+        completedDate: outcome === 'cleared' || outcome === 'eliminated' ? new Date().toISOString().slice(0, 10) : undefined,
+      })
+      // An elimination isn't fully recorded until we know why — that reason
+      // is what the whole Exit Reason insight is built from, so the prompt
+      // opens immediately rather than being an optional extra step.
       if (outcome === 'eliminated') setReflectingRoundId(roundId)
+      refresh()
+      onChanged()
+    } catch (err) {
+      setError(describeSaveError(err))
+    }
+  }
+
+  const handleExitReason = async (roundId: string, exitReason: ExitReason, notes: string | null) => {
+    try {
+      await updateRound(userId, applicationId, roundId, { exitReason, outcomeNotes: notes })
+      setReflectingRoundId(null)
+      refresh()
+      onChanged()
+    } catch (err) {
+      setError(describeSaveError(err))
+    }
+  }
+
+  const handleMarkOffer = async () => {
+    try {
+      await markOfferReceived(userId, applicationId)
       refresh()
       onChanged()
     } catch (err) {
@@ -125,6 +153,7 @@ export function ApplicationDetailModal({
         </div>
         <ApplicationStatusBadge status={app.status} />
       </div>
+      <p className="text-xs text-muted-foreground mt-1">{getApplicationJourneyState(app).label}</p>
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground mb-6 mt-2">
         <span className="inline-flex items-center gap-1"><Briefcase className="w-3 h-3" /> {app.opportunityType}</span>
@@ -154,25 +183,32 @@ export function ApplicationDetailModal({
             </div>
 
             {reflectingRoundId === round.id && (
-              <RoundReflectionPrompt
-                onSkip={() => setReflectingRoundId(null)}
-                onSubmit={async (reflectionType, notes) => {
-                  try {
-                    await addReflection(round.id, { reflectionType, notes })
-                    setReflectingRoundId(null)
-                    refresh()
-                  } catch (err) {
-                    setError(describeSaveError(err))
-                  }
-                }}
+              <ExitReasonPrompt
+                initialReason={round.exitReason}
+                initialNotes={round.outcomeNotes ?? ''}
+                onCancel={() => setReflectingRoundId(null)}
+                onSubmit={(reason, notes) => handleExitReason(round.id, reason, notes)}
               />
             )}
 
-            {round.reflection && reflectingRoundId !== round.id && (
-              <p className="text-[11px] text-muted-foreground mt-2 italic">
-                Personal reflection: {REFLECTION_TYPES.find(r => r.value === round.reflection!.reflectionType)?.label}
-                {round.reflection.notes ? ` — ${round.reflection.notes}` : ''}
-              </p>
+            {round.outcome === 'eliminated' && reflectingRoundId !== round.id && (
+              <div className="mt-2 pt-2 border-t" style={{ borderColor: 'var(--divider)' }}>
+                {round.exitReason ? (
+                  <>
+                    <p className="text-[11px] text-muted-foreground">
+                      Exit reason: <span className="text-foreground font-medium">{exitReasonLabel(round.exitReason)}</span>
+                    </p>
+                    {round.outcomeNotes && <p className="text-[11px] text-muted-foreground mt-1">{round.outcomeNotes}</p>}
+                    <button onClick={() => setReflectingRoundId(round.id)} className="text-[11px] text-indigo-400 hover:text-indigo-300 transition-colors mt-1">
+                      Edit
+                    </button>
+                  </>
+                ) : (
+                  <button onClick={() => setReflectingRoundId(round.id)} className="text-[11px] text-amber-500 dark:text-amber-400 hover:underline">
+                    Add an exit reason
+                  </button>
+                )}
+              </div>
             )}
           </div>
         ))}
@@ -182,7 +218,7 @@ export function ApplicationDetailModal({
             <div className="flex items-center gap-2">
               <Input
                 value={newRoundName}
-                onChange={e => { setNewRoundName(e.target.value); setNewRoundCategory(inferAnalyticsCategory(e.target.value)) }}
+                onChange={e => { setNewRoundName(e.target.value); setNewRoundCategory(inferRoundType(e.target.value)) }}
                 placeholder="New round name"
                 className="h-8 text-xs flex-1"
               />
@@ -193,10 +229,10 @@ export function ApplicationDetailModal({
             {newRoundName.trim().length > 0 && newRoundCategory === null && (
               <div className="mt-2">
                 <p className="text-[11px] text-muted-foreground mb-1.5">What type of round is this?</p>
-                <Select value="" onValueChange={v => setNewRoundCategory(v as AnalyticsCategory)}>
+                <Select value="" onValueChange={v => setNewRoundCategory(v as RoundType)}>
                   <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Choose a type" /></SelectTrigger>
                   <SelectContent>
-                    {ANALYTICS_CATEGORIES.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+                    {ROUND_TYPES.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -219,44 +255,58 @@ export function ApplicationDetailModal({
         </div>
       )}
 
-      <div className="flex gap-2 mt-6">
+      <div className="flex flex-wrap gap-2 mt-6">
         <Button variant="ghost" onClick={onClose}>Close</Button>
         {!closed && (
-          <Button variant="outline" className="flex-1 text-red-500 hover:text-red-400" onClick={handleWithdraw}>
-            Mark as Withdrawn
-          </Button>
+          <>
+            {/* An offer is an outcome, not a round to clear — there's no
+                "Final Result" stage left to mark, so it's recorded here. */}
+            <Button variant="outline" className="flex-1 text-emerald-600 dark:text-emerald-400" onClick={handleMarkOffer}>
+              Offer Received
+            </Button>
+            <Button variant="outline" className="flex-1 text-red-500 hover:text-red-400" onClick={handleWithdraw}>
+              Mark as Withdrawn
+            </Button>
+          </>
         )}
       </div>
     </UploadModalShell>
   )
 }
 
-// "What do you think contributed to this outcome?" — always optional,
-// never forced, and deliberately labelled as the student's own take rather
-// than a fact the system is asserting.
-function RoundReflectionPrompt({
+// Recorded against the round the student exited at. The reason is required
+// — it's the entire basis of the Exit Reason breakdown in Insights, and an
+// elimination with no cause tells the student nothing they didn't already
+// know. The free-text note stays optional.
+function ExitReasonPrompt({
+  initialReason,
+  initialNotes,
   onSubmit,
-  onSkip,
+  onCancel,
 }: {
-  onSubmit: (reflectionType: ReflectionType, notes: string | null) => void
-  onSkip: () => void
+  initialReason: ExitReason | null
+  initialNotes: string
+  onSubmit: (reason: ExitReason, notes: string | null) => void
+  onCancel: () => void
 }) {
-  const [reflectionType, setReflectionType] = useState<ReflectionType>('unknown')
-  const [notes, setNotes] = useState('')
+  const [reason, setReason] = useState<ExitReason | null>(initialReason)
+  const [notes, setNotes] = useState(initialNotes)
 
   return (
     <div className="mt-3 pt-3 border-t" style={{ borderColor: 'var(--divider)' }}>
-      <p className="text-xs text-muted-foreground mb-2">What do you think contributed to this outcome? <span className="opacity-70">(optional)</span></p>
-      <Select value={reflectionType} onValueChange={v => setReflectionType(v as ReflectionType)}>
-        <SelectTrigger className="h-8 text-xs mb-2"><SelectValue /></SelectTrigger>
+      <p className="text-xs text-muted-foreground mb-2">What ended this one? <span className="opacity-70">(helps spot your pattern)</span></p>
+      <Select value={reason ?? ''} onValueChange={v => setReason(v as ExitReason)}>
+        <SelectTrigger className="h-8 text-xs mb-2"><SelectValue placeholder="Choose a reason" /></SelectTrigger>
         <SelectContent>
-          {REFLECTION_TYPES.map(r => <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>)}
+          {EXIT_REASONS.map(r => <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>)}
         </SelectContent>
       </Select>
-      <Input value={notes} onChange={e => setNotes(e.target.value)} placeholder="Anything else? (optional)" className="h-8 text-xs mb-2" />
+      <Input value={notes} onChange={e => setNotes(e.target.value)} placeholder="What happened? (optional)" className="h-8 text-xs mb-2" />
       <div className="flex gap-2">
-        <Button type="button" variant="ghost" size="sm" onClick={onSkip}>Skip</Button>
-        <Button type="button" variant="outline" size="sm" onClick={() => onSubmit(reflectionType, notes.trim() || null)}>Save reflection</Button>
+        <Button type="button" variant="ghost" size="sm" onClick={onCancel}>Cancel</Button>
+        <Button type="button" variant="outline" size="sm" disabled={!reason} onClick={() => reason && onSubmit(reason, notes.trim() || null)}>
+          Save
+        </Button>
       </div>
     </div>
   )

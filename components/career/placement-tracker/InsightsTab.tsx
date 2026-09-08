@@ -8,9 +8,8 @@ import { Sparkles, TrendingUp, TrendingDown, Minus, ArrowRight } from 'lucide-re
 import { GlassCard } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import {
-  computeRoundPerformance, computeApplicationFunnel, computeConversionSteps,
-  computeStageInsights, computeGroupPatterns, computePlacementPattern,
-  computeObservations, hasEnoughDataForInsights,
+  computeRoundPerformance, computeStageInsights, computePlacementPattern,
+  computeObservations, computeExitReasonBreakdown, hasEnoughDataForInsights,
   DROPOFF_EMPTY_MESSAGE, STRENGTH_EMPTY_MESSAGE,
 } from '@/lib/placementTracker/analytics'
 import type { Confidence } from '@/lib/placementTracker/analytics'
@@ -72,10 +71,8 @@ export function InsightsTab({ applications }: { applications: PlacementApplicati
   const pattern = computePlacementPattern(applications)
   const observations = computeObservations(applications)
   const roundPerformance = computeRoundPerformance(applications)
-  const funnel = computeApplicationFunnel(applications)
-  const conversionSteps = computeConversionSteps(applications)
   const { bottleneck, strength } = computeStageInsights(applications)
-  const groupPatterns = computeGroupPatterns(applications)
+  const exitReasons = computeExitReasonBreakdown(applications)
 
   return (
     <div className="space-y-4">
@@ -174,40 +171,32 @@ export function InsightsTab({ applications }: { applications: PlacementApplicati
         </div>
       </GlassCard>
 
-      {/* Application Conversion */}
-      <GlassCard className="p-5">
-        <h3 className="text-base font-semibold font-display mb-4">Application Conversion</h3>
-        <div className="flex flex-wrap items-center gap-2 mb-5">
-          {funnel.map((stage, i) => (
-            <div key={stage.key} className="flex items-center gap-2">
-              <div className="text-center px-3 py-2 rounded-xl min-w-[5rem]" style={{ background: 'var(--muted-surface)' }}>
-                <div className="text-lg font-bold font-display">{stage.count}</div>
-                <div className="text-[10px] text-muted-foreground">{stage.label}</div>
-              </div>
-              {i < funnel.length - 1 && <ArrowRight className="w-3.5 h-3.5 text-muted-foreground/60 shrink-0" aria-hidden="true" />}
-            </div>
-          ))}
-        </div>
-        {!funnel.some(st => st.key === 'interview') && (
+      {/* Exit Reason Breakdown */}
+      {exitReasons.length > 0 && (
+        <GlassCard className="p-5">
+          <h3 className="text-base font-semibold font-display mb-1">Why your applications ended</h3>
           <p className="text-xs text-muted-foreground mb-4">
-            No interview data yet — conversion beyond this point will appear once an application reaches an interview.
+            Recorded on the round you exited at, across {exitReasons.reduce((n, r) => n + r.count, 0)} closed application{exitReasons.reduce((n, r) => n + r.count, 0) === 1 ? '' : 's'}.
           </p>
-        )}
-        {conversionSteps.length > 0 && (
-          <div className="grid sm:grid-cols-2 gap-2">
-            {conversionSteps.map(step => (
-              <div key={`${step.fromLabel}-${step.toLabel}`} className="flex items-center justify-between gap-2 p-2.5 rounded-xl" style={{ background: 'var(--muted-surface)' }}>
-                <span className="text-[11px] text-muted-foreground truncate">
-                  {step.fromLabel} <span aria-hidden="true">&rarr;</span> {step.toLabel}
-                </span>
-                <span className="text-xs font-semibold shrink-0 text-foreground">
-                  {(step.rate * 100).toFixed(1)}%
-                </span>
-              </div>
-            ))}
+          <div className="space-y-2">
+            {exitReasons.map(r => {
+              const max = Math.max(...exitReasons.map(e => e.count))
+              return (
+                <div key={r.reason} className="flex items-center gap-3">
+                  <span className="text-xs text-foreground w-40 sm:w-52 shrink-0 truncate">{r.label}</span>
+                  <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: 'var(--divider)' }}>
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-violet-500"
+                      style={{ width: `${(r.count / max) * 100}%` }}
+                    />
+                  </div>
+                  <span className="text-xs font-semibold text-foreground w-6 text-right shrink-0">{r.count}</span>
+                </div>
+              )
+            })}
           </div>
-        )}
-      </GlassCard>
+        </GlassCard>
+      )}
 
       {/* Strongest and weakest areas */}
       <div className="grid sm:grid-cols-2 gap-4">
@@ -248,22 +237,6 @@ export function InsightsTab({ applications }: { applications: PlacementApplicati
         </GlassCard>
       </div>
 
-      {/* Role / industry patterns */}
-      {groupPatterns.length > 0 && (
-        <GlassCard className="p-5">
-          <h3 className="text-base font-semibold font-display mb-3">Role / Industry Patterns</h3>
-          <div className="space-y-2">
-            {groupPatterns.map(p => (
-              <div key={p.dimension} className="flex items-start gap-2 p-3 rounded-xl" style={{ background: 'var(--muted-surface)' }}>
-                <div className="min-w-0">
-                  <p className="text-xs text-foreground">{p.supportingData}</p>
-                  <Badge variant="indigo" className="mt-1.5">{p.confidence.label}</Badge>
-                </div>
-              </div>
-            ))}
-          </div>
-        </GlassCard>
-      )}
     </div>
   )
 }

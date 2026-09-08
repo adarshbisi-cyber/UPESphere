@@ -5,14 +5,14 @@ import {
   computePlacementPattern, computeRoundPerformance, computeStrongestStage, computeTrends,
   computeStageInsights, computeUpcomingActions, confidenceFor, hasEnoughDataForInsights,
 } from '@/lib/placementTracker/analytics'
-import type { AnalyticsCategory, PlacementApplication, PlacementRound, RoundOutcome } from '@/lib/placementTracker/types'
+import type { RoundType, PlacementApplication, PlacementRound, RoundOutcome } from '@/lib/placementTracker/types'
 
 let seq = 0
-function round(category: AnalyticsCategory, outcome: RoundOutcome, overrides: Partial<PlacementRound> = {}): PlacementRound {
+function round(category: RoundType, outcome: RoundOutcome, overrides: Partial<PlacementRound> = {}): PlacementRound {
   seq++
   return {
     id: `r${seq}`, applicationId: 'a', roundOrder: seq, displayName: category, analyticsCategory: category,
-    outcome, scheduledDate: null, completedDate: null, outcomeNotes: null, reflection: null,
+    outcome, exitReason: null, scheduledDate: null, completedDate: null, outcomeNotes: null, reflection: null,
     ...overrides,
   }
 }
@@ -57,16 +57,32 @@ describe('computeOverview', () => {
     expect(overview.offersReceived).toBe(1)
   })
 
-  it('counts upcoming rounds only for applications with a genuinely future scheduled round', () => {
+  // Regression: this metric used to require a future scheduled date, which
+  // silently disagreed with the Upcoming Actions list beside it.
+  it('counts an upcoming round even when no date has been scheduled yet', () => {
+    const hilti = application({ status: 'active', rounds: [round('video', 'upcoming', { displayName: 'Video Upload' })] })
+    expect(computeOverview([hilti]).upcomingRounds).toBe(1)
+    expect(computeUpcomingActions([hilti])).toHaveLength(1)
+  })
+
+  it('never counts rounds left over on a closed application', () => {
     const future = new Date(Date.now() + 86_400_000).toISOString()
-    const past = new Date(Date.now() - 86_400_000).toISOString()
     const apps = [
-      application({ rounds: [round('interview', 'upcoming', { scheduledDate: future })] }),
-      application({ rounds: [round('interview', 'upcoming', { scheduledDate: past })] }), // past — not upcoming
-      application({ rounds: [round('interview', 'upcoming', { scheduledDate: null })] }), // no date — not counted
-      application({ rounds: [round('interview', 'eliminated', { scheduledDate: future })] }), // resolved — not counted
+      application({ status: 'rejected', rounds: [round('final_interview', 'upcoming', { scheduledDate: future })] }),
+      application({ status: 'withdrawn', rounds: [round('final_interview', 'upcoming', { scheduledDate: future })] }),
+      application({ status: 'offer', rounds: [round('final_interview', 'upcoming', { scheduledDate: future })] }),
     ]
-    expect(computeOverview(apps).upcomingRounds).toBe(1)
+    expect(computeOverview(apps).upcomingRounds).toBe(0)
+  })
+
+  it('agrees with the Upcoming Actions list it is rendered beside', () => {
+    const apps = [
+      application({ status: 'active', rounds: [round('assessment', 'upcoming')] }),
+      application({ status: 'active', rounds: [round('case_interview', 'pending')] }),
+      application({ status: 'rejected', rounds: [round('assessment', 'eliminated')] }),
+    ]
+    const nextRoundActions = computeUpcomingActions(apps).filter(a => a.kind === 'next_round')
+    expect(computeOverview(apps).upcomingRounds).toBe(nextRoundActions.length)
   })
 })
 
@@ -75,8 +91,8 @@ describe('computeActiveApplicationSummaries', () => {
     const active = application({
       status: 'active',
       rounds: [
-        round('resume_screening', 'cleared', { roundOrder: 0, displayName: 'Resume Screening' }),
-        round('interview', 'pending', { roundOrder: 1, displayName: 'Case Interview' }),
+        round('resume', 'cleared', { roundOrder: 0, displayName: 'Resume Screening' }),
+        round('final_interview', 'pending', { roundOrder: 1, displayName: 'Case Interview' }),
       ],
     })
     const rejected = application({ status: 'rejected' })
@@ -89,20 +105,20 @@ describe('computeActiveApplicationSummaries', () => {
 describe('computeApplicationFunnel', () => {
   it('counts applications through each stage, starting from Applied', () => {
     const apps = [
-      application({ rounds: [round('resume_screening', 'cleared'), round('assessment', 'cleared')] }),
-      application({ rounds: [round('resume_screening', 'cleared'), round('assessment', 'eliminated')] }),
-      application({ rounds: [round('resume_screening', 'eliminated')] }),
+      application({ rounds: [round('resume', 'cleared'), round('assessment', 'cleared')] }),
+      application({ rounds: [round('resume', 'cleared'), round('assessment', 'eliminated')] }),
+      application({ rounds: [round('resume', 'eliminated')] }),
     ]
     const funnel = computeApplicationFunnel(apps)
     expect(funnel[0]).toMatchObject({ key: 'applied', count: 3 })
-    expect(funnel.find(f => f.key === 'resume_screening')).toMatchObject({ count: 2, reached: 3 })
+    expect(funnel.find(f => f.key === 'resume')).toMatchObject({ count: 2, reached: 3 })
     expect(funnel.find(f => f.key === 'assessment')).toMatchObject({ count: 1, reached: 2 })
   })
 
   it('omits stages no application has reached', () => {
-    const apps = [application({ rounds: [round('resume_screening', 'cleared'), round('interview', 'upcoming')] })]
+    const apps = [application({ rounds: [round('resume', 'cleared'), round('final_interview', 'upcoming')] })]
     const funnel = computeApplicationFunnel(apps)
-    expect(funnel.find(f => f.key === 'interview')).toBeUndefined()
+    expect(funnel.find(f => f.key === 'final_interview')).toBeUndefined()
   })
 
   it("keeps the student's own round name when a stage is named consistently", () => {
@@ -118,7 +134,7 @@ describe('computeApplicationFunnel', () => {
       application({ rounds: [round('assessment', 'cleared', { displayName: 'Aptitude Test' })] }),
       application({ rounds: [round('assessment', 'cleared', { displayName: 'Online Assessment' })] }),
     ]
-    expect(computeApplicationFunnel(apps).find(f => f.key === 'assessment')?.label).toBe('Assessment')
+    expect(computeApplicationFunnel(apps).find(f => f.key === 'assessment')?.label).toBe('Online Test / Assessment')
   })
 
   it('returns nothing at all with no applications', () => {
@@ -132,7 +148,7 @@ describe('computeBiggestBottleneck', () => {
     const rounds = [
       ...Array.from({ length: 5 }, () => round('assessment', 'eliminated')),
       ...Array.from({ length: 2 }, () => round('assessment', 'cleared')),
-      ...Array.from({ length: 2 }, () => round('interview', 'cleared')),
+      ...Array.from({ length: 2 }, () => round('final_interview', 'cleared')),
     ]
     const result = computeBiggestBottleneck([application({ rounds })])
     expect(result.status).toBe('ok')
@@ -147,7 +163,7 @@ describe('computeBiggestBottleneck', () => {
   it('reports no drop-off (not missing data) when a well-evidenced stage has zero eliminations', () => {
     const rounds = [
       ...Array.from({ length: 3 }, () => round('assessment', 'cleared')),
-      ...Array.from({ length: 3 }, () => round('interview', 'cleared')),
+      ...Array.from({ length: 3 }, () => round('final_interview', 'cleared')),
     ]
     expect(computeBiggestBottleneck([application({ rounds })]).status).toBe('no_dropoff')
   })
@@ -173,13 +189,13 @@ describe('computeBiggestBottleneck', () => {
 describe('computeStrongestStage', () => {
   it('identifies the category with the highest progression rate and reports it as a rate', () => {
     const rounds = [
-      ...Array.from({ length: 4 }, () => round('interview', 'cleared')),
-      round('interview', 'eliminated'),
+      ...Array.from({ length: 4 }, () => round('final_interview', 'cleared')),
+      round('final_interview', 'eliminated'),
     ]
     const result = computeStrongestStage([application({ rounds })])
     expect(result.status).toBe('ok')
     if (result.status !== 'ok') return
-    expect(result.insight.category).toBe('interview')
+    expect(result.insight.category).toBe('final_interview')
     expect(result.insight.progressed).toBe(4)
     expect(result.insight.reached).toBe(5)
     expect(result.insight.progressionRate).toBeCloseTo(0.8)
@@ -192,7 +208,7 @@ describe('computeStrongestStage', () => {
   })
 
   it('refuses to name a strongest stage from fewer than three observations', () => {
-    const rounds = [round('interview', 'cleared'), round('interview', 'cleared')]
+    const rounds = [round('final_interview', 'cleared'), round('final_interview', 'cleared')]
     expect(computeStrongestStage([application({ rounds })]).status).toBe('insufficient_data')
   })
 })
@@ -228,16 +244,16 @@ describe('computeTrends', () => {
 describe('computeRoundPerformance', () => {
   it("reports reached, progressed, eliminated and the progression rate per stage", () => {
     const rounds = [
-      ...Array.from({ length: 4 }, () => round('resume_screening', 'cleared')),
-      ...Array.from({ length: 4 }, () => round('resume_screening', 'eliminated')),
+      ...Array.from({ length: 4 }, () => round('resume', 'cleared')),
+      ...Array.from({ length: 4 }, () => round('resume', 'eliminated')),
       ...Array.from({ length: 2 }, () => round('assessment', 'cleared')),
       ...Array.from({ length: 4 }, () => round('assessment', 'eliminated')),
-      ...Array.from({ length: 2 }, () => round('interview', 'cleared')),
+      ...Array.from({ length: 2 }, () => round('final_interview', 'cleared')),
     ]
     const table = computeRoundPerformance([application({ rounds })])
-    expect(table.find(r => r.category === 'resume_screening')).toMatchObject({ reached: 8, progressed: 4, eliminated: 4, progressionRate: 0.5 })
+    expect(table.find(r => r.category === 'resume')).toMatchObject({ reached: 8, progressed: 4, eliminated: 4, progressionRate: 0.5 })
     expect(table.find(r => r.category === 'assessment')).toMatchObject({ reached: 6, progressed: 2, eliminated: 4 })
-    expect(table.find(r => r.category === 'interview')).toMatchObject({ reached: 2, progressed: 2, eliminated: 0, progressionRate: 1 })
+    expect(table.find(r => r.category === 'final_interview')).toMatchObject({ reached: 2, progressed: 2, eliminated: 0, progressionRate: 1 })
   })
 })
 
@@ -245,9 +261,9 @@ describe('computeConversionSteps', () => {
   it('computes the step-to-step conversion between consecutive funnel stages', () => {
     // 3 applications, 2 clear resume screening, 1 of those clears assessment.
     const apps = [
-      application({ rounds: [round('resume_screening', 'cleared'), round('assessment', 'cleared')] }),
-      application({ rounds: [round('resume_screening', 'cleared'), round('assessment', 'eliminated')] }),
-      application({ rounds: [round('resume_screening', 'eliminated')] }),
+      application({ rounds: [round('resume', 'cleared'), round('assessment', 'cleared')] }),
+      application({ rounds: [round('resume', 'cleared'), round('assessment', 'eliminated')] }),
+      application({ rounds: [round('resume', 'eliminated')] }),
     ]
     const steps = computeConversionSteps(apps)
     expect(steps[0]).toMatchObject({ fromCount: 3, toCount: 2 })
@@ -267,7 +283,7 @@ describe('computeUpcomingActions', () => {
     const soon = new Date(Date.now() + 86_400_000).toISOString()
     const later = new Date(Date.now() + 5 * 86_400_000).toISOString()
     const apps = [
-      application({ companyName: 'Later Co', status: 'active', rounds: [round('interview', 'upcoming', { scheduledDate: later, displayName: 'Interview' })] }),
+      application({ companyName: 'Later Co', status: 'active', rounds: [round('final_interview', 'upcoming', { scheduledDate: later, displayName: 'Interview' })] }),
       application({ companyName: 'Soon Co', status: 'active', rounds: [round('assessment', 'upcoming', { scheduledDate: soon, displayName: 'Assessment' })] }),
     ]
     const actions = computeUpcomingActions(apps)
@@ -276,16 +292,16 @@ describe('computeUpcomingActions', () => {
   })
 
   it('asks for a status update when an active application has no unresolved round left', () => {
-    const apps = [application({ companyName: 'Stalled Co', status: 'active', rounds: [round('interview', 'cleared')] })]
+    const apps = [application({ companyName: 'Stalled Co', status: 'active', rounds: [round('final_interview', 'cleared')] })]
     const actions = computeUpcomingActions(apps)
     expect(actions[0]).toMatchObject({ kind: 'needs_update', detail: 'Update your application status' })
   })
 
   it('ignores applications that are no longer active', () => {
     const apps = [
-      application({ status: 'rejected', rounds: [round('interview', 'upcoming')] }),
-      application({ status: 'withdrawn', rounds: [round('interview', 'upcoming')] }),
-      application({ status: 'offer', rounds: [round('interview', 'upcoming')] }),
+      application({ status: 'rejected', rounds: [round('final_interview', 'upcoming')] }),
+      application({ status: 'withdrawn', rounds: [round('final_interview', 'upcoming')] }),
+      application({ status: 'offer', rounds: [round('final_interview', 'upcoming')] }),
     ]
     expect(computeUpcomingActions(apps)).toEqual([])
   })
@@ -303,18 +319,18 @@ describe('computePlacementPattern', () => {
 
   it('withholds the interview conversion rate until enough interviews have been reached', () => {
     const twoInterviews = [
-      application({ rounds: [round('interview', 'cleared')] }),
-      application({ rounds: [round('interview', 'eliminated')] }),
+      application({ rounds: [round('final_interview', 'cleared')] }),
+      application({ rounds: [round('final_interview', 'eliminated')] }),
     ]
     expect(computePlacementPattern(twoInterviews).interviewConversion).toBeNull()
   })
 
   it('reports the interview conversion rate with its supporting counts once it qualifies', () => {
     const apps = [
-      application({ rounds: [round('interview', 'cleared')] }),
-      application({ rounds: [round('interview', 'cleared')] }),
-      application({ rounds: [round('interview', 'eliminated')] }),
-      application({ rounds: [round('interview', 'eliminated')] }),
+      application({ rounds: [round('final_interview', 'cleared')] }),
+      application({ rounds: [round('final_interview', 'cleared')] }),
+      application({ rounds: [round('final_interview', 'eliminated')] }),
+      application({ rounds: [round('final_interview', 'eliminated')] }),
     ]
     expect(computePlacementPattern(apps).interviewConversion).toMatchObject({ rate: 0.5, reached: 4, cleared: 2 })
   })
@@ -327,9 +343,9 @@ describe('computeObservations', () => {
 
   it('flags a weak resume shortlist rate as a concern', () => {
     const apps = [
-      application({ rounds: [round('resume_screening', 'eliminated')] }),
-      application({ rounds: [round('resume_screening', 'eliminated')] }),
-      application({ rounds: [round('resume_screening', 'cleared')] }),
+      application({ rounds: [round('resume', 'eliminated')] }),
+      application({ rounds: [round('resume', 'eliminated')] }),
+      application({ rounds: [round('resume', 'cleared')] }),
     ]
     const resume = computeObservations(apps).find(o => o.id === 'resume-rate')
     expect(resume?.tone).toBe('concern')
@@ -337,8 +353,8 @@ describe('computeObservations', () => {
   })
 
   it('describes a stage the student reliably clears as a strength', () => {
-    const apps = Array.from({ length: 4 }, () => application({ rounds: [round('group_exercise', 'cleared')] }))
-    const strong = computeObservations(apps).find(o => o.id === 'strong-group_exercise')
+    const apps = Array.from({ length: 4 }, () => application({ rounds: [round('group_discussion', 'cleared', { displayName: 'Group Discussion' })] }))
+    const strong = computeObservations(apps).find(o => o.id === 'strong-group_discussion')
     expect(strong?.tone).toBe('positive')
   })
 
@@ -357,8 +373,8 @@ describe('computeObservations', () => {
 
 describe('computeGroupPatterns', () => {
   it('requires at least 2 groups with 3+ applications each before comparing industries', () => {
-    const consulting = Array.from({ length: 3 }, () => application({ industry: 'Consulting', rounds: [round('interview', 'cleared'), round('interview', 'cleared')] }))
-    const tech = Array.from({ length: 3 }, () => application({ industry: 'Technology', rounds: [round('interview', 'eliminated')] }))
+    const consulting = Array.from({ length: 3 }, () => application({ industry: 'Consulting', rounds: [round('final_interview', 'cleared'), round('final_interview', 'cleared')] }))
+    const tech = Array.from({ length: 3 }, () => application({ industry: 'Technology', rounds: [round('final_interview', 'eliminated')] }))
     const patterns = computeGroupPatterns([...consulting, ...tech])
     const industryPattern = patterns.find(p => p.dimension === 'industry')
     expect(industryPattern?.better).toBe('Consulting')
@@ -378,7 +394,7 @@ describe('hasEnoughDataForInsights', () => {
   })
 
   it('is true with 2 or more resolved rounds', () => {
-    expect(hasEnoughDataForInsights([application({ rounds: [round('assessment', 'cleared'), round('interview', 'eliminated')] })])).toBe(true)
+    expect(hasEnoughDataForInsights([application({ rounds: [round('assessment', 'cleared'), round('final_interview', 'eliminated')] })])).toBe(true)
   })
 })
 
@@ -388,19 +404,19 @@ describe('evidence threshold is applied before ranking, not after', () => {
   // (or weakest) well-evidenced stage entirely.
   it('does not let a one-off perfect stage mask a well-evidenced strength', () => {
     const apps = [
-      ...Array.from({ length: 4 }, () => application({ rounds: [round('resume_screening', 'cleared')] })),
-      application({ rounds: [round('final_outcome', 'cleared')] }), // 1 observation, 100%
+      ...Array.from({ length: 4 }, () => application({ rounds: [round('resume', 'cleared')] })),
+      application({ rounds: [round('final_interview', 'cleared')] }), // 1 observation, 100%
     ]
     const result = computeStrongestStage(apps)
     expect(result.status).toBe('ok')
     if (result.status !== 'ok') return
-    expect(result.insight.category).toBe('resume_screening')
+    expect(result.insight.category).toBe('resume')
   })
 
   it('does not let a one-off total elimination mask a well-evidenced drop-off', () => {
     const apps = [
       ...Array.from({ length: 4 }, () => application({ rounds: [round('assessment', 'eliminated')] })),
-      application({ rounds: [round('group_exercise', 'eliminated')] }), // 1 observation, 100%
+      application({ rounds: [round('group_discussion', 'eliminated')] }), // 1 observation, 100%
     ]
     const result = computeBiggestBottleneck(apps)
     expect(result.status).toBe('ok')
@@ -411,10 +427,10 @@ describe('evidence threshold is applied before ranking, not after', () => {
 
 describe('computeObservations does not repeat itself', () => {
   it('states the resume-screening result once, not twice', () => {
-    const apps = Array.from({ length: 4 }, () => application({ rounds: [round('resume_screening', 'cleared')] }))
+    const apps = Array.from({ length: 4 }, () => application({ rounds: [round('resume', 'cleared')] }))
     const ids = computeObservations(apps).map(o => o.id)
     expect(ids).toContain('resume-rate')
-    expect(ids).not.toContain('strong-resume_screening')
+    expect(ids).not.toContain('strong-resume')
   })
 })
 
@@ -424,14 +440,14 @@ describe('the same stage is never both the biggest drop-off and the strongest st
   // was their greatest weakness and their greatest strength.
   it('reports only a strength when the single qualifying stage is mostly cleared', () => {
     const apps = [
-      application({ rounds: [round('resume_screening', 'cleared'), round('assessment', 'cleared')] }),
-      application({ rounds: [round('resume_screening', 'cleared'), round('assessment', 'eliminated')] }),
-      application({ rounds: [round('resume_screening', 'eliminated')] }),
+      application({ rounds: [round('resume', 'cleared'), round('assessment', 'cleared')] }),
+      application({ rounds: [round('resume', 'cleared'), round('assessment', 'eliminated')] }),
+      application({ rounds: [round('resume', 'eliminated')] }),
     ]
     const { bottleneck, strength } = computeStageInsights(apps)
     expect(strength.status).toBe('ok')
     if (strength.status !== 'ok') return
-    expect(strength.insight.category).toBe('resume_screening')
+    expect(strength.insight.category).toBe('resume')
     expect(bottleneck.status).toBe('insufficient_data')
   })
 
@@ -462,7 +478,7 @@ describe('the same stage is never both the biggest drop-off and the strongest st
 
   it('holds across many shapes of data: the two never name the same stage', () => {
     const outcomes = ['cleared', 'eliminated'] as const
-    const categories = ['resume_screening', 'assessment', 'interview'] as const
+    const categories = ['resume', 'assessment', 'final_interview'] as const
     // Exhaustively walk a spread of journeys rather than trusting one fixture.
     for (let mask = 0; mask < 1 << 6; mask++) {
       const apps = categories.flatMap((cat, ci) =>
@@ -495,7 +511,7 @@ describe('current focus never contradicts the strongest stage', () => {
   })
 
   it('names an emerging strength when there is no reliable weakness', () => {
-    const apps = Array.from({ length: 3 }, () => application({ rounds: [round('resume_screening', 'cleared')] }))
+    const apps = Array.from({ length: 3 }, () => application({ rounds: [round('resume', 'cleared')] }))
     const pattern = computePlacementPattern(apps)
     expect(pattern.currentFocus).toContain('emerging strength')
     expect(pattern.mostCommonExitPoint).toBeNull()
@@ -503,9 +519,9 @@ describe('current focus never contradicts the strongest stage', () => {
 
   it('never tells the student to improve the stage it just called their strongest', () => {
     const apps = [
-      application({ rounds: [round('resume_screening', 'cleared'), round('assessment', 'eliminated')] }),
-      application({ rounds: [round('resume_screening', 'cleared'), round('assessment', 'eliminated')] }),
-      application({ rounds: [round('resume_screening', 'cleared'), round('assessment', 'cleared')] }),
+      application({ rounds: [round('resume', 'cleared'), round('assessment', 'eliminated')] }),
+      application({ rounds: [round('resume', 'cleared'), round('assessment', 'eliminated')] }),
+      application({ rounds: [round('resume', 'cleared'), round('assessment', 'cleared')] }),
     ]
     const pattern = computePlacementPattern(apps)
     if (pattern.strongestStage) {
@@ -516,16 +532,16 @@ describe('current focus never contradicts the strongest stage', () => {
 
 describe('round performance carries a confidence indicator', () => {
   it('marks a stage reached fewer than 3 times as limited data', () => {
-    const apps = [application({ rounds: [round('interview', 'cleared'), round('interview', 'cleared')] })]
-    const row = computeRoundPerformance(apps).find(r => r.category === 'interview')
+    const apps = [application({ rounds: [round('final_interview', 'cleared'), round('final_interview', 'cleared')] })]
+    const row = computeRoundPerformance(apps).find(r => r.category === 'final_interview')
     expect(row?.confidence.label).toBe('Limited Data')
     expect(row?.confidence.qualifies).toBe(false)
   })
 
   it('escalates from emerging to established as observations accumulate', () => {
-    const emerging = [application({ rounds: Array.from({ length: 3 }, () => round('interview', 'cleared')) })]
+    const emerging = [application({ rounds: Array.from({ length: 3 }, () => round('final_interview', 'cleared')) })]
     expect(computeRoundPerformance(emerging)[0].confidence.label).toBe('Emerging Pattern')
-    const established = [application({ rounds: Array.from({ length: 5 }, () => round('interview', 'cleared')) })]
+    const established = [application({ rounds: Array.from({ length: 5 }, () => round('final_interview', 'cleared')) })]
     expect(computeRoundPerformance(established)[0].confidence.label).toBe('Established Pattern')
   })
 })

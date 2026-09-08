@@ -5,7 +5,7 @@ import type { PlacementRound } from '@/lib/placementTracker/types'
 function round(overrides: Partial<PlacementRound>): PlacementRound {
   return {
     id: 'r1', applicationId: 'a1', roundOrder: 0, displayName: 'Round',
-    analyticsCategory: 'other', outcome: 'upcoming',
+    analyticsCategory: 'other', outcome: 'upcoming', exitReason: null,
     scheduledDate: null, completedDate: null, outcomeNotes: null, reflection: null,
     ...overrides,
   }
@@ -29,21 +29,26 @@ describe('deriveApplicationStatus', () => {
     expect(deriveApplicationStatus(rounds)).toBe('rejected')
   })
 
-  it('is offer only when the final_outcome round is cleared', () => {
-    const rounds = [
-      round({ roundOrder: 0, outcome: 'cleared' }),
-      round({ roundOrder: 1, analyticsCategory: 'final_outcome', outcome: 'cleared' }),
-    ]
-    expect(deriveApplicationStatus(rounds)).toBe('offer')
+  it('never derives an offer from a round — an offer is an outcome, set explicitly', () => {
+    // "Final Result" is no longer a round, so clearing the last interview
+    // does not by itself mean an offer was made.
+    const rounds = [round({ roundOrder: 0, outcome: 'cleared', analyticsCategory: 'final_interview' })]
+    expect(deriveApplicationStatus(rounds)).toBe('active')
+    expect(deriveApplicationStatus(rounds, 'offer')).toBe('offer')
   })
 
-  it('is not offer if the final_outcome round exists but is not yet cleared', () => {
-    const rounds = [round({ analyticsCategory: 'final_outcome', outcome: 'pending' })]
-    expect(deriveApplicationStatus(rounds)).toBe('active')
+  it('closes as withdrawn rather than rejected when the student withdrew', () => {
+    const rounds = [round({ roundOrder: 0, outcome: 'eliminated', exitReason: 'WITHDREW' })]
+    expect(deriveApplicationStatus(rounds)).toBe('withdrawn')
+  })
+
+  it('is rejected when a round eliminated the student for any other reason', () => {
+    const rounds = [round({ roundOrder: 0, outcome: 'eliminated', exitReason: 'CASE_STRUCTURE' })]
+    expect(deriveApplicationStatus(rounds)).toBe('rejected')
   })
 
   it('a manual withdrawal overrides everything, including an eventual offer', () => {
-    const rounds = [round({ analyticsCategory: 'final_outcome', outcome: 'cleared' })]
+    const rounds = [round({ analyticsCategory: 'final_interview', outcome: 'cleared' })]
     expect(deriveApplicationStatus(rounds, 'withdrawn')).toBe('withdrawn')
   })
 
@@ -59,9 +64,12 @@ describe('isApplicationClosed', () => {
     expect(isApplicationClosed('closed')).toBe(true)
   })
 
-  it('treats active and offer as not closed', () => {
+  it('treats an offer as closed too — the journey has ended either way', () => {
+    expect(isApplicationClosed('offer')).toBe(true)
+  })
+
+  it('treats only an active application as open', () => {
     expect(isApplicationClosed('active')).toBe(false)
-    expect(isApplicationClosed('offer')).toBe(false)
   })
 })
 
