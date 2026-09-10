@@ -14,19 +14,25 @@ import { ApplicationFields, type ApplicationFieldValues } from './ApplicationFie
 import { sanitizeDigits } from '@/lib/format/currency'
 import { updateApplicationDetails } from '@/lib/placementTracker/api'
 import { resolveRole, splitRole } from '@/lib/placementTracker/role'
+import { OTHER_INDUSTRY, resolveIndustry, splitIndustry } from '@/lib/placementTracker/industry'
+import { OTHER_LOCATION, resolveLocation, splitLocation } from '@/lib/placementTracker/location'
 import { describeSaveError } from '@/lib/onboarding/errors'
 import type { PlacementApplication } from '@/lib/placementTracker/types'
 
 function toFieldValues(app: PlacementApplication): ApplicationFieldValues {
   const { choice, customRole } = splitRole(app.role)
+  const industry = splitIndustry(app.industry ?? '')
+  const location = splitLocation(app.location ?? '')
   return {
     companyName: app.companyName,
     roleChoice: choice,
     customRole,
     opportunityType: app.opportunityType,
     applicationDate: app.applicationDate,
-    industry: app.industry ?? '',
-    location: app.location ?? '',
+    industryChoice: industry.choice,
+    customIndustry: industry.custom,
+    locationChoice: location.choice,
+    customLocation: location.custom,
     // CurrencyInput's contract is a clean digit string. Stored values
     // normally already are, but a row written before that input existed
     // could hold anything the old free-text field accepted.
@@ -55,7 +61,10 @@ export function EditApplicationModal({
   const update = (patch: Partial<ApplicationFieldValues>) => setValues(v => ({ ...v, ...patch }))
 
   const resolvedRole = resolveRole(values.roleChoice, values.customRole)
-  const canSave = values.companyName.trim().length > 0 && resolvedRole.length > 0 && values.applicationDate.length > 0
+  const industryIncomplete = values.industryChoice === OTHER_INDUSTRY && values.customIndustry.trim().length === 0
+  const locationIncomplete = values.locationChoice === OTHER_LOCATION && values.customLocation.trim().length === 0
+  const canSave = values.companyName.trim().length > 0 && resolvedRole.length > 0
+    && values.applicationDate.length > 0 && !industryIncomplete && !locationIncomplete
 
   const handleSave = async () => {
     if (savingRef.current || !canSave) return
@@ -67,8 +76,8 @@ export function EditApplicationModal({
         companyName: values.companyName.trim(),
         role: resolvedRole,
         opportunityType: values.opportunityType,
-        industry: values.industry.trim() || null,
-        location: values.location.trim() || null,
+        industry: resolveIndustry(values.industryChoice, values.customIndustry) || null,
+        location: resolveLocation(values.locationChoice, values.customLocation) || null,
         package: values.packageValue.trim() || null,
         stipend: values.stipend.trim() || null,
         applicationDate: values.applicationDate,

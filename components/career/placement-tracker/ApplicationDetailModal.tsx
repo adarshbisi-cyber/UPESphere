@@ -9,6 +9,7 @@
 // fact as the observed elimination itself.
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { Loader2, AlertTriangle, Plus, MapPin, Briefcase, Calendar } from 'lucide-react'
 import { UploadModalShell } from '@/components/workspace/UploadModalShell'
 import { Button } from '@/components/ui/button'
@@ -22,8 +23,10 @@ import {
 import { isApplicationClosed } from '@/lib/placementTracker/status'
 import { getApplicationJourneyState } from '@/lib/placementTracker/journey'
 import { inferRoundType } from '@/lib/placementTracker/categoryInference'
-import { ROUND_TYPES, EXIT_REASONS, exitReasonLabel } from '@/lib/placementTracker/constants'
+import { ROUND_TYPES, EXIT_REASONS, exitReasonLabel, roundTypeLabel } from '@/lib/placementTracker/constants'
 import { describeSaveError } from '@/lib/onboarding/errors'
+import { practiceTypeForRound } from '@/lib/recommendations/mapping'
+import { practiceTypeLabel } from '@/lib/practiceTogether/constants'
 import type { RoundType, ExitReason, PlacementApplication, RoundOutcome } from '@/lib/placementTracker/types'
 
 const OUTCOME_OPTIONS: { value: RoundOutcome; label: string }[] = [
@@ -50,6 +53,10 @@ export function ApplicationDetailModal({
   const [reflectingRoundId, setReflectingRoundId] = useState<string | null>(null)
   const [newRoundName, setNewRoundName] = useState('')
   const [newRoundCategory, setNewRoundCategory] = useState<RoundType | null>(null)
+  // The stage a student just recorded an exit at, if it maps to something
+  // they can actually practise. Cleared by "Maybe Later" — which hides the
+  // prompt only; the underlying weakness stays in Insights either way (§17).
+  const [suggestPracticeFor, setSuggestPracticeFor] = useState<RoundType | null>(null)
 
   const refresh = () => {
     getApplication(userId, applicationId)
@@ -80,6 +87,12 @@ export function ApplicationDetailModal({
     try {
       await updateRound(userId, applicationId, roundId, { exitReason, outcomeNotes: notes })
       setReflectingRoundId(null)
+      // Offer practice for the stage they exited at — but only if there's a
+      // format that addresses it, and never as a blocking step (§10).
+      const exitedRound = app?.rounds.find(r => r.id === roundId)
+      if (exitedRound && exitReason !== 'WITHDREW' && practiceTypeForRound(exitedRound.analyticsCategory)) {
+        setSuggestPracticeFor(exitedRound.analyticsCategory)
+      }
       refresh()
       onChanged()
     } catch (err) {
@@ -237,6 +250,27 @@ export function ApplicationDetailModal({
                 </Select>
               </div>
             )}
+          </div>
+        )}
+
+        {suggestPracticeFor && (
+          <div className="p-3 rounded-xl border" style={{ background: 'var(--muted-surface)', borderColor: 'var(--divider)' }}>
+            <p className="text-sm text-foreground mb-0.5">Round updated &#10003;</p>
+            <p className="text-xs text-muted-foreground mb-2.5">
+              Want to prepare for your next opportunity?{' '}
+              {roundTypeLabel(suggestPracticeFor)} could be a useful area to practise.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Button asChild size="sm" variant="gradient" className="gap-1.5">
+                <Link href={`/practice?practiceType=${practiceTypeForRound(suggestPracticeFor)}`}>
+                  Find {practiceTypeLabel(practiceTypeForRound(suggestPracticeFor)!)} Practice
+                </Link>
+              </Button>
+              <Button size="sm" variant="ghost" className="text-muted-foreground"
+                onClick={() => setSuggestPracticeFor(null)}>
+                Maybe Later
+              </Button>
+            </div>
           </div>
         )}
 

@@ -10,6 +10,8 @@ import { RoundEditor, type EditableRound } from './RoundEditor'
 import { createApplication } from '@/lib/placementTracker/api'
 import { DEFAULT_ROUND_TEMPLATE } from '@/lib/placementTracker/constants'
 import { resolveRole } from '@/lib/placementTracker/role'
+import { OTHER_INDUSTRY, resolveIndustry } from '@/lib/placementTracker/industry'
+import { OTHER_LOCATION, resolveLocation } from '@/lib/placementTracker/location'
 import { describeSaveError } from '@/lib/onboarding/errors'
 
 function todayIso(): string {
@@ -31,8 +33,10 @@ export function AddApplicationModal({
     customRole: '',
     opportunityType: 'placement',
     applicationDate: todayIso(),
-    industry: '',
-    location: '',
+    industryChoice: '',
+    customIndustry: '',
+    locationChoice: '',
+    customLocation: '',
     packageValue: '',
     stipend: '',
     notes: '',
@@ -47,7 +51,12 @@ export function AddApplicationModal({
   const update = (patch: Partial<ApplicationFieldValues>) => setValues(v => ({ ...v, ...patch }))
 
   const resolvedRole = resolveRole(values.roleChoice, values.customRole)
-  const canSave = values.companyName.trim().length > 0 && resolvedRole.length > 0 && values.applicationDate.length > 0
+  // "Other" without a specified industry is an incomplete answer, not a
+  // blank one — the field is optional, but half-filled must not save.
+  const industryIncomplete = values.industryChoice === OTHER_INDUSTRY && values.customIndustry.trim().length === 0
+  const locationIncomplete = values.locationChoice === OTHER_LOCATION && values.customLocation.trim().length === 0
+  const canSave = values.companyName.trim().length > 0 && resolvedRole.length > 0
+    && values.applicationDate.length > 0 && !industryIncomplete && !locationIncomplete
 
   const handleSave = async () => {
     if (savingRef.current || !canSave) return
@@ -61,8 +70,8 @@ export function AddApplicationModal({
           companyName: values.companyName.trim(),
           role: resolvedRole,
           opportunityType: values.opportunityType,
-          industry: values.industry.trim() || null,
-          location: values.location.trim() || null,
+          industry: resolveIndustry(values.industryChoice, values.customIndustry) || null,
+          location: resolveLocation(values.locationChoice, values.customLocation) || null,
           package: values.packageValue.trim() || null,
           stipend: values.stipend.trim() || null,
           applicationDate: values.applicationDate,

@@ -63,7 +63,7 @@ describe('Navbar', () => {
     expect(screen.getByRole('button', { name: /community/i })).toBeInTheDocument()
   })
 
-  it('opens the Community dropdown to reveal TeamUp and the existing Community page', () => {
+  it('opens the Community dropdown to reveal Practice Together and TeamUp', () => {
     render(<Navbar />)
 
     fireEvent.click(screen.getByRole('button', { name: /community/i }))
@@ -71,8 +71,16 @@ describe('Navbar', () => {
     // NavDropdown items render with an explicit role="menuitem", not the
     // native link role — mobile's accordion items don't override role, so
     // that variant below still queries by 'link'.
+    expect(screen.getByRole('menuitem', { name: /practice together/i })).toHaveAttribute('href', '/practice')
     expect(screen.getByRole('menuitem', { name: /teamup/i })).toHaveAttribute('href', '/teamup')
-    expect(screen.getByRole('menuitem', { name: /community feed/i })).toHaveAttribute('href', '/community')
+  })
+
+  it('no longer lists the Community Feed teaser', () => {
+    render(<Navbar />)
+
+    fireEvent.click(screen.getByRole('button', { name: /community/i }))
+
+    expect(screen.queryByRole('menuitem', { name: /community feed/i })).not.toBeInTheDocument()
   })
 
   it('shows Community and TeamUp inside the mobile menu after opening it', () => {
@@ -85,11 +93,12 @@ describe('Navbar', () => {
 
     fireEvent.click(within(mobileMenu as HTMLElement).getByRole('button', { name: /community/i }))
 
-    expect(within(mobileMenu as HTMLElement).getByRole('link', { name: /teamup/i })).toHaveAttribute('href', '/teamup')
-    expect(within(mobileMenu as HTMLElement).getByRole('link', { name: /community feed/i })).toHaveAttribute(
+    expect(within(mobileMenu as HTMLElement).getByRole('link', { name: /practice together/i })).toHaveAttribute(
       'href',
-      '/community'
+      '/practice'
     )
+    expect(within(mobileMenu as HTMLElement).getByRole('link', { name: /teamup/i })).toHaveAttribute('href', '/teamup')
+    expect(within(mobileMenu as HTMLElement).queryByRole('link', { name: /community feed/i })).not.toBeInTheDocument()
   })
 
   it('marks Community as active while viewing a TeamUp route', () => {
@@ -100,12 +109,23 @@ describe('Navbar', () => {
     expect(screen.getByRole('button', { name: /community/i })).toHaveClass('text-indigo-400')
   })
 
-  it('marks Community as active on the community page too', () => {
-    pathname = '/community'
+  it('marks Community as active while viewing Practice Together', () => {
+    pathname = '/practice'
 
     render(<Navbar />)
 
     expect(screen.getByRole('button', { name: /community/i })).toHaveClass('text-indigo-400')
+  })
+
+  // The /community teaser page still exists and is reachable by URL, but it
+  // is no longer one of the Community section's destinations, so it no
+  // longer lights the trigger up either.
+  it('does not mark Community as active on the unlisted teaser page', () => {
+    pathname = '/community'
+
+    render(<Navbar />)
+
+    expect(screen.getByRole('button', { name: /community/i })).not.toHaveClass('text-indigo-400')
   })
 
   it('falls back to the initials avatar when the profile image fails to load', () => {

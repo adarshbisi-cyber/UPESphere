@@ -13,6 +13,9 @@ import {
   DROPOFF_EMPTY_MESSAGE, STRENGTH_EMPTY_MESSAGE,
 } from '@/lib/placementTracker/analytics'
 import type { Confidence } from '@/lib/placementTracker/analytics'
+import { RecommendedNextStep } from '@/components/recommendations/RecommendedNextStep'
+import { recommendationForRound } from '@/lib/recommendations/engine'
+import type { Recommendation } from '@/lib/recommendations/types'
 import type { PlacementApplication } from '@/lib/placementTracker/types'
 
 const NOT_ENOUGH = 'More data needed'
@@ -55,7 +58,13 @@ function rateTone(rate: number, qualifies = true): { bar: string; text: string }
   return { bar: 'from-red-500 to-red-400', text: 'text-red-500 dark:text-red-400' }
 }
 
-export function InsightsTab({ applications }: { applications: PlacementApplication[] }) {
+export function InsightsTab({
+  applications,
+  recommendations = [],
+}: {
+  applications: PlacementApplication[]
+  recommendations?: Recommendation[]
+}) {
   if (!hasEnoughDataForInsights(applications)) {
     return (
       <GlassCard className="p-10 text-center">
@@ -73,6 +82,9 @@ export function InsightsTab({ applications }: { applications: PlacementApplicati
   const roundPerformance = computeRoundPerformance(applications)
   const { bottleneck, strength } = computeStageInsights(applications)
   const exitReasons = computeExitReasonBreakdown(applications)
+  const dropOffRecommendation = bottleneck.status === 'ok'
+    ? recommendationForRound(bottleneck.insight.category, recommendations)
+    : null
 
   return (
     <div className="space-y-4">
@@ -214,6 +226,12 @@ export function InsightsTab({ applications }: { applications: PlacementApplicati
             <p className="text-sm text-muted-foreground">You haven&rsquo;t been eliminated at any stage yet.</p>
           ) : (
             <InsufficientCard message={DROPOFF_EMPTY_MESSAGE} />
+          )}
+
+          {/* Contextually tied to this exact weakness, rather than a
+              generic suggestion floating elsewhere on the page (§9). */}
+          {bottleneck.status === 'ok' && dropOffRecommendation && (
+            <RecommendedNextStep recommendation={dropOffRecommendation} variant="inline" />
           )}
         </GlassCard>
         <GlassCard className="p-5">
