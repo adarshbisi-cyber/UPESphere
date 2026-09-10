@@ -8,48 +8,22 @@
 // show up in March. That distinction is the whole point of the feature, so
 // no function in this file takes a record timestamp at all.
 
+import {
+  DAYS_IN_LONGEST_MONTH, MONTH_NAMES, addDays, endOfMonth, monthIndex,
+  parseIsoDay, startOfMonth, startOfWeek, toIsoDay,
+  type DateRange, type HeatmapLayout, type HeatmapMode,
+} from '@/lib/shared/calendarGrid'
 import type { PlacementApplication } from './types'
 
 // ============================================================
 // Local-date helpers
 //
-// applicationDate is a plain 'YYYY-MM-DD' calendar day with no timezone.
-// new Date('2026-09-07') parses that as UTC midnight, which lands on the
-// 6th for anyone west of Greenwich — so dates are always built explicitly
-// from their parts and compared as strings.
+// Now shared with Practice Together's calendar — see
+// lib/shared/calendarGrid.ts. Re-exported here because this module's public
+// API already promised them.
 // ============================================================
 
-const pad = (n: number) => String(n).padStart(2, '0')
-
-export function toIsoDay(date: Date): string {
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
-}
-
-export function parseIsoDay(iso: string): Date {
-  const [y, m, d] = iso.split('-').map(Number)
-  return new Date(y, m - 1, d)
-}
-
-function addDays(date: Date, days: number): Date {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate() + days)
-}
-
-function startOfWeek(date: Date): Date {
-  // Sunday-start, matching the academic calendar's grid elsewhere in the app.
-  return addDays(date, -date.getDay())
-}
-
-function startOfMonth(date: Date): Date {
-  return new Date(date.getFullYear(), date.getMonth(), 1)
-}
-
-function endOfMonth(date: Date): Date {
-  return new Date(date.getFullYear(), date.getMonth() + 1, 0)
-}
-
-function monthIndex(date: Date): number {
-  return date.getFullYear() * 12 + date.getMonth()
-}
+export { toIsoDay, parseIsoDay } from '@/lib/shared/calendarGrid'
 
 // ============================================================
 // Activity sources
@@ -116,11 +90,6 @@ export const DEFAULT_ACTIVITY_PERIOD: ActivityPeriod = 'last_12_months'
 // the university's season is defined differently.
 const SEASON_START_MONTH = 6 // July (0-indexed)
 
-export interface DateRange {
-  start: Date
-  end: Date
-}
-
 export function resolvePeriodRange(
   period: ActivityPeriod,
   applications: PlacementApplication[],
@@ -185,8 +154,6 @@ export function intensityLevel(count: number): 0 | 1 | 2 | 3 | 4 {
   if (count >= 4) return 4
   return count as 1 | 2 | 3
 }
-
-const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 export function buildActivityGrid(range: DateRange, byDay: Map<string, string[]>): ActivityGrid {
   const weeks: ActivityWeek[] = []
@@ -348,20 +315,12 @@ export function computeActivityInsight(
 // into. Kept pure so the sizing rules are testable without a layout engine.
 // ============================================================
 
-export type HeatmapMode = 'month_rows' | 'contribution'
-
-// Short ranges get one compact row per month, days running left to right —
-// a month is only ~31 cells, so a week-column grid wastes most of the width
-// while a calendar layout wastes height on oversized cells. Long ranges keep
-// the week-column contribution grid, which is what makes a year legible.
 export function heatmapModeFor(period: ActivityPeriod): HeatmapMode {
   return period === 'this_month' || period === 'last_3_months' ? 'month_rows' : 'contribution'
 }
 
 // The widest a month gets. Every month row is laid out on the same 31
 // columns so the day axis lines up across rows regardless of month length.
-export const DAYS_IN_LONGEST_MONTH = 31
-
 export interface MonthRow {
   key: string
   label: string
@@ -391,7 +350,7 @@ export function buildMonthRows(range: DateRange, byDay: Map<string, string[]>): 
       const inRange = withinMonth && date >= range.start && date <= range.end
       const applicationIds = inRange ? byDay.get(iso) ?? [] : []
       days.push({
-        iso: withinMonth ? iso : `${year}-${pad(month + 1)}-pad${d}`,
+        iso: withinMonth ? iso : `${year}-${month}-pad${d}`,
         date, count: applicationIds.length, level: intensityLevel(applicationIds.length),
         inRange, applicationIds,
       })
@@ -408,54 +367,4 @@ export function buildMonthRows(range: DateRange, byDay: Map<string, string[]>): 
   return rows
 }
 
-export interface HeatmapLayout {
-  cellSize: number
-  gap: number
-  /** Total width the grid will occupy, so the caller can centre it. */
-  gridWidth: number
-}
-
-// Floors, below which a cell stops being readable and horizontal scrolling
-// is the better trade. A month strip is only ~31 cells, so it can afford a
-// higher floor and scroll on a phone; a year has to compress much further
-// before scrolling becomes worse than shrinking.
-const MIN_CELL: Record<HeatmapMode, number> = { month_rows: 14, contribution: 9 }
-
-// The upper bound scales with how much history is on screen. Without it a
-// three-month view would blow its cells up to ~60px each just because the
-// width was available, which reads as a chart of nothing rather than a dense
-// record of activity.
-// Deliberately tight. Filling the width matters less than a day cell
-// staying recognisably the same object across every period — it should not
-// look four times bigger just because a shorter range was selected. The cap
-// depends on the mode, not only the column count, because a 31-column month
-// row and a 27-column six-month grid want different densities.
-function maxCellFor(columns: number, mode: HeatmapMode): number {
-  if (mode === 'month_rows') return 22 // ~31 days spread across the card
-  if (columns <= 30) return 18 // ~6 months of week columns
-  return 13 // a full year — the original density, which already worked
-}
-
-function gapFor(cellSize: number): number {
-  if (cellSize >= 18) return 4
-  if (cellSize >= 13) return 3
-  return 2
-}
-
-export function computeHeatmapLayout(
-  columns: number,
-  availableWidth: number,
-  mode: HeatmapMode = 'contribution',
-): HeatmapLayout {
-  if (columns <= 0) return { cellSize: MIN_CELL[mode], gap: 3, gridWidth: 0 }
-
-  const maxCell = maxCellFor(columns, mode)
-  // Solved against the gap the resulting size would itself imply: pick the
-  // size first using a provisional gap, then settle on the matching gap.
-  const provisionalGap = gapFor(maxCell)
-  const fitted = Math.floor((availableWidth - (columns - 1) * provisionalGap) / columns)
-  const cellSize = Math.max(MIN_CELL[mode], Math.min(maxCell, fitted))
-  const gap = gapFor(cellSize)
-
-  return { cellSize, gap, gridWidth: columns * cellSize + (columns - 1) * gap }
-}
+export { computeHeatmapLayout, type HeatmapLayout, type HeatmapMode, DAYS_IN_LONGEST_MONTH } from '@/lib/shared/calendarGrid'
