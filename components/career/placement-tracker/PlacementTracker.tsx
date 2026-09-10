@@ -7,12 +7,13 @@
 // distinct (a network failure and "nothing tracked yet" must never look the
 // same — same convention as AcademicWorkspace.tsx).
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AnimatePresence } from 'framer-motion'
 import { AlertTriangle, LayoutGrid } from 'lucide-react'
 import { GlassCard } from '@/components/ui/card'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { PlacementTrackerEmptyState } from './EmptyState'
+import { RecommendedNextStep } from '@/components/recommendations/RecommendedNextStep'
 import { DashboardTab } from './DashboardTab'
 import { ApplicationsTab } from './ApplicationsTab'
 import { InsightsTab } from './InsightsTab'
@@ -22,6 +23,10 @@ import { ApplicationDetailModal } from './ApplicationDetailModal'
 import { ConfirmModal } from '@/components/ui/confirm-modal'
 import { useToast } from '@/components/ui/use-toast'
 import { deleteApplication, getApplications } from '@/lib/placementTracker/api'
+import { getSessions } from '@/lib/practiceTogether/api'
+import { dismissRecommendation, getDismissedSignatures } from '@/lib/recommendations/api'
+import { computeRecommendations, topRecommendation } from '@/lib/recommendations/engine'
+import type { PracticeSession } from '@/lib/practiceTogether/types'
 import { describeSaveError } from '@/lib/onboarding/errors'
 import type { PlacementApplication } from '@/lib/placementTracker/types'
 
@@ -40,6 +45,11 @@ function isMissingTableError(err: unknown): boolean {
 
 export function PlacementTracker({ userId }: { userId: string }) {
   const [applications, setApplications] = useState<PlacementApplication[]>([])
+  // Recommendations are derived from both sides of the loop: the placement
+  // record says what to work on, the practice record says whether the
+  // student has acted on it.
+  const [practiceSessions, setPracticeSessions] = useState<PracticeSession[]>([])
+  const [dismissed, setDismissed] = useState<string[]>([])
   const [status, setStatus] = useState<Status>('loading')
   const [errorDetail, setErrorDetail] = useState('')
   const [missingTable, setMissingTable] = useState(false)
@@ -55,6 +65,16 @@ export function PlacementTracker({ userId }: { userId: string }) {
 
   const refresh = useCallback(() => {
     setStatus('loading')
+    // Practice data and dismissals are best-effort: if Practice Together
+    // isn't set up yet, the tracker still works — it just can't recommend.
+    Promise.all([
+      getSessions().catch(() => [] as PracticeSession[]),
+      getDismissedSignatures(userId).catch(() => [] as string[]),
+    ]).then(([sessions, signatures]) => {
+      setPracticeSessions(sessions)
+      setDismissed(signatures)
+    })
+
     getApplications(userId)
       .then(apps => { setApplications(apps); setStatus('ready') })
       .catch(err => {
@@ -65,6 +85,26 @@ export function PlacementTracker({ userId }: { userId: string }) {
   }, [userId])
 
   useEffect(() => { refresh() }, [refresh])
+
+  // Re-derived from whatever the data currently says, on every render —
+  // which is why adding, editing or deleting an application can't leave a
+  // stale recommendation behind (§19).
+  const recommendations = useMemo(
+    () => computeRecommendations({ userId, applications, practiceSessions, dismissedSignatures: dismissed }),
+    [userId, applications, practiceSessions, dismissed],
+  )
+  const nextStep = topRecommendation(recommendations)
+
+  const handleDismissRecommendation = async (signature: string) => {
+    // Optimistic: the card should go away immediately, and a failed write
+    // only means it returns on the next load.
+    setDismissed(prev => [...prev, signature])
+    try {
+      await dismissRecommendation(userId, signature)
+    } catch {
+      /* best-effort — the recommendation itself is never lost, only hidden */
+    }
+  }
 
   const handleAdded = () => { setShowAddModal(false); refresh() }
   const handleEdited = () => { setEditingApplication(null); refresh() }
@@ -135,6 +175,15 @@ export function PlacementTracker({ userId }: { userId: string }) {
         </TabsList>
 
         <TabsContent value="dashboard">
+          {/* Only rendered when there's something real to say (§8). */}
+          {nextStep && (
+            <div className="mb-4">
+              <RecommendedNextStep
+                recommendation={nextStep}
+                onDismiss={() => handleDismissRecommendation(nextStep.id)}
+              />
+            </div>
+          )}
           <DashboardTab
             applications={applications}
             onOpen={setOpenApplicationId}
@@ -151,7 +200,7 @@ export function PlacementTracker({ userId }: { userId: string }) {
           />
         </TabsContent>
         <TabsContent value="insights">
-          <InsightsTab applications={applications} />
+          <InsightsTab applications={applications} recommendations={recommendations} />
         </TabsContent>
       </Tabs>
 
