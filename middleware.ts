@@ -37,13 +37,18 @@ export async function middleware(req: NextRequest) {
     path.startsWith('/career') ||
     path.startsWith('/community') ||
     path.startsWith('/teamup/mine') ||
+    path.startsWith('/practice') ||
     path.startsWith('/notifications')
   const emailVerified = !!(user && (user.email_confirmed_at || user.confirmed_at))
 
   // Not signed in → bounce protected routes to login (preserving intended dest).
+  // The search string is part of that destination: a Placement Tracker
+  // recommendation links to /practice?practiceType=group_discussion, and
+  // dropping the query would land the student on an unfiltered page after
+  // signing in — the opposite of what they clicked.
   if (isProtected && !user) {
     const loginUrl = new URL('/login', req.url)
-    loginUrl.searchParams.set('redirect', path)
+    loginUrl.searchParams.set('redirect', path + req.nextUrl.search)
     return NextResponse.redirect(loginUrl)
   }
 
@@ -89,6 +94,7 @@ export const config = {
     '/career/:path*',
     '/community/:path*',
     '/teamup/mine/:path*',
+    '/practice/:path*',
     '/notifications/:path*',
     '/login',
   ],
