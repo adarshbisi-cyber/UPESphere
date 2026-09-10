@@ -9,7 +9,7 @@ import {
   Menu, X, GraduationCap, LogOut, LayoutDashboard, BookOpenCheck,
   ChevronDown, Calculator, TrendingUp, CalendarCheck, Target, Crosshair,
   Zap, MessageSquare, ExternalLink, CalendarRange, CalendarDays, Briefcase, Users, Code2,
-  User as UserIcon, LogIn, UserPlus, Users2, LayoutGrid, Library,
+  User as UserIcon, LogIn, UserPlus, Users2, LayoutGrid, Library, MessagesSquare,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -153,9 +153,18 @@ const careerItems: NavItem[] = [
 // top-level nav item. Structured as a NavItem list (like calculators/
 // calendarItems above) so future community features — Find Students, Clubs &
 // Societies, Events — can be added here later without restructuring the
-// dropdown. "Community Feed" keeps the pre-existing /community teaser page
-// reachable now that Community itself no longer links there directly.
+// dropdown. The /community teaser page still exists and is reachable by
+// URL; it's just no longer listed here.
 const communityItems: NavItem[] = [
+  {
+    label: 'Practice Together',
+    description: 'Find people to practise cases, GDs and interviews',
+    href: '/practice',
+    icon: MessagesSquare,
+    iconClass: 'text-emerald-400',
+    iconBg: 'bg-emerald-500/15',
+    activeBg: 'bg-emerald-500/10 border-emerald-500/25',
+  },
   {
     label: 'TeamUp',
     description: 'Find teammates for competitions',
@@ -164,15 +173,6 @@ const communityItems: NavItem[] = [
     iconClass: 'text-indigo-400',
     iconBg: 'bg-indigo-500/15',
     activeBg: 'bg-indigo-500/10 border-indigo-500/25',
-  },
-  {
-    label: 'Community Feed',
-    description: 'Study squads, peer Q&A, and campus chatter',
-    href: '/community',
-    icon: Users,
-    iconClass: 'text-violet-400',
-    iconBg: 'bg-violet-500/15',
-    activeBg: 'bg-violet-500/10 border-violet-500/25',
   },
 ]
 
